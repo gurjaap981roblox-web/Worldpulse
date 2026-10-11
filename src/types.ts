@@ -120,6 +120,30 @@ export interface CoinMarket {
   url: string;
 }
 
+export interface FxRateShift {
+  pair: string;
+  symbol: string;
+  currencyName: string;
+  country: string;
+  rate: number;
+  change1dPct: number;
+  change7dPct: number;
+  sparkline: number[];
+  asOf: string;
+  url: string;
+}
+
+export interface MacroCountryIndicator {
+  country: string;
+  countryName: string;
+  gdpGrowthPct: number | null;
+  gdpDeltaPct: number | null;
+  cpiInflationPct: number | null;
+  cpiDeltaPct: number | null;
+  period: string;
+  url: string;
+}
+
 export interface CityWeather {
   city: string;
   country: string;
@@ -146,6 +170,8 @@ export type SourceId =
   | 'eonet'
   | 'gdelt'
   | 'coingecko'
+  | 'fx'
+  | 'worldbank'
   | 'openmeteo'
   | 'wikipedia'
   | 'bbc'

@@ -42,15 +42,14 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const labelLayerRef = useRef<L.TileLayer | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
 
-  // Touch swipe state for bottom sheet
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [sheetTranslateY, setSheetTranslateY] = useState(0);
 
   const isDark = settings.theme === 'dark';
 
-  // Initialize Leaflet Map once
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -64,23 +63,31 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
       worldCopyJump: true,
     });
 
-    const tileUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    const baseTileUrl = isDark
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
 
-    const tileLayer = L.tileLayer(tileUrl, {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      subdomains: 'abcd',
-      maxZoom: 19,
+    const refTileUrl = isDark
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+
+    const tileLayer = L.tileLayer(baseTileUrl, {
+      attribution: 'Tiles &copy; Esri, HERE, Garmin, OpenStreetMap',
+      maxZoom: 16,
+    }).addTo(map);
+
+    const labelLayer = L.tileLayer(refTileUrl, {
+      maxZoom: 16,
+      opacity: 0.85,
     }).addTo(map);
 
     const markersGroup = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
     tileLayerRef.current = tileLayer;
+    labelLayerRef.current = labelLayer;
     markersLayerRef.current = markersGroup;
 
-    // Ensure proper sizing after mount
     const resizeTimer = setTimeout(() => {
       map.invalidateSize();
     }, 200);
@@ -92,16 +99,20 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
     };
   }, []);
 
-  // Update map tiles when theme toggles
   useEffect(() => {
-    if (!tileLayerRef.current) return;
-    const tileUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
-    tileLayerRef.current.setUrl(tileUrl);
+    if (!tileLayerRef.current || !labelLayerRef.current) return;
+    const baseTileUrl = isDark
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+
+    const refTileUrl = isDark
+      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
+
+    tileLayerRef.current.setUrl(baseTileUrl);
+    labelLayerRef.current.setUrl(refTileUrl);
   }, [isDark]);
 
-  // Render topic-colored, importance-sized markers with <1h pulse animation
   useEffect(() => {
     const group = markersLayerRef.current;
     if (!group) return;
@@ -113,8 +124,8 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
       if (typeof story.lat !== 'number' || typeof story.lng !== 'number') return;
       if (Number.isNaN(story.lat) || Number.isNaN(story.lng)) return;
 
-      const colorHex = TOPIC_COLORS[story.topic]?.hex || '#14B8A6';
-      const dotDiameter = Math.round(12 + (story.importance / 10) * 16); // 13px to 28px
+      const colorHex = TOPIC_COLORS[story.topic]?.hex || '#E05A2B';
+      const dotDiameter = Math.round(11 + (story.importance / 10) * 16);
       const isUnderOneHour = story.time >= oneHourAgo;
       const isSelected = selectedStory?.id === story.id;
       const srLabel = `${story.topic} in ${story.countryName}: ${story.headline} (Importance ${story.importance.toFixed(1)} out of 10)`;
@@ -138,8 +149,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
               height: ${dotDiameter}px;
               border-radius: 9999px;
               background-color: ${colorHex};
-              border: ${isSelected ? '3px solid #ffffff' : '2px solid rgba(7, 11, 20, 0.85)'};
-              box-shadow: 0 2px 10px ${colorHex}66;
+              border: ${isSelected ? '3px solid #ffffff' : '1.5px solid rgba(9, 10, 13, 0.9)'};
               display: block;
               position: relative;
               z-index: 2;
@@ -170,12 +180,13 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
     });
   }, [stories, selectedStory, onSelectStory]);
 
-  // Pan smoothly when a story is selected
   useEffect(() => {
     if (selectedStory && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([selectedStory.lat, selectedStory.lng], Math.max(3, mapInstanceRef.current.getZoom()), {
-        duration: 0.6,
-      });
+      mapInstanceRef.current.flyTo(
+        [selectedStory.lat, selectedStory.lng],
+        Math.max(3, mapInstanceRef.current.getZoom()),
+        { duration: 0.6 }
+      );
     }
   }, [selectedStory]);
 
@@ -185,7 +196,6 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
     }
   };
 
-  // Touch handlers for swipeable bottom sheet
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartY(e.touches[0].clientY);
   };
@@ -210,44 +220,49 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
     <section
       id="map-monitor"
       aria-labelledby="map-section-heading"
-      className={`rounded-2xl border overflow-hidden flex flex-col relative transition-colors duration-200 ${
+      className={`border border-t-2 overflow-hidden flex flex-col relative transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
       }`}
     >
-      {/* Top Map Toolbar & Filter Chips */}
+      {/* Top Map Masthead & Filter Bar */}
       <div
         className={`p-4 border-b flex flex-col gap-3 ${
-          isDark ? 'border-slate-800/80' : 'border-slate-200'
+          isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 id="map-section-heading" className="text-base font-bold tracking-tight">
-              Global Live Activity Map
+            <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B]">
+              <span>Section 02</span>
+              <span aria-hidden="true">/</span>
+              <span>Geospatial Telemetry</span>
+            </div>
+            <h2
+              id="map-section-heading"
+              className="font-editorial text-lg font-semibold tracking-tight mt-0.5"
+            >
+              Global Activity Map ({stories.length} Plotted Dispatches)
             </h2>
-            <p className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              {stories.length} plotted events · Size = Importance (1–10) · Pulse = Under 1h old
-            </p>
           </div>
 
           <button
             type="button"
             onClick={handleResetView}
-            className={`min-h-[44px] px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+            className={`min-h-[40px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
               isDark
-                ? 'bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-800'
-                : 'bg-slate-100 text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE] hover:border-[#F3F2EE]'
+                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#666159] hover:text-[#181615] hover:border-[#181615]'
             }`}
             title="Reset world map zoom"
           >
             <Maximize2 className="w-3.5 h-3.5" />
-            <span>Reset View</span>
+            <span>Reset Frame</span>
           </button>
         </div>
 
-        {/* Map Filter Chips (All, Conflict, Disaster, Economy, Markets, Tech, Health, Climate) */}
+        {/* Map Filter Chips */}
         <div
           role="tablist"
           aria-label="Filter map markers by topic"
@@ -255,7 +270,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
         >
           {MAP_FILTER_TOPICS.map((topic) => {
             const isActive = selectedTopicFilter === topic;
-            const colorHex = topic !== 'All' ? TOPIC_COLORS[topic]?.hex : '#14B8A6';
+            const colorHex = topic !== 'All' ? TOPIC_COLORS[topic]?.hex : '#E05A2B';
 
             return (
               <button
@@ -264,20 +279,20 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => onSelectTopicFilter(topic)}
-                className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`min-h-[40px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   isActive
                     ? isDark
-                      ? 'bg-teal-500/20 text-teal-300 border border-teal-500/50'
-                      : 'bg-slate-900 text-white'
+                      ? 'bg-[#F3F2EE] text-[#090A0D] border-[#F3F2EE] font-semibold'
+                      : 'bg-[#181615] text-[#FCFAF5] border-[#181615] font-semibold'
                     : isDark
-                    ? 'bg-slate-900/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-slate-800/60'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    ? 'bg-[#090A0D] text-[#8C93A1] border-[#222631] hover:text-[#F3F2EE]'
+                    : 'bg-[#EFEAE0]/50 text-[#666159] border-[#DCD5C7] hover:text-[#181615]'
                 }`}
               >
                 {topic !== 'All' && (
                   <span
                     aria-hidden="true"
-                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                    className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: colorHex }}
                   />
                 )}
@@ -289,7 +304,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
       </div>
 
       {/* Interactive Leaflet Map Canvas */}
-      <div className="relative w-full h-[380px] sm:h-[460px] lg:h-[520px]">
+      <div className="relative w-full h-[380px] sm:h-[440px] lg:h-[480px]">
         <div
           ref={mapContainerRef}
           className="w-full h-full z-10"
@@ -313,17 +328,17 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
         {/* Topic Legend Overlay */}
         <div
-          className={`absolute bottom-3 left-3 z-20 rounded-xl px-3 py-2 text-[11px] backdrop-blur-md border pointer-events-none hidden sm:flex items-center gap-3 flex-wrap ${
+          className={`absolute bottom-3 left-3 z-20 px-3 py-1.5 text-[11px] font-mono-tabular border pointer-events-none hidden sm:flex items-center gap-3 flex-wrap ${
             isDark
-              ? 'bg-[#070B14]/85 border-slate-800 text-slate-300'
-              : 'bg-white/90 border-slate-200 text-slate-700'
+              ? 'bg-[#090A0D]/90 border-[#222631] text-[#8C93A1]'
+              : 'bg-[#FCFAF5]/95 border-[#DCD5C7] text-[#666159]'
           }`}
         >
           {(['Conflict', 'Disaster', 'Economy', 'Markets', 'Tech', 'Climate', 'Politics'] as Topic[]).map(
             (t) => (
               <span key={t} className="flex items-center gap-1.5 whitespace-nowrap">
                 <span
-                  className="w-2.5 h-2.5 rounded-full inline-block"
+                  className="w-2 h-2 rounded-full inline-block"
                   style={{ backgroundColor: TOPIC_COLORS[t].hex }}
                 />
                 <span>{t}</span>
@@ -343,42 +358,43 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
             style={{
               transform: `translateY(${sheetTranslateY}px)`,
             }}
-            className={`absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl border-t p-4 sm:p-5 shadow-2xl backdrop-blur-xl transition-transform duration-200 max-h-[82%] overflow-y-auto ${
+            className={`absolute bottom-0 left-0 right-0 z-30 border-t-2 p-4 sm:p-5 shadow-2xl transition-transform duration-200 max-h-[82%] overflow-y-auto ${
               isDark
-                ? 'bg-[#0B1120]/95 border-slate-700/80 text-slate-100'
-                : 'bg-white/95 border-slate-300 text-slate-900'
+                ? 'bg-[#101217]/98 border-t-[#E05A2B] text-[#F3F2EE]'
+                : 'bg-[#FCFAF5]/98 border-t-[#E05A2B] text-[#181615]'
             }`}
           >
-            {/* Drag Handle Affordance */}
             <div
               aria-hidden="true"
-              className={`w-10 h-1.5 rounded-full mx-auto mb-3 ${
-                isDark ? 'bg-slate-700' : 'bg-slate-300'
+              className={`w-10 h-1 mx-auto mb-3 ${
+                isDark ? 'bg-[#323846]' : 'bg-[#DCD5C7]'
               }`}
             />
 
             <div className="flex items-start justify-between gap-4">
               <div className="space-y-1.5 flex-1 min-w-0">
-                {/* Unboxed metadata line */}
                 <div
                   className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular ${
-                    isDark ? 'text-slate-400' : 'text-slate-600'
+                    isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => onSelectCountry(selectedStory.country)}
-                    className="font-semibold text-teal-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    className="font-semibold text-[#E05A2B] hover:underline flex items-center gap-1 cursor-pointer"
                   >
                     <span>{getCountryFlag(selectedStory.country)}</span>
                     <span>{selectedStory.countryName} ({selectedStory.country})</span>
                   </button>
                   <span aria-hidden="true">·</span>
-                  <span style={{ color: TOPIC_COLORS[selectedStory.topic]?.hex }}>
+                  <span
+                    className="font-semibold"
+                    style={{ color: TOPIC_COLORS[selectedStory.topic]?.hex }}
+                  >
                     {selectedStory.topic}
                   </span>
                   <span aria-hidden="true">·</span>
-                  <span>Importance {selectedStory.importance.toFixed(1)}/10</span>
+                  <span>Impact {selectedStory.importance.toFixed(1)}/10</span>
                   <span aria-hidden="true">·</span>
                   <span>
                     {selectedStory.isDeveloping
@@ -391,11 +407,11 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                   </span>
                 </div>
 
-                <h3 className="text-base sm:text-lg font-bold leading-snug">
+                <h3 className="font-editorial text-base sm:text-lg font-semibold leading-snug">
                   {selectedStory.headline}
                 </h3>
 
-                <p className={`text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <p className={`text-sm leading-relaxed ${isDark ? 'text-[#F3F2EE]/85' : 'text-[#181615]/85'}`}>
                   {selectedStory.summary}
                 </p>
               </div>
@@ -404,36 +420,37 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                 type="button"
                 onClick={() => onSelectStory(null)}
                 aria-label="Close story details"
-                className={`min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center shrink-0 cursor-pointer ${
+                className={`min-h-[44px] min-w-[44px] border flex items-center justify-center shrink-0 cursor-pointer ${
                   isDark
-                    ? 'bg-slate-800/80 text-slate-300 hover:text-white'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                    ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE]'
+                    : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#666159] hover:text-[#181615]'
                 }`}
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Google Search Verification Result (if verified) */}
             {selectedStory.verificationNote && (
               <div
-                className={`mt-3 p-3 rounded-xl border text-xs leading-relaxed ${
+                className={`mt-3 p-3 border text-xs leading-relaxed ${
                   isDark
-                    ? 'bg-teal-950/30 border-teal-500/30 text-teal-200'
-                    : 'bg-teal-50 border-teal-200 text-teal-900'
+                    ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE]'
+                    : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#181615]'
                 }`}
               >
-                <p className="font-semibold mb-1">Google Search Grounding Verification:</p>
+                <p className="font-mono-tabular font-semibold text-[#E05A2B] mb-1">
+                  Google Search Grounding Verification:
+                </p>
                 <p>{selectedStory.verificationNote}</p>
                 {selectedStory.groundedSources && selectedStory.groundedSources.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <div className="mt-2 flex flex-wrap items-center gap-3 font-mono-tabular">
                     {selectedStory.groundedSources.map((gs, i) => (
                       <a
                         key={i}
                         href={gs.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="underline hover:text-teal-400 inline-flex items-center gap-1"
+                        className="underline hover:text-[#E05A2B] inline-flex items-center gap-1"
                       >
                         <span>{gs.title}</span>
                         <ExternalLink className="w-3 h-3" />
@@ -444,14 +461,13 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
               </div>
             )}
 
-            {/* Source Links & Action Bar */}
             <div
               className={`mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-3 ${
-                isDark ? 'border-slate-800' : 'border-slate-200'
+                isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
               }`}
             >
-              <div className="flex flex-wrap items-center gap-3">
-                <span className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <div className="flex flex-wrap items-center gap-3 font-mono-tabular">
+                <span className={`text-xs ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
                   Sources ({selectedStory.sources.length}):
                 </span>
                 {selectedStory.sources.map((src, idx) => (
@@ -460,7 +476,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                     href={src.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold text-teal-400 hover:underline"
+                    className="min-h-[36px] inline-flex items-center gap-1.5 text-xs font-semibold text-[#E05A2B] hover:underline"
                   >
                     <span>{src.name}</span>
                     <ExternalLink className="w-3.5 h-3.5" />
@@ -468,21 +484,21 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                 ))}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 font-mono-tabular">
                 <button
                   type="button"
                   onClick={() => onVerifyStory(selectedStory)}
                   disabled={verifyingStoryId === selectedStory.id}
-                  className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`min-h-[44px] px-3.5 py-2 border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                     isDark
-                      ? 'bg-slate-800 text-teal-300 hover:bg-slate-700 border border-slate-700'
-                      : 'bg-slate-100 text-teal-800 hover:bg-slate-200 border border-slate-300'
+                      ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE] hover:border-[#F3F2EE]'
+                      : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#181615] hover:border-[#181615]'
                   } disabled:opacity-50`}
                 >
-                  <SearchCheck className="w-4 h-4" />
+                  <SearchCheck className="w-4 h-4 text-[#E05A2B]" />
                   <span>
                     {verifyingStoryId === selectedStory.id
-                      ? 'Verifying with Google Search...'
+                      ? 'Verifying...'
                       : 'Verify via Google Search'}
                   </span>
                 </button>
@@ -490,14 +506,14 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
                 <button
                   type="button"
                   onClick={() => onSelectCountry(selectedStory.country)}
-                  className={`min-h-[44px] px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`min-h-[44px] px-3.5 py-2 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
                     isDark
-                      ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30 border border-teal-500/40'
-                      : 'bg-teal-600 text-white hover:bg-teal-700'
+                      ? 'bg-[#F3F2EE] text-[#090A0D] hover:bg-white'
+                      : 'bg-[#181615] text-[#FCFAF5] hover:bg-black'
                   }`}
                 >
                   <Globe className="w-4 h-4" />
-                  <span>{selectedStory.countryName} Brief</span>
+                  <span>{selectedStory.countryName} Dossier</span>
                 </button>
               </div>
             </div>

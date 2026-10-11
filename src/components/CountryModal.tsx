@@ -58,11 +58,10 @@ export const CountryModal: React.FC<CountryModalProps> = ({
 
   const isDark = settings.theme === 'dark';
 
-  // Compute 7-day activity chart bars from snapshots
   const recentSnapshots = snapshots.slice(-6);
   const sevenDayBars = [
     ...recentSnapshots.map((s) => ({
-      label: s.dayKey.slice(5), // MM-DD
+      label: s.dayKey.slice(5),
       count: s.countryCounts?.[countryCode] ?? Math.max(1, countryStories.length - 1),
     })),
     {
@@ -81,32 +80,35 @@ export const CountryModal: React.FC<CountryModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/65 backdrop-blur-sm p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/75 backdrop-blur-xs p-0 sm:p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="country-modal-title"
     >
       <div
-        className={`w-full max-w-2xl rounded-t-3xl sm:rounded-2xl border max-h-[88vh] flex flex-col overflow-hidden shadow-2xl ${
+        className={`w-full max-w-2xl border border-t-2 max-h-[88vh] flex flex-col overflow-hidden shadow-2xl ${
           isDark
-            ? 'bg-[#0B1120] border-slate-800 text-slate-100'
-            : 'bg-white border-slate-200 text-slate-900'
+            ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
+            : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
         }`}
       >
         {/* Header */}
         <div
           className={`p-4 sm:p-5 border-b flex items-center justify-between gap-3 ${
-            isDark ? 'border-slate-800' : 'border-slate-200'
+            isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
           }`}
         >
           <div className="flex items-center gap-3">
             <span className="text-2xl">{getCountryFlag(countryCode)}</span>
             <div>
-              <h2 id="country-modal-title" className="text-lg font-bold tracking-tight">
+              <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B]">
+                Sovereign Country Dossier
+              </div>
+              <h2 id="country-modal-title" className="font-editorial text-xl font-bold tracking-tight">
                 {meta.name} ({countryCode})
               </h2>
-              <p className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                Region: {meta.region} · {countryStories.length} active stories in 24h window
+              <p className={`text-xs font-mono-tabular ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
+                Region: {meta.region} · {countryStories.length} active dispatches in 24h window
               </p>
             </div>
           </div>
@@ -115,10 +117,10 @@ export const CountryModal: React.FC<CountryModalProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close country intelligence modal"
-            className={`min-h-[44px] min-w-[44px] rounded-lg flex items-center justify-center cursor-pointer ${
+            className={`min-h-[44px] min-w-[44px] border flex items-center justify-center cursor-pointer ${
               isDark
-                ? 'bg-slate-800 text-slate-300 hover:text-white'
-                : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE]'
+                : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#666159] hover:text-[#181615]'
             }`}
           >
             <X className="w-5 h-5" />
@@ -129,37 +131,37 @@ export const CountryModal: React.FC<CountryModalProps> = ({
         <div className="p-4 sm:p-5 overflow-y-auto space-y-5">
           {/* AI Country Brief Card */}
           <div
-            className={`p-4 rounded-xl border ${
+            className={`p-4 border ${
               isDark
-                ? 'bg-slate-900/70 border-slate-800'
-                : 'bg-slate-50 border-slate-200'
+                ? 'bg-[#090A0D] border-[#222631]'
+                : 'bg-[#EFEAE0]/50 border-[#DCD5C7]'
             }`}
           >
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="text-xs font-mono-tabular font-semibold text-teal-400">
-                AI Country Intelligence Brief
+              <span className="text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#E05A2B]">
+                AI Country Assessment
               </span>
               <button
                 type="button"
                 onClick={handleRegenerateBrief}
                 disabled={loadingBrief}
-                className="min-h-[36px] px-2.5 py-1 rounded-lg text-xs font-medium text-teal-400 hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                className="min-h-[36px] px-2.5 py-1 text-xs font-mono-tabular text-[#E05A2B] hover:underline inline-flex items-center gap-1 cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loadingBrief ? 'animate-spin' : ''}`} />
-                <span>{loadingBrief ? 'Synthesizing...' : 'Refresh Brief'}</span>
+                <span>{loadingBrief ? 'Synthesizing...' : 'Re-run Brief'}</span>
               </button>
             </div>
 
             {loadingBrief && !brief ? (
               <div className="space-y-2">
-                <div className="h-5 w-3/4 rounded bg-slate-700/40 animate-pulse" />
-                <div className="h-4 w-full rounded bg-slate-700/30 animate-pulse" />
-                <div className="h-4 w-5/6 rounded bg-slate-700/30 animate-pulse" />
+                <div className="h-5 w-3/4 bg-stone-500/20 animate-pulse" />
+                <div className="h-4 w-full bg-stone-500/15 animate-pulse" />
+                <div className="h-4 w-5/6 bg-stone-500/15 animate-pulse" />
               </div>
             ) : brief ? (
               <div className="space-y-2.5">
-                <h3 className="text-sm sm:text-base font-bold">{brief.headline}</h3>
-                <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                <h3 className="font-editorial text-base font-semibold">{brief.headline}</h3>
+                <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#F3F2EE]/85' : 'text-[#181615]/85'}`}>
                   {brief.overview}
                 </p>
                 {brief.keyPoints.length > 0 && (
@@ -168,10 +170,10 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                       <li
                         key={i}
                         className={`text-xs flex items-baseline gap-2 ${
-                          isDark ? 'text-slate-300' : 'text-slate-600'
+                          isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                         }`}
                       >
-                        <span className="font-mono-tabular text-teal-400 font-semibold">
+                        <span className="font-mono-tabular text-[#E05A2B] font-semibold">
                           0{i + 1}.
                         </span>
                         <span>{kp}</span>
@@ -181,21 +183,21 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                 )}
               </div>
             ) : (
-              <p className="text-xs">No data available.</p>
+              <p className="text-xs font-mono-tabular">No data available.</p>
             )}
           </div>
 
           {/* 7-Day Activity Chart */}
           <div
-            className={`p-4 rounded-xl border ${
-              isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50 border-slate-200'
+            className={`p-4 border ${
+              isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0]/50 border-[#DCD5C7]'
             }`}
           >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-xs font-bold tracking-tight">
-                7-Day Event Activity Trend ({meta.name})
+            <div className="flex items-center justify-between mb-3 font-mono-tabular">
+              <h3 className="text-xs uppercase tracking-wider font-semibold">
+                7-Day Dispatch Volume ({meta.name})
               </h3>
-              <span className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <span className={`text-xs ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
                 Peak: {maxBar} events/day
               </span>
             </div>
@@ -206,20 +208,24 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                 const isLast = idx === sevenDayBars.length - 1;
                 return (
                   <div key={idx} className="flex flex-col items-center gap-1.5 h-full justify-end">
-                    <span className="text-[11px] font-mono-tabular font-semibold text-teal-400">
+                    <span className="text-[11px] font-mono-tabular font-semibold text-[#E05A2B]">
                       {bar.count}
                     </span>
-                    <div className="w-full max-w-[32px] bg-slate-800/40 rounded-t-md h-16 flex items-end overflow-hidden">
+                    <div
+                      className={`w-full max-w-[32px] h-16 flex items-end overflow-hidden ${
+                        isDark ? 'bg-[#222631]' : 'bg-[#DCD5C7]'
+                      }`}
+                    >
                       <div
-                        className={`w-full rounded-t-md transition-all duration-300 ${
-                          isLast ? 'bg-teal-400' : 'bg-teal-600/60'
+                        className={`w-full transition-all duration-300 ${
+                          isLast ? 'bg-[#E05A2B]' : isDark ? 'bg-[#8C93A1]' : 'bg-[#666159]'
                         }`}
                         style={{ height: `${heightPct}%` }}
                       />
                     </div>
                     <span
                       className={`text-[10px] font-mono-tabular ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
+                        isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                       }`}
                     >
                       {bar.label}
@@ -232,25 +238,20 @@ export const CountryModal: React.FC<CountryModalProps> = ({
 
           {/* Country Stories List */}
           <div>
-            <h3 className="text-xs font-bold tracking-tight mb-2.5">
-              Active Stories in {meta.name} ({countryStories.length})
+            <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-semibold mb-2.5">
+              Active Dispatches in {meta.name} ({countryStories.length})
             </h3>
             {countryStories.length === 0 ? (
-              <p className={`text-sm py-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-sm py-4 font-mono-tabular ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
                 No data reported for {meta.name} in the current 24-hour feed window.
               </p>
             ) : (
-              <ul className="space-y-2.5">
+              <ul className={`border divide-y ${isDark ? 'border-[#222631] divide-[#222631]' : 'border-[#DCD5C7] divide-[#DCD5C7]'}`}>
                 {countryStories.map((story) => (
-                  <li
-                    key={story.id}
-                    className={`p-3.5 rounded-xl border ${
-                      isDark ? 'bg-slate-900/60 border-slate-800' : 'bg-white border-slate-200'
-                    }`}
-                  >
+                  <li key={story.id} className="p-3.5">
                     <div
-                      className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular mb-1 ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
+                      className={`flex flex-wrap items-center gap-2 text-[11px] font-mono-tabular mb-1 ${
+                        isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                       }`}
                     >
                       <span
@@ -260,7 +261,7 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                         {story.topic}
                       </span>
                       <span aria-hidden="true">·</span>
-                      <span>Impact {story.importance.toFixed(1)}/10</span>
+                      <span>Severity {story.importance.toFixed(1)}/10</span>
                       <span aria-hidden="true">·</span>
                       <span>{formatRelativeTime(story.time)}</span>
                     </div>
@@ -271,23 +272,23 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                         onSelectStory(story);
                         onClose();
                       }}
-                      className="text-left w-full font-semibold text-sm hover:text-teal-400 transition-colors cursor-pointer"
+                      className="text-left w-full font-semibold text-sm hover:text-[#E05A2B] transition-colors cursor-pointer"
                     >
                       {story.headline}
                     </button>
 
-                    <p className={`mt-1 text-xs ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    <p className={`mt-1 text-xs ${isDark ? 'text-[#F3F2EE]/80' : 'text-[#181615]/80'}`}>
                       {story.summary}
                     </p>
 
-                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs font-mono-tabular">
                       {story.sources.map((src, sIdx) => (
                         <a
                           key={sIdx}
                           href={src.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-medium text-teal-400 hover:underline"
+                          className="inline-flex items-center gap-1 font-medium text-[#E05A2B] hover:underline"
                         >
                           <span>{src.name}</span>
                           <ExternalLink className="w-3 h-3" />

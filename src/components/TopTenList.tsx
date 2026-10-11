@@ -31,27 +31,32 @@ export const TopTenList: React.FC<TopTenListProps> = ({
     <section
       id="top-stories"
       aria-labelledby="top-ten-heading"
-      className={`rounded-2xl border flex flex-col transition-colors duration-200 ${
+      className={`border border-t-2 flex flex-col transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
       }`}
     >
       <div
         className={`p-4 border-b flex items-center justify-between gap-2 ${
-          isDark ? 'border-slate-800/80' : 'border-slate-200'
+          isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
         }`}
       >
         <div>
-          <h2 id="top-ten-heading" className="text-base font-bold tracking-tight">
-            Top 10 Right Now
+          <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B]">
+            <span>Section 03</span>
+            <span aria-hidden="true">/</span>
+            <span>Priority Ledger</span>
+          </div>
+          <h2
+            id="top-ten-heading"
+            className="font-editorial text-lg font-semibold tracking-tight mt-0.5"
+          >
+            Top 10 Global Dispatches
           </h2>
-          <p className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Ranked by global importance & multi-source corroboration
-          </p>
         </div>
-        <span className="text-xs font-mono-tabular text-teal-400">
-          {topTen.length}/10 active
+        <span className="text-xs font-mono-tabular text-[#E05A2B]">
+          {topTen.length}/10 Ranked
         </span>
       </div>
 
@@ -59,23 +64,23 @@ export const TopTenList: React.FC<TopTenListProps> = ({
         <div className="p-4 space-y-4">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="space-y-2">
-              <div className="h-3.5 w-1/2 rounded bg-slate-700/30 animate-pulse" />
-              <div className="h-5 w-full rounded bg-slate-700/40 animate-pulse" />
-              <div className="h-4 w-5/6 rounded bg-slate-700/20 animate-pulse" />
+              <div className="h-3.5 w-1/2 bg-stone-500/15 animate-pulse" />
+              <div className="h-5 w-full bg-stone-500/20 animate-pulse" />
+              <div className="h-4 w-5/6 bg-stone-500/10 animate-pulse" />
             </div>
           ))}
         </div>
       ) : topTen.length === 0 ? (
         <div className="p-8 text-center">
-          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-sm font-mono-tabular ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
             No data matches the current filter criteria.
           </p>
         </div>
       ) : (
-        <ol className={`divide-y ${isDark ? 'divide-slate-800/80' : 'divide-slate-100'}`}>
+        <ol className={`divide-y ${isDark ? 'divide-[#222631]' : 'divide-[#DCD5C7]'}`}>
           {topTen.map((story, idx) => {
             const rankStr = String(idx + 1).padStart(2, '0');
-            const topicColor = TOPIC_COLORS[story.topic]?.hex || '#14B8A6';
+            const topicColor = TOPIC_COLORS[story.topic]?.hex || '#E05A2B';
             const isSelected = selectedStoryId === story.id;
             const importancePct = Math.min(100, Math.max(10, Math.round(story.importance * 10)));
 
@@ -85,18 +90,18 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                 className={`p-4 transition-colors duration-150 ${
                   isSelected
                     ? isDark
-                      ? 'bg-teal-500/10'
-                      : 'bg-teal-50/80'
+                      ? 'bg-[#151820]'
+                      : 'bg-[#EFEAE0]'
                     : isDark
-                    ? 'hover:bg-slate-800/40'
-                    : 'hover:bg-slate-50'
+                    ? 'hover:bg-[#151820]/60'
+                    : 'hover:bg-[#EFEAE0]/50'
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  {/* Rank number */}
+                <div className="flex items-start gap-3.5">
+                  {/* Rank index */}
                   <span
-                    className={`font-mono-tabular text-sm font-bold pt-0.5 select-none shrink-0 ${
-                      idx < 3 ? 'text-teal-400' : isDark ? 'text-slate-500' : 'text-slate-400'
+                    className={`font-editorial text-lg font-bold leading-none pt-0.5 select-none shrink-0 ${
+                      idx < 3 ? 'text-[#E05A2B]' : isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                     }`}
                   >
                     {rankStr}
@@ -105,15 +110,15 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                   <div className="flex-1 min-w-0 space-y-1.5">
                     {/* Clean unboxed metadata row */}
                     <div
-                      className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-mono-tabular ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
+                      className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-mono-tabular ${
+                        isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => onSelectCountry(story.country)}
-                        className="font-semibold hover:text-teal-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
-                        title={`Open ${story.countryName} Country Intelligence`}
+                        className="font-semibold hover:text-[#E05A2B] hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        title={`Open ${story.countryName} Country Dossier`}
                       >
                         <span>{getCountryFlag(story.country)}</span>
                         <span>{story.country}</span>
@@ -124,25 +129,29 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                       </span>
                       <span aria-hidden="true">·</span>
                       <span>
-                        {story.sources.length} {story.sources.length === 1 ? 'source' : 'sources'}
+                        {story.sources.length} {story.sources.length === 1 ? 'src' : 'srcs'}
                       </span>
                       <span aria-hidden="true">·</span>
                       <span>{formatRelativeTime(story.time)}</span>
                       <span aria-hidden="true">·</span>
-                      <span className={story.isDeveloping ? 'text-amber-400' : 'text-teal-400'}>
+                      <span className={story.isDeveloping ? 'text-amber-500' : ''}>
                         {story.isDeveloping
                           ? 'Developing'
-                          : `${Math.round(story.confidence * 100)}% verified`}
+                          : `${Math.round(story.confidence * 100)}% conf`}
                       </span>
                     </div>
 
-                    {/* Headline (tappable to focus on map) */}
+                    {/* Headline */}
                     <button
                       type="button"
                       onClick={() => onSelectStory(story)}
-                      className="text-left w-full group cursor-pointer focus-visible:outline-2 focus-visible:outline-teal-500 rounded"
+                      className="text-left w-full group cursor-pointer focus-visible:outline-2 focus-visible:outline-[#E05A2B]"
                     >
-                      <h3 className="text-sm sm:text-[15px] font-semibold leading-snug group-hover:text-teal-400 transition-colors">
+                      <h3
+                        className={`text-sm sm:text-[15px] font-semibold leading-snug group-hover:text-[#E05A2B] transition-colors ${
+                          idx === 0 ? 'font-editorial text-base sm:text-[17px]' : ''
+                        }`}
+                      >
                         {story.headline}
                       </h3>
                     </button>
@@ -150,7 +159,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                     {/* 2-Line Summary */}
                     <p
                       className={`text-xs sm:text-[13px] leading-relaxed line-clamp-2 ${
-                        isDark ? 'text-slate-300' : 'text-slate-600'
+                        isDark ? 'text-[#F3F2EE]/80' : 'text-[#181615]/80'
                       }`}
                     >
                       {story.summary}
@@ -158,23 +167,22 @@ export const TopTenList: React.FC<TopTenListProps> = ({
 
                     {/* Importance Bar & Direct Source Links */}
                     <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
-                      {/* Importance Bar */}
-                      <div className="flex items-center gap-2 min-w-[140px]">
+                      <div className="flex items-center gap-2 min-w-[130px]">
                         <span
                           className={`text-[11px] font-mono-tabular ${
-                            isDark ? 'text-slate-400' : 'text-slate-500'
+                            isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                           }`}
                         >
-                          Impact {story.importance.toFixed(1)}
+                          Severity {story.importance.toFixed(1)}
                         </span>
                         <div
-                          className={`w-20 h-1.5 rounded-full overflow-hidden ${
-                            isDark ? 'bg-slate-800' : 'bg-slate-200'
+                          className={`w-16 h-1 overflow-hidden ${
+                            isDark ? 'bg-[#222631]' : 'bg-[#DCD5C7]'
                           }`}
                           aria-label={`Importance ${story.importance} out of 10`}
                         >
                           <div
-                            className="h-full rounded-full transition-all duration-200"
+                            className="h-full transition-all duration-200"
                             style={{
                               width: `${importancePct}%`,
                               backgroundColor: topicColor,
@@ -183,18 +191,17 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                         </div>
                       </div>
 
-                      {/* Source links & Map focus button */}
-                      <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                      <div className="flex flex-wrap items-center gap-2.5 text-[11px] font-mono-tabular">
                         <button
                           type="button"
                           onClick={() => onSelectStory(story)}
-                          className={`inline-flex items-center gap-1 hover:text-teal-400 cursor-pointer ${
-                            isDark ? 'text-slate-400' : 'text-slate-500'
+                          className={`inline-flex items-center gap-1 hover:text-[#E05A2B] cursor-pointer ${
+                            isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                           }`}
                           title="Locate on World Map"
                         >
-                          <MapPin className="w-3.5 h-3.5" />
-                          <span>Map</span>
+                          <MapPin className="w-3 h-3" />
+                          <span>Locate</span>
                         </button>
                         {story.sources.slice(0, 3).map((src, sIdx) => (
                           <a
@@ -202,7 +209,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                             href={src.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 font-medium text-teal-400 hover:underline whitespace-nowrap"
+                            className="inline-flex items-center gap-1 font-medium text-[#E05A2B] hover:underline whitespace-nowrap"
                           >
                             <span>{src.name}</span>
                             <ExternalLink className="w-3 h-3" />

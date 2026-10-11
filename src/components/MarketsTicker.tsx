@@ -1,9 +1,10 @@
 import React from 'react';
 import { ArrowDownRight, ArrowUpRight, ExternalLink } from 'lucide-react';
-import { AppSettings, CoinMarket, WikiTrend } from '../types';
+import { AppSettings, CoinMarket, FxRateShift, WikiTrend } from '../types';
 
 interface MarketsTickerProps {
   coins: CoinMarket[];
+  fxRates: FxRateShift[];
   wikiTrends: WikiTrend[];
   isLoading: boolean;
   settings: AppSettings;
@@ -11,6 +12,7 @@ interface MarketsTickerProps {
 
 export const MarketsTicker: React.FC<MarketsTickerProps> = ({
   coins,
+  fxRates,
   wikiTrends,
   isLoading,
   settings,
@@ -19,40 +21,78 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
 
   return (
     <section
-      aria-label="Live crypto markets and Wikipedia trending topics"
-      className={`rounded-2xl border p-3.5 sm:p-4 transition-colors duration-200 ${
+      aria-label="Live sovereign FX, digital assets, and global attention index"
+      className={`border transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] text-[#181615]'
       }`}
     >
-      {/* Top 10 Crypto Markets Strip */}
-      <div className="flex items-center gap-3 overflow-x-auto pb-2 no-scrollbar">
-        <div className="shrink-0 pr-2 border-r border-slate-700/60">
-          <span className="text-xs font-bold tracking-tight block">Markets (24h)</span>
-          <a
-            href="https://www.coingecko.com/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] font-mono-tabular text-teal-400 hover:underline inline-flex items-center gap-0.5"
-          >
-            <span>CoinGecko</span>
-            <ExternalLink className="w-2.5 h-2.5" />
-          </a>
+      {/* Row 1: Sovereign FX + Benchmark Digital Assets Ledger Ribbon */}
+      <div
+        className={`flex items-stretch overflow-x-auto no-scrollbar divide-x ${
+          isDark ? 'divide-[#222631]' : 'divide-[#DCD5C7]'
+        }`}
+      >
+        <div
+          className={`px-4 py-2 shrink-0 flex flex-col justify-center ${
+            isDark ? 'bg-[#090A0D]' : 'bg-[#EFEAE0]/60'
+          }`}
+        >
+          <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
+            Live Tape
+          </span>
+          <span className="text-xs font-semibold whitespace-nowrap">FX &amp; Markets</span>
         </div>
 
+        {/* Key Sovereign FX pairs first */}
+        {fxRates.slice(0, 5).map((fx) => {
+          const isUp = fx.change1dPct >= 0;
+          return (
+            <a
+              key={fx.pair}
+              href={fx.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-3.5 py-2 flex flex-col justify-center whitespace-nowrap shrink-0 transition-colors ${
+                isDark ? 'hover:bg-[#151820]' : 'hover:bg-[#EFEAE0]/50'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] font-mono-tabular">
+                <span className="font-bold">{fx.pair}</span>
+                <span className={isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}>ECB</span>
+              </div>
+              <div className="flex items-center gap-2 font-mono-tabular text-xs mt-0.5">
+                <span className="font-semibold">
+                  {fx.rate >= 10 ? fx.rate.toFixed(2) : fx.rate.toFixed(4)}
+                </span>
+                <span
+                  className={`text-[11px] font-semibold inline-flex items-center ${
+                    isUp ? 'text-emerald-500' : 'text-rose-500'
+                  }`}
+                >
+                  {isUp ? (
+                    <ArrowUpRight className="w-3 h-3" />
+                  ) : (
+                    <ArrowDownRight className="w-3 h-3" />
+                  )}
+                  {isUp ? '+' : ''}
+                  {fx.change1dPct.toFixed(2)}%
+                </span>
+              </div>
+            </a>
+          );
+        })}
+
+        {/* Digital Asset Benchmarks */}
         {isLoading && coins.length === 0 ? (
-          <div className="flex items-center gap-3">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <div key={n} className="h-10 w-36 rounded-lg bg-slate-700/30 animate-pulse" />
+          <div className="flex items-center gap-3 px-4 py-2">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="h-8 w-28 bg-stone-500/15 animate-pulse" />
             ))}
           </div>
-        ) : coins.length === 0 ? (
-          <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            No data from CoinGecko market feed.
-          </span>
         ) : (
-          coins.map((c) => {
+          coins.slice(0, 6).map((c) => {
             const isUp = c.change24h >= 0;
             return (
               <a
@@ -60,46 +100,34 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
                 href={c.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={`min-h-[44px] px-3 py-1.5 rounded-xl border flex items-center gap-3 transition-colors whitespace-nowrap shrink-0 ${
-                  isDark
-                    ? 'bg-slate-900/70 border-slate-800/80 hover:border-slate-700'
-                    : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                className={`px-3.5 py-2 flex flex-col justify-center whitespace-nowrap shrink-0 transition-colors ${
+                  isDark ? 'hover:bg-[#151820]' : 'hover:bg-[#EFEAE0]/50'
                 }`}
               >
-                <div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold">
-                    <span>{c.symbol}</span>
-                    <span
-                      className={`font-normal text-[11px] ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
-                      }`}
-                    >
-                      {c.name}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 font-mono-tabular text-xs">
-                    <span>
-                      $
-                      {c.currentPrice >= 1
-                        ? c.currentPrice.toLocaleString(undefined, {
-                            maximumFractionDigits: 2,
-                          })
-                        : c.currentPrice.toFixed(4)}
-                    </span>
-                    <span
-                      className={`font-semibold inline-flex items-center ${
-                        isUp ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
-                    >
-                      {isUp ? (
-                        <ArrowUpRight className="w-3 h-3" />
-                      ) : (
-                        <ArrowDownRight className="w-3 h-3" />
-                      )}
-                      {isUp ? '+' : ''}
-                      {c.change24h.toFixed(2)}%
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-mono-tabular">
+                  <span className="font-bold">{c.symbol}/USD</span>
+                  <span className={isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}>{c.name}</span>
+                </div>
+                <div className="flex items-center gap-2 font-mono-tabular text-xs mt-0.5">
+                  <span className="font-semibold">
+                    $
+                    {c.currentPrice >= 1
+                      ? c.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 2 })
+                      : c.currentPrice.toFixed(4)}
+                  </span>
+                  <span
+                    className={`text-[11px] font-semibold inline-flex items-center ${
+                      isUp ? 'text-emerald-500' : 'text-rose-500'
+                    }`}
+                  >
+                    {isUp ? (
+                      <ArrowUpRight className="w-3 h-3" />
+                    ) : (
+                      <ArrowDownRight className="w-3 h-3" />
+                    )}
+                    {isUp ? '+' : ''}
+                    {c.change24h.toFixed(2)}%
+                  </span>
                 </div>
               </a>
             );
@@ -107,19 +135,17 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
         )}
       </div>
 
-      {/* Wikipedia Most Viewed Trending Strip */}
+      {/* Row 2: Wikipedia Global Reader Attention Strip */}
       {wikiTrends.length > 0 && (
         <div
-          className={`mt-2.5 pt-2.5 border-t flex items-center gap-3 overflow-x-auto no-scrollbar text-xs ${
-            isDark ? 'border-slate-800/80 text-slate-300' : 'border-slate-200 text-slate-700'
+          className={`px-4 py-2 border-t flex items-center gap-4 overflow-x-auto no-scrollbar text-xs ${
+            isDark
+              ? 'border-[#222631] bg-[#090A0D]/50 text-[#8C93A1]'
+              : 'border-[#DCD5C7] bg-[#EFEAE0]/40 text-[#666159]'
           }`}
         >
-          <span
-            className={`font-mono-tabular text-[11px] font-semibold shrink-0 ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
-            }`}
-          >
-            Wikipedia Trending:
+          <span className="font-mono-tabular text-[11px] uppercase tracking-wider font-semibold text-[#E05A2B] shrink-0">
+            Wikipedia Most Viewed:
           </span>
           {wikiTrends.slice(0, 8).map((w) => (
             <a
@@ -127,18 +153,16 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
               href={w.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-teal-400 hover:underline inline-flex items-center gap-1 whitespace-nowrap shrink-0"
+              className={`hover:text-[#E05A2B] hover:underline inline-flex items-center gap-1 whitespace-nowrap shrink-0 ${
+                isDark ? 'text-[#F3F2EE]' : 'text-[#181615]'
+              }`}
             >
-              <span className="font-mono-tabular text-teal-400">#{w.rank}</span>
+              <span className="font-mono-tabular text-[#E05A2B]">0{w.rank}</span>
               <span className="font-medium">{w.displayTitle}</span>
-              <span
-                className={`font-mono-tabular text-[11px] ${
-                  isDark ? 'text-slate-500' : 'text-slate-400'
-                }`}
-              >
+              <span className="font-mono-tabular text-[11px] opacity-60">
                 ({Math.round(w.views / 1000)}k)
               </span>
-              <ExternalLink className="w-3 h-3 opacity-60" />
+              <ExternalLink className="w-3 h-3 opacity-50" />
             </a>
           ))}
         </div>

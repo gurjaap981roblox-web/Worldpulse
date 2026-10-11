@@ -1,18 +1,56 @@
-/* WorldPulse Design System & Map Marker Styles */
+/* WorldPulse Institutional Broadsheet & Data Desk Design System */
 
 :root {
-  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Dark Mode: Obsidian Institutional Terminal */
+  --wp-bg: #090a0d;
+  --wp-surface: #101217;
+  --wp-surface-elevated: #151820;
+  --wp-border: #222631;
+  --wp-border-strong: #323846;
+  --wp-text: #f3f2ee;
+  --wp-text-muted: #8c93a1;
+  --wp-accent: #e05a2b;
+}
+
+html.light {
+  /* Light Mode: Archival Newsprint Broadsheet */
+  --wp-bg: #f6f3ec;
+  --wp-surface: #fcfaf5;
+  --wp-surface-elevated: #efeae0;
+  --wp-border: #dcd5c7;
+  --wp-border-strong: #1c1917;
+  --wp-text: #181615;
+  --wp-text-muted: #666159;
+  --wp-accent: #b93815;
 }
 
 body {
   font-family: var(--font-sans);
+  background-color: var(--wp-bg);
+  color: var(--wp-text);
   overflow-x: hidden;
+}
+
+.font-editorial {
+  font-family: var(--font-serif);
 }
 
 .font-mono-tabular {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+}
+
+/* Hide scrollbars cleanly on horizontal ticker strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Custom Map Marker Pulse Animation for stories under 1 hour old */
@@ -48,14 +86,14 @@ body {
   }
 }
 
-/* Leaflet container overrides for dark & light command center look */
+/* Leaflet container overrides */
 .leaflet-container {
   font-family: var(--font-sans) !important;
-  background-color: #070b14 !important;
+  background-color: #090a0d !important;
 }
 
 html.light .leaflet-container {
-  background-color: #e2e8f0 !important;
+  background-color: #e6e1d6 !important;
 }
 
 .wp-custom-marker {
@@ -70,16 +108,16 @@ html.light .leaflet-container {
   border-radius: 9999px;
   cursor: pointer;
   outline: none;
-  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .wp-marker-btn:hover,
 .wp-marker-btn:focus-visible {
-  transform: scale(1.22);
+  transform: scale(1.25);
 }
 
 .wp-marker-btn:focus-visible {
-  box-shadow: 0 0 0 3px #14b8a6, 0 0 0 5px #070b14;
+  box-shadow: 0 0 0 2px #e05a2b, 0 0 0 4px #090a0d;
 }
 
 /* Print stylesheet for PDF Briefing Export */

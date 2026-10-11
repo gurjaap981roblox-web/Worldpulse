@@ -57,31 +57,38 @@ export const RisingTopicsStrip: React.FC<RisingTopicsStripProps> = ({
   return (
     <section
       aria-label="Rising topics vs 7-day average"
-      className={`rounded-2xl border p-3.5 sm:p-4 transition-colors duration-200 ${
+      className={`border transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] text-[#181615]'
       }`}
     >
-      <div className="flex items-center justify-between gap-2 mb-2.5">
-        <h2 className="text-xs font-bold tracking-tight">
-          Rising Topics vs. 7-Day Snapshot Average
-        </h2>
-        {selectedTopicFilter !== 'All' && (
-          <button
-            type="button"
-            onClick={() => onSelectTopic('All')}
-            className="text-xs font-semibold text-teal-400 hover:underline cursor-pointer"
-          >
-            Clear topic filter ({selectedTopicFilter})
-          </button>
-        )}
-      </div>
+      <div className="flex items-stretch overflow-x-auto no-scrollbar divide-x divide-[#222631]">
+        <div
+          className={`px-4 py-2.5 shrink-0 flex flex-col justify-center ${
+            isDark ? 'bg-[#090A0D]' : 'bg-[#EFEAE0]/60'
+          }`}
+        >
+          <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
+            7-Day Velocity
+          </span>
+          <span className="text-xs font-semibold whitespace-nowrap">
+            Rising Topics
+          </span>
+          {selectedTopicFilter !== 'All' && (
+            <button
+              type="button"
+              onClick={() => onSelectTopic('All')}
+              className="mt-0.5 text-[11px] font-mono-tabular text-[#E05A2B] underline text-left cursor-pointer"
+            >
+              Reset ({selectedTopicFilter})
+            </button>
+          )}
+        </div>
 
-      <div className="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
         {metrics.map((m) => {
           const isSelected = selectedTopicFilter === m.topic;
-          const colorHex = TOPIC_COLORS[m.topic]?.hex || '#14B8A6';
+          const colorHex = TOPIC_COLORS[m.topic]?.hex || '#E05A2B';
           const isPositive = m.spikePct >= 0;
 
           return (
@@ -91,14 +98,14 @@ export const RisingTopicsStrip: React.FC<RisingTopicsStripProps> = ({
               onClick={() =>
                 onSelectTopic(selectedTopicFilter === m.topic ? 'All' : m.topic)
               }
-              className={`min-h-[48px] px-3.5 py-2 rounded-xl border flex items-center gap-3 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[52px] px-4 py-2.5 flex items-center gap-3.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 isSelected
                   ? isDark
-                    ? 'bg-teal-500/20 border-teal-500/60 text-white'
-                    : 'bg-slate-900 border-slate-900 text-white'
+                    ? 'bg-[#F3F2EE] text-[#090A0D]'
+                    : 'bg-[#181615] text-[#FCFAF5]'
                   : isDark
-                  ? 'bg-slate-900/70 border-slate-800/80 hover:border-slate-700 text-slate-200'
-                  : 'bg-slate-50 border-slate-200 hover:border-slate-300 text-slate-800'
+                  ? 'hover:bg-[#151820]'
+                  : 'hover:bg-[#EFEAE0]/50'
               }`}
             >
               <div className="text-left">
@@ -108,17 +115,17 @@ export const RisingTopicsStrip: React.FC<RisingTopicsStripProps> = ({
                     style={{ backgroundColor: colorHex }}
                   />
                   <span>{m.topic}</span>
-                  <span
-                    className={`font-mono-tabular text-[11px] ${
-                      isDark ? 'text-slate-400' : 'text-slate-500'
-                    }`}
-                  >
+                  <span className="font-mono-tabular text-[11px] opacity-70">
                     ({m.currentCount})
                   </span>
                 </div>
                 <div
                   className={`flex items-center gap-0.5 text-[11px] font-mono-tabular font-semibold ${
-                    isPositive ? 'text-amber-400' : 'text-teal-400'
+                    isSelected
+                      ? 'opacity-90'
+                      : isPositive
+                      ? 'text-[#E05A2B]'
+                      : 'text-emerald-500'
                   }`}
                 >
                   {isPositive ? (
@@ -133,7 +140,7 @@ export const RisingTopicsStrip: React.FC<RisingTopicsStripProps> = ({
                 </div>
               </div>
 
-              {renderMiniSparkline(m.sparkline, colorHex)}
+              {renderMiniSparkline(m.sparkline, isSelected ? '#E05A2B' : colorHex)}
             </button>
           );
         })}

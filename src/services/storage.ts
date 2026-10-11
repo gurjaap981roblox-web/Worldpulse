@@ -3,6 +3,8 @@ import {
   CityWeather,
   CoinMarket,
   DailyBriefing,
+  FxRateShift,
+  MacroCountryIndicator,
   Snapshot,
   Story,
   Topic,
@@ -54,6 +56,8 @@ export interface PersistedDashboardState {
   briefing: DailyBriefing | null;
   whatChanged: WhatChangedAnalysis | null;
   coins: CoinMarket[];
+  fxRates?: FxRateShift[];
+  macroIndicators?: MacroCountryIndicator[];
   weather: CityWeather[];
   wikiTrends: WikiTrend[];
   lastUpdated: number;

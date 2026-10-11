@@ -76,7 +76,7 @@ export default defineConfig(() => {
               },
             },
             {
-              urlPattern: /^https:\/\/.*\.basemaps\.cartocdn\.com\/.*/i,
+              urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'map-tiles-cache',

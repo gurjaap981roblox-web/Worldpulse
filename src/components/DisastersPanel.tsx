@@ -69,54 +69,59 @@ export const DisastersPanel: React.FC<DisastersPanelProps> = ({
     <section
       id="disasters"
       aria-labelledby="disasters-heading"
-      className={`rounded-2xl border flex flex-col transition-colors duration-200 ${
+      className={`border border-t-2 flex flex-col transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
       }`}
     >
       {/* Header + Sort Controls */}
       <div
         className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${
-          isDark ? 'border-slate-800/80' : 'border-slate-200'
+          isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
         }`}
       >
         <div>
-          <h2 id="disasters-heading" className="text-base font-bold tracking-tight">
-            Earthquakes, Natural Events & Severe Weather
+          <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B]">
+            <span>Section 05</span>
+            <span aria-hidden="true">/</span>
+            <span>USGS M4.5+ · NASA EONET · Open-Meteo</span>
+          </div>
+          <h2
+            id="disasters-heading"
+            className="font-editorial text-lg font-semibold tracking-tight mt-0.5"
+          >
+            Seismic, Natural Events &amp; Weather Telemetry
           </h2>
-          <p className={`text-xs font-mono-tabular ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            USGS M4.5+ · NASA EONET · Open-Meteo · Distance from {settings.referenceCity}
-          </p>
         </div>
 
         {/* Sort segmented buttons */}
         <div
           role="group"
           aria-label="Sort disasters by"
-          className={`flex items-center gap-1 p-1 rounded-xl border ${
-            isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100 border-slate-200'
+          className={`flex items-center border ${
+            isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0] border-[#DCD5C7]'
           }`}
         >
           {(
             [
               { key: 'time', label: 'Latest' },
               { key: 'magnitude', label: 'Magnitude' },
-              { key: 'distance', label: 'Distance' },
+              { key: 'distance', label: `Near ${settings.referenceCity}` },
             ] as Array<{ key: DisasterSortMode; label: string }>
           ).map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setSortMode(tab.key)}
-              className={`min-h-[36px] px-3 py-1 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[38px] px-3 py-1 text-xs font-mono-tabular transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 sortMode === tab.key
                   ? isDark
-                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                    : 'bg-white text-slate-900 shadow-xs'
+                    ? 'bg-[#F3F2EE] text-[#090A0D] font-semibold'
+                    : 'bg-[#181615] text-[#FCFAF5] font-semibold'
                   : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-[#8C93A1] hover:text-[#F3F2EE]'
+                  : 'text-[#666159] hover:text-[#181615]'
               }`}
             >
               {tab.label}
@@ -125,23 +130,23 @@ export const DisastersPanel: React.FC<DisastersPanelProps> = ({
         </div>
       </div>
 
-      {/* Disasters List */}
+      {/* Disasters Ledger */}
       {isLoading && disasterStories.length === 0 ? (
         <div className="p-4 space-y-3">
           {[1, 2, 3, 4].map((n) => (
-            <div key={n} className="h-14 rounded-xl bg-slate-700/30 animate-pulse" />
+            <div key={n} className="h-14 bg-stone-500/10 animate-pulse" />
           ))}
         </div>
       ) : disasterStories.length === 0 ? (
         <div className="p-6 text-center">
-          <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+          <p className={`text-sm font-mono-tabular ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
             No data available from seismic or natural event sensors right now.
           </p>
         </div>
       ) : (
         <ul
           className={`divide-y max-h-[420px] overflow-y-auto ${
-            isDark ? 'divide-slate-800/80' : 'divide-slate-100'
+            isDark ? 'divide-[#222631]' : 'divide-[#DCD5C7]'
           }`}
         >
           {disasterStories.slice(0, 14).map(({ story, distanceKm }) => {
@@ -152,59 +157,57 @@ export const DisastersPanel: React.FC<DisastersPanelProps> = ({
               <li
                 key={story.id}
                 className={`p-4 transition-colors ${
-                  isDark ? 'hover:bg-slate-800/40' : 'hover:bg-slate-50'
+                  isDark ? 'hover:bg-[#151820]' : 'hover:bg-[#EFEAE0]/50'
                 }`}
               >
-                <div className="flex items-start gap-3">
-                  {/* Numeric Magnitude or Category Indicator */}
-                  <div className="w-14 shrink-0 text-right font-mono-tabular">
+                <div className="flex items-start gap-3.5">
+                  <div className="w-16 shrink-0 text-right font-mono-tabular">
                     {hasMag ? (
                       <div>
                         <span
                           className={`text-sm font-bold ${
                             (story.magnitude || 0) >= 6.0
-                              ? 'text-rose-400'
+                              ? 'text-rose-500'
                               : (story.magnitude || 0) >= 5.2
-                              ? 'text-orange-400'
-                              : 'text-amber-400'
+                              ? 'text-[#E05A2B]'
+                              : 'text-amber-500'
                           }`}
                         >
                           M{story.magnitude?.toFixed(1)}
                         </span>
                         {typeof story.depthKm === 'number' && (
-                          <div className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {story.depthKm}km
+                          <div className={`text-[11px] ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
+                            {story.depthKm} km
                           </div>
                         )}
                       </div>
                     ) : (
-                      <span className="text-xs font-semibold text-orange-400">
+                      <span className="text-xs font-semibold text-[#E05A2B]">
                         {story.disasterCategory?.split(' ')[0] || 'Event'}
                       </span>
                     )}
                   </div>
 
-                  {/* Event details */}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div
-                      className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
+                      className={`flex flex-wrap items-center gap-2 text-[11px] font-mono-tabular ${
+                        isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => onSelectCountry(story.country)}
-                        className="hover:text-teal-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+                        className="hover:text-[#E05A2B] hover:underline inline-flex items-center gap-1 cursor-pointer"
                       >
                         <span>{getCountryFlag(story.country)}</span>
                         <span>{story.countryName}</span>
                       </button>
                       <span aria-hidden="true">·</span>
-                      <span>{formatDistance(distanceKm, settings.units)} away</span>
+                      <span>{formatDistance(distanceKm, settings.units)}</span>
                       <span aria-hidden="true">·</span>
                       <span>{formatRelativeTime(story.time)}</span>
                       <span aria-hidden="true">·</span>
-                      <span>{Math.round(story.confidence * 100)}% sensor confidence</span>
+                      <span>{Math.round(story.confidence * 100)}% sensor</span>
                     </div>
 
                     <button
@@ -212,28 +215,30 @@ export const DisastersPanel: React.FC<DisastersPanelProps> = ({
                       onClick={() => onSelectStory(story)}
                       className="text-left w-full cursor-pointer group"
                     >
-                      <h3 className="text-sm font-semibold group-hover:text-teal-400 transition-colors">
+                      <h3 className="text-sm font-semibold group-hover:text-[#E05A2B] transition-colors">
                         {story.headline}
                       </h3>
                     </button>
 
-                    <div className="flex items-center gap-3 pt-0.5 text-xs">
+                    <div className="flex items-center gap-3 pt-0.5 text-[11px] font-mono-tabular">
                       <button
                         type="button"
                         onClick={() => onSelectStory(story)}
-                        className={`inline-flex items-center gap-1 hover:text-teal-400 cursor-pointer ${
-                          isDark ? 'text-slate-400' : 'text-slate-500'
+                        className={`inline-flex items-center gap-1 hover:text-[#E05A2B] cursor-pointer ${
+                          isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                         }`}
                       >
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>View on map ({story.lat.toFixed(1)}°, {story.lng.toFixed(1)}°)</span>
+                        <MapPin className="w-3 h-3" />
+                        <span>
+                          {story.lat.toFixed(1)}°, {story.lng.toFixed(1)}°
+                        </span>
                       </button>
                       {src && (
                         <a
                           href={src.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-medium text-teal-400 hover:underline"
+                          className="inline-flex items-center gap-1 font-medium text-[#E05A2B] hover:underline"
                         >
                           <span>{src.name}</span>
                           <ExternalLink className="w-3 h-3" />
@@ -248,58 +253,62 @@ export const DisastersPanel: React.FC<DisastersPanelProps> = ({
         </ul>
       )}
 
-      {/* Open-Meteo Top 10 Global Cities Weather & Severe Alert Strip */}
+      {/* Open-Meteo Top 10 Global Cities Weather Grid */}
       {weather.length > 0 && (
         <div
           className={`p-4 border-t ${
-            isDark ? 'border-slate-800/80 bg-slate-900/40' : 'border-slate-200 bg-slate-50/70'
+            isDark ? 'border-[#222631] bg-[#090A0D]/50' : 'border-[#DCD5C7] bg-[#EFEAE0]/40'
           }`}
         >
-          <div className="flex items-center justify-between mb-2">
-            <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Open-Meteo Top 10 Global Cities Telemetry
+          <div className="flex items-center justify-between mb-2.5 font-mono-tabular">
+            <span className={`text-[11px] uppercase tracking-wider font-semibold ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
+              Open-Meteo Top 10 Global Cities Surface Telemetry
             </span>
             <a
               href="https://open-meteo.com/"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[11px] font-mono-tabular text-teal-400 hover:underline inline-flex items-center gap-1"
+              className="text-[11px] text-[#E05A2B] hover:underline inline-flex items-center gap-1"
             >
-              <span>Open-Meteo Source</span>
+              <span>Open-Meteo</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-5 border-t border-l ${
+              isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
+            }`}
+          >
             {weather.map((w) => (
               <button
                 key={w.city}
                 type="button"
                 onClick={() => onSelectCountry(w.country)}
-                className={`p-2.5 rounded-xl border text-left transition-colors cursor-pointer ${
+                className={`p-2.5 border-r border-b text-left transition-colors cursor-pointer ${
                   w.isSevere
                     ? isDark
-                      ? 'bg-rose-950/30 border-rose-500/40'
-                      : 'bg-rose-50 border-rose-200'
+                      ? 'bg-rose-950/30 border-[#222631]'
+                      : 'bg-rose-50 border-[#DCD5C7]'
                     : isDark
-                    ? 'bg-slate-900/80 border-slate-800/80 hover:border-slate-700'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
+                    ? 'bg-[#101217] border-[#222631] hover:bg-[#151820]'
+                    : 'bg-[#FCFAF5] border-[#DCD5C7] hover:bg-[#EFEAE0]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1 text-xs font-semibold truncate">
                   <span className="truncate">
                     {getCountryFlag(w.country)} {w.city}
                   </span>
-                  <span className="font-mono-tabular text-teal-400">
+                  <span className="font-mono-tabular text-[#E05A2B]">
                     {formatTemperature(w.tempC, settings.units)}
                   </span>
                 </div>
                 <div
-                  className={`mt-1 text-[11px] truncate ${
+                  className={`mt-1 text-[11px] font-mono-tabular truncate ${
                     w.isSevere
-                      ? 'text-rose-400 font-medium'
+                      ? 'text-rose-500 font-semibold'
                       : isDark
-                      ? 'text-slate-400'
-                      : 'text-slate-500'
+                      ? 'text-[#8C93A1]'
+                      : 'text-[#666159]'
                   }`}
                 >
                   {w.alertText || w.conditionLabel}

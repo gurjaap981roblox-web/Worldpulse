@@ -316,19 +316,19 @@ export function formatRelativeTime(timestamp: number): string {
   return `${diffDays}d ago`;
 }
 
-// Accessible topic palette that passes contrast checks on both dark navy and light slate
+// Accessible institutional topic palette for dark obsidian and warm archival paper
 export const TOPIC_COLORS: Record<Topic, { hex: string; textClass: string; dotClass: string }> = {
-  Conflict: { hex: '#F43F5E', textClass: 'text-rose-400 light:text-rose-600', dotClass: 'bg-rose-500' },
-  Disaster: { hex: '#F97316', textClass: 'text-orange-400 light:text-orange-600', dotClass: 'bg-orange-500' },
-  Economy: { hex: '#F59E0B', textClass: 'text-amber-400 light:text-amber-600', dotClass: 'bg-amber-500' },
-  Markets: { hex: '#10B981', textClass: 'text-emerald-400 light:text-emerald-600', dotClass: 'bg-emerald-500' },
-  Tech: { hex: '#14B8A6', textClass: 'text-teal-400 light:text-teal-600', dotClass: 'bg-teal-500' },
-  Health: { hex: '#EC4899', textClass: 'text-pink-400 light:text-pink-600', dotClass: 'bg-pink-500' },
-  Climate: { hex: '#06B6D4', textClass: 'text-cyan-400 light:text-cyan-600', dotClass: 'bg-cyan-500' },
-  Politics: { hex: '#38BDF8', textClass: 'text-sky-400 light:text-sky-600', dotClass: 'bg-sky-500' },
-  Science: { hex: '#A855F7', textClass: 'text-purple-400 light:text-purple-600', dotClass: 'bg-purple-500' },
-  Sports: { hex: '#84CC16', textClass: 'text-lime-400 light:text-lime-600', dotClass: 'bg-lime-500' },
-  Other: { hex: '#94A3B8', textClass: 'text-slate-400 light:text-slate-600', dotClass: 'bg-slate-400' },
+  Conflict: { hex: '#E11D48', textClass: 'text-rose-500', dotClass: 'bg-rose-600' },
+  Disaster: { hex: '#E05A2B', textClass: 'text-orange-500', dotClass: 'bg-orange-600' },
+  Economy: { hex: '#D97706', textClass: 'text-amber-500', dotClass: 'bg-amber-600' },
+  Markets: { hex: '#10B981', textClass: 'text-emerald-500', dotClass: 'bg-emerald-600' },
+  Tech: { hex: '#0EA5E9', textClass: 'text-sky-500', dotClass: 'bg-sky-600' },
+  Health: { hex: '#DB2777', textClass: 'text-pink-500', dotClass: 'bg-pink-600' },
+  Climate: { hex: '#0D9488', textClass: 'text-teal-500', dotClass: 'bg-teal-600' },
+  Politics: { hex: '#6366F1', textClass: 'text-indigo-400', dotClass: 'bg-indigo-500' },
+  Science: { hex: '#8B5CF6', textClass: 'text-violet-400', dotClass: 'bg-violet-500' },
+  Sports: { hex: '#65A30D', textClass: 'text-lime-500', dotClass: 'bg-lime-600' },
+  Other: { hex: '#78716C', textClass: 'text-stone-400', dotClass: 'bg-stone-500' },
 };
 
 export const ALL_TOPICS: Topic[] = [

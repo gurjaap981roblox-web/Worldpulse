@@ -1,6 +1,8 @@
 import {
   CityWeather,
   CoinMarket,
+  FxRateShift,
+  MacroCountryIndicator,
   RawFeedItem,
   SourceId,
   SourceStatus,
@@ -20,7 +22,9 @@ export const INITIAL_SOURCE_STATUSES: Record<SourceId, SourceStatus> = {
   aljazeera: { id: 'aljazeera', name: 'Al Jazeera Global RSS', category: 'News Wire', status: 'loading', lastSuccess: null, itemCount: 0 },
   reuters: { id: 'reuters', name: 'Reuters World Wire', category: 'News Wire', status: 'loading', lastSuccess: null, itemCount: 0 },
   gdelt: { id: 'gdelt', name: 'GDELT DOC 2.0 Global', category: 'Global Media', status: 'loading', lastSuccess: null, itemCount: 0 },
-  coingecko: { id: 'coingecko', name: 'CoinGecko Top 10 Crypto', category: 'Markets', status: 'loading', lastSuccess: null, itemCount: 0 },
+  fx: { id: 'fx', name: 'ECB Sovereign FX Rates', category: 'Macro & FX', status: 'loading', lastSuccess: null, itemCount: 0 },
+  worldbank: { id: 'worldbank', name: 'World Bank G20 Macro', category: 'Economy', status: 'loading', lastSuccess: null, itemCount: 0 },
+  coingecko: { id: 'coingecko', name: 'CoinGecko Digital Assets', category: 'Markets', status: 'loading', lastSuccess: null, itemCount: 0 },
   openmeteo: { id: 'openmeteo', name: 'Open-Meteo Top 10 Cities', category: 'Weather', status: 'loading', lastSuccess: null, itemCount: 0 },
   wikipedia: { id: 'wikipedia', name: 'Wikipedia Most Viewed', category: 'Trends', status: 'loading', lastSuccess: null, itemCount: 0 },
 };
@@ -36,6 +40,41 @@ const TOP_10_CITIES = [
   { city: 'Beijing', country: 'CN', lat: 39.9042, lng: 116.4074 },
   { city: 'Dhaka', country: 'BD', lat: 23.8103, lng: 90.4125 },
   { city: 'New York', country: 'US', lat: 40.7128, lng: -74.0060 },
+];
+
+const FX_PAIRS_META: Array<{
+  symbol: string;
+  pair: string;
+  currencyName: string;
+  country: string;
+  lat: number;
+  lng: number;
+}> = [
+  { symbol: 'INR', pair: 'USD/INR', currencyName: 'Indian Rupee', country: 'IN', lat: 19.07, lng: 72.87 },
+  { symbol: 'EUR', pair: 'USD/EUR', currencyName: 'Eurozone Euro', country: 'DE', lat: 50.11, lng: 8.68 },
+  { symbol: 'GBP', pair: 'USD/GBP', currencyName: 'British Pound', country: 'GB', lat: 51.50, lng: -0.12 },
+  { symbol: 'JPY', pair: 'USD/JPY', currencyName: 'Japanese Yen', country: 'JP', lat: 35.68, lng: 139.76 },
+  { symbol: 'CNY', pair: 'USD/CNY', currencyName: 'Chinese Yuan', country: 'CN', lat: 31.23, lng: 121.47 },
+  { symbol: 'CHF', pair: 'USD/CHF', currencyName: 'Swiss Franc', country: 'CH', lat: 47.37, lng: 8.54 },
+  { symbol: 'BRL', pair: 'USD/BRL', currencyName: 'Brazilian Real', country: 'BR', lat: -23.55, lng: -46.63 },
+  { symbol: 'CAD', pair: 'USD/CAD', currencyName: 'Canadian Dollar', country: 'CA', lat: 43.65, lng: -79.38 },
+];
+
+const MACRO_COUNTRIES_META: Array<{
+  iso3: string;
+  iso2: string;
+  name: string;
+  lat: number;
+  lng: number;
+}> = [
+  { iso3: 'USA', iso2: 'US', name: 'United States', lat: 38.89, lng: -77.03 },
+  { iso3: 'IND', iso2: 'IN', name: 'India', lat: 28.61, lng: 77.20 },
+  { iso3: 'CHN', iso2: 'CN', name: 'China', lat: 39.90, lng: 116.40 },
+  { iso3: 'DEU', iso2: 'DE', name: 'Germany', lat: 52.52, lng: 13.40 },
+  { iso3: 'JPN', iso2: 'JP', name: 'Japan', lat: 35.68, lng: 139.76 },
+  { iso3: 'GBR', iso2: 'GB', name: 'United Kingdom', lat: 51.50, lng: -0.12 },
+  { iso3: 'BRA', iso2: 'BR', name: 'Brazil', lat: -15.79, lng: -47.88 },
+  { iso3: 'FRA', iso2: 'FR', name: 'France', lat: 48.85, lng: 2.35 },
 ];
 
 async function fetchJsonWithTimeout<T>(url: string, timeoutMs = 8500): Promise<T> {
@@ -185,7 +224,6 @@ async function fetchRssSource(sourceKey: 'bbc' | 'aljazeera' | 'reuters'): Promi
     const cleanTitle = sanitizeText(item.title, 200);
     const cleanText = sanitizeText(item.text, 340);
     const countryMeta = getCountryMeta('', `${cleanTitle} ${cleanText}`);
-    // Add slight deterministic jitter around country centroid so dots in the same country don't overlap identically
     const hash = cleanTitle.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), idx);
     const latJitter = ((hash % 19) - 9) * 0.22;
     const lngJitter = (((hash * 7) % 19) - 9) * 0.25;
@@ -207,7 +245,6 @@ async function fetchRssSource(sourceKey: 'bbc' | 'aljazeera' | 'reuters'): Promi
 // 4. GDELT DOC 2.0 API (direct CORS with proxy fallback)
 function parseGdeltDate(seendate?: string): number {
   if (!seendate || seendate.length < 14) return Date.now();
-  // Format: YYYYMMDDTHHMMSSZ
   const y = seendate.slice(0, 4);
   const m = seendate.slice(4, 6);
   const d = seendate.slice(6, 8);
@@ -266,7 +303,137 @@ async function fetchGdeltArticles(): Promise<RawFeedItem[]> {
     });
 }
 
-// 5. CoinGecko Top 10 Coins
+// 5. ECB / Frankfurter Sovereign Foreign Exchange Time-Series (Economic Change)
+async function fetchSovereignFxRates(): Promise<{
+  fxRates: FxRateShift[];
+  fxItems: RawFeedItem[];
+}> {
+  const startDate = new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const symbols = FX_PAIRS_META.map((p) => p.symbol).join(',');
+  const url = `https://api.frankfurter.dev/v1/${startDate}..?base=USD&symbols=${symbols}`;
+
+  interface FrankfurterSeries {
+    end_date: string;
+    rates: Record<string, Record<string, number>>;
+  }
+
+  const data = await fetchJsonWithTimeout<FrankfurterSeries>(url, 7500);
+  const dateKeys = Object.keys(data.rates || {}).sort();
+  if (dateKeys.length === 0) {
+    throw new Error('No FX dates returned');
+  }
+
+  const latestDate = dateKeys[dateKeys.length - 1];
+  const prevDate = dateKeys.length > 1 ? dateKeys[dateKeys.length - 2] : latestDate;
+  const firstDate = dateKeys[0];
+
+  const fxRates: FxRateShift[] = [];
+  const fxItems: RawFeedItem[] = [];
+
+  for (const meta of FX_PAIRS_META) {
+    const series = dateKeys
+      .map((d) => data.rates[d]?.[meta.symbol])
+      .filter((v): v is number => typeof v === 'number');
+    if (series.length === 0) continue;
+
+    const latestRate = data.rates[latestDate]?.[meta.symbol] ?? series[series.length - 1];
+    const prevRate = data.rates[prevDate]?.[meta.symbol] ?? latestRate;
+    const firstRate = data.rates[firstDate]?.[meta.symbol] ?? latestRate;
+
+    const change1dPct = prevRate > 0 ? ((latestRate - prevRate) / prevRate) * 100 : 0;
+    const change7dPct = firstRate > 0 ? ((latestRate - firstRate) / firstRate) * 100 : 0;
+
+    fxRates.push({
+      pair: meta.pair,
+      symbol: meta.symbol,
+      currencyName: meta.currencyName,
+      country: meta.country,
+      rate: latestRate,
+      change1dPct: Math.round(change1dPct * 100) / 100,
+      change7dPct: Math.round(change7dPct * 100) / 100,
+      sparkline: series,
+      asOf: latestDate,
+      url: `https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html`,
+    });
+
+    if (Math.abs(change7dPct) >= 0.45 || meta.symbol === 'INR' || meta.symbol === 'EUR') {
+      const sign = change7dPct >= 0 ? '+' : '';
+      fxItems.push({
+        id: `fx-${meta.symbol}-${latestDate}`,
+        source: 'ECB FX Reference',
+        title: `${meta.pair} at ${latestRate.toFixed(2)} (${sign}${change7dPct.toFixed(2)}% 7d shift) — ${meta.currencyName}`,
+        text: `Sovereign foreign exchange telemetry: ${meta.pair} (${meta.currencyName}) trades at ${latestRate.toFixed(4)} with a daily shift of ${change1dPct >= 0 ? '+' : ''}${change1dPct.toFixed(2)}% and a 7-day shift of ${sign}${change7dPct.toFixed(2)}%.`,
+        url: 'https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html',
+        time: Date.now() - 1800 * 1000,
+        country: meta.country,
+        lat: meta.lat,
+        lng: meta.lng,
+      });
+    }
+  }
+
+  return { fxRates, fxItems: fxItems.slice(0, 3) };
+}
+
+// 6. World Bank Sovereign Macroeconomic Indicators (GDP Growth & CPI Inflation Changes)
+async function fetchWorldBankMacro(): Promise<MacroCountryIndicator[]> {
+  const iso3List = MACRO_COUNTRIES_META.map((c) => c.iso3).join(';');
+  const cpiUrl = `https://api.worldbank.org/v2/country/${iso3List}/indicator/FP.CPI.TOTL.ZG?format=json&per_page=50&mrnev=2`;
+  const gdpUrl = `https://api.worldbank.org/v2/country/${iso3List}/indicator/NY.GDP.MKTP.KD.ZG?format=json&per_page=50&mrnev=2`;
+
+  interface WbEntry {
+    countryiso3code: string;
+    date: string;
+    value: number | null;
+  }
+
+  const [cpiRes, gdpRes] = await Promise.all([
+    fetchJsonWithTimeout<[unknown, WbEntry[]]>(cpiUrl, 8000),
+    fetchJsonWithTimeout<[unknown, WbEntry[]]>(gdpUrl, 8000),
+  ]);
+
+  const cpiRows = Array.isArray(cpiRes?.[1]) ? cpiRes[1] : [];
+  const gdpRows = Array.isArray(gdpRes?.[1]) ? gdpRes[1] : [];
+
+  return MACRO_COUNTRIES_META.map((meta) => {
+    const countryCpi = cpiRows
+      .filter((r) => r.countryiso3code === meta.iso3 && typeof r.value === 'number')
+      .sort((a, b) => Number(b.date) - Number(a.date));
+
+    const countryGdp = gdpRows
+      .filter((r) => r.countryiso3code === meta.iso3 && typeof r.value === 'number')
+      .sort((a, b) => Number(b.date) - Number(a.date));
+
+    const latestCpi = countryCpi[0]?.value ?? null;
+    const prevCpi = countryCpi[1]?.value ?? null;
+    const cpiDelta =
+      latestCpi !== null && prevCpi !== null
+        ? Math.round((latestCpi - prevCpi) * 100) / 100
+        : null;
+
+    const latestGdp = countryGdp[0]?.value ?? null;
+    const prevGdp = countryGdp[1]?.value ?? null;
+    const gdpDelta =
+      latestGdp !== null && prevGdp !== null
+        ? Math.round((latestGdp - prevGdp) * 100) / 100
+        : null;
+
+    const period = countryGdp[0]?.date || countryCpi[0]?.date || 'Latest';
+
+    return {
+      country: meta.iso2,
+      countryName: meta.name,
+      gdpGrowthPct: latestGdp !== null ? Math.round(latestGdp * 100) / 100 : null,
+      gdpDeltaPct: gdpDelta,
+      cpiInflationPct: latestCpi !== null ? Math.round(latestCpi * 100) / 100 : null,
+      cpiDeltaPct: cpiDelta,
+      period,
+      url: `https://data.worldbank.org/country/${meta.iso2.toLowerCase()}`,
+    };
+  });
+}
+
+// 7. CoinGecko Top 10 Coins
 async function fetchCoinGeckoMarkets(): Promise<{
   coins: CoinMarket[];
   marketItems: RawFeedItem[];
@@ -302,7 +469,6 @@ async function fetchCoinGeckoMarkets(): Promise<{
     };
   });
 
-  // Create market stories for notable 24h crypto market moves
   const marketItems: RawFeedItem[] = [];
   const notable = coins.filter((c, idx) => idx === 0 || Math.abs(c.change24h) >= 4.0).slice(0, 3);
   for (const c of notable) {
@@ -324,7 +490,7 @@ async function fetchCoinGeckoMarkets(): Promise<{
   return { coins, marketItems };
 }
 
-// 6. Open-Meteo Weather & Severe Alerts for Top 10 Global Cities
+// 8. Open-Meteo Weather & Severe Alerts for Top 10 Global Cities
 function decodeWmoWeather(code: number, windKmh: number, tempC: number): {
   label: string;
   isSevere: boolean;
@@ -422,7 +588,7 @@ async function fetchOpenMeteoCities(): Promise<{
   return { weather, weatherItems };
 }
 
-// 7. Wikipedia "Most Viewed" API
+// 9. Wikipedia "Most Viewed" API
 async function fetchWikipediaMostViewed(): Promise<WikiTrend[]> {
   interface WikiArticle {
     article: string;
@@ -447,7 +613,6 @@ async function fetchWikipediaMostViewed(): Promise<WikiTrend[]> {
     'XXX',
   ];
 
-  // Try yesterday UTC, then 2 days ago UTC (Wikimedia publishes daily pageviews after UTC midnight)
   for (let daysBack = 1; daysBack <= 3; daysBack++) {
     try {
       const d = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
@@ -487,6 +652,8 @@ async function fetchWikipediaMostViewed(): Promise<WikiTrend[]> {
 export interface AllSourcesFetchResult {
   rawItems: RawFeedItem[];
   coins: CoinMarket[];
+  fxRates: FxRateShift[];
+  macroIndicators: MacroCountryIndicator[];
   weather: CityWeather[];
   wikiTrends: WikiTrend[];
   statuses: Record<SourceId, SourceStatus>;
@@ -498,6 +665,8 @@ export async function fetchAllWorldSources(
   const statuses: Record<SourceId, SourceStatus> = { ...previousStatuses };
   const rawItems: RawFeedItem[] = [];
   let coins: CoinMarket[] = [];
+  let fxRates: FxRateShift[] = [];
+  let macroIndicators: MacroCountryIndicator[] = [];
   let weather: CityWeather[] = [];
   let wikiTrends: WikiTrend[] = [];
 
@@ -564,6 +733,21 @@ export async function fetchAllWorldSources(
       })
       .catch((err) => updateStatus('gdelt', false, 0, err)),
 
+    fetchSovereignFxRates()
+      .then((res) => {
+        fxRates = res.fxRates;
+        rawItems.push(...res.fxItems);
+        updateStatus('fx', true, res.fxRates.length);
+      })
+      .catch((err) => updateStatus('fx', false, 0, err)),
+
+    fetchWorldBankMacro()
+      .then((rows) => {
+        macroIndicators = rows;
+        updateStatus('worldbank', true, rows.length);
+      })
+      .catch((err) => updateStatus('worldbank', false, 0, err)),
+
     fetchCoinGeckoMarkets()
       .then((res) => {
         coins = res.coins;
@@ -591,6 +775,8 @@ export async function fetchAllWorldSources(
   return {
     rawItems,
     coins,
+    fxRates,
+    macroIndicators,
     weather,
     wikiTrends,
     statuses,

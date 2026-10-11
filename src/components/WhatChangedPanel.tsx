@@ -26,14 +26,16 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
       <section
         id="changes-24h"
         aria-label="What changed in 24h loading"
-        className={`rounded-2xl border p-5 ${
-          isDark ? 'bg-[#0F172A]/85 border-slate-800/80' : 'bg-white border-slate-200'
+        className={`border border-t-2 p-5 ${
+          isDark
+            ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE]'
+            : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615]'
         }`}
       >
-        <div className="h-5 w-48 rounded bg-slate-700/40 animate-pulse mb-4" />
+        <div className="h-5 w-48 bg-stone-500/20 animate-pulse mb-4" />
         <div className="space-y-3">
           {[1, 2, 3].map((n) => (
-            <div key={n} className="h-14 rounded-xl bg-slate-700/30 animate-pulse" />
+            <div key={n} className="h-14 bg-stone-500/10 animate-pulse" />
           ))}
         </div>
       </section>
@@ -44,11 +46,13 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
     return (
       <section
         id="changes-24h"
-        className={`rounded-2xl border p-6 ${
-          isDark ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-400' : 'bg-white border-slate-200 text-slate-600'
+        className={`border border-t-2 p-6 ${
+          isDark
+            ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#8C93A1]'
+            : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#666159]'
         }`}
       >
-        <p className="text-sm">No data available for 24-hour comparison.</p>
+        <p className="text-sm font-mono-tabular">No data available for 24-hour comparison.</p>
       </section>
     );
   }
@@ -64,33 +68,38 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
     <section
       id="changes-24h"
       aria-labelledby="changes-heading"
-      className={`rounded-2xl border flex flex-col transition-colors duration-200 ${
+      className={`border border-t-2 flex flex-col transition-colors duration-200 ${
         isDark
-          ? 'bg-[#0F172A]/85 border-slate-800/80 text-slate-100'
-          : 'bg-white border-slate-200 text-slate-900 shadow-xs'
+          ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
+          : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
       }`}
     >
       {/* Header & Three Tabs: New, Escalating, Fading */}
       <div
         className={`p-4 border-b flex flex-wrap items-center justify-between gap-3 ${
-          isDark ? 'border-slate-800/80' : 'border-slate-200'
+          isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
         }`}
       >
         <div>
-          <h2 id="changes-heading" className="text-base font-bold tracking-tight">
-            Changed in the Last 24h
+          <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#E05A2B]">
+            <span>Section 06</span>
+            <span aria-hidden="true">/</span>
+            <span>Snapshot Comparison</span>
+          </div>
+          <h2
+            id="changes-heading"
+            className="font-editorial text-lg font-semibold tracking-tight mt-0.5"
+          >
+            Changed in the Last 24 Hours
           </h2>
-          <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {whatChanged.summaryLine}
-          </p>
         </div>
 
         {/* 3 Segmented Tabs: New, Escalating, Fading */}
         <div
           role="tablist"
           aria-label="24-hour change categories"
-          className={`flex items-center gap-1 p-1 rounded-xl border ${
-            isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100 border-slate-200'
+          className={`flex items-center border ${
+            isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0] border-[#DCD5C7]'
           }`}
         >
           {(
@@ -106,14 +115,14 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
               role="tab"
               aria-selected={activeTab === tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              className={`min-h-[38px] px-3.5 py-1.5 text-xs font-mono-tabular transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                 activeTab === tab.key
                   ? isDark
-                    ? 'bg-teal-500/20 text-teal-300 border border-teal-500/40'
-                    : 'bg-white text-slate-900 shadow-xs'
+                    ? 'bg-[#F3F2EE] text-[#090A0D] font-semibold'
+                    : 'bg-[#181615] text-[#FCFAF5] font-semibold'
                   : isDark
-                  ? 'text-slate-400 hover:text-slate-200'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'text-[#8C93A1] hover:text-[#F3F2EE]'
+                  : 'text-[#666159] hover:text-[#181615]'
               }`}
             >
               {tab.label}
@@ -122,38 +131,34 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
         </div>
       </div>
 
-      {/* Tab Items with Up/Down Arrows and Percentages */}
-      <div className="p-4 space-y-3">
+      {/* Tab Items */}
+      <div className="divide-y divide-[#222631]">
         {activeItems.length === 0 ? (
-          <p className={`text-sm py-4 text-center ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+          <p className={`text-sm p-6 text-center ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
             No data recorded in this category for the current window.
           </p>
         ) : (
-          <ul className="space-y-2.5">
+          <ul className={`divide-y ${isDark ? 'divide-[#222631]' : 'divide-[#DCD5C7]'}`}>
             {activeItems.map((item, idx) => {
               const isDown = activeTab === 'fading' || item.deltaPct < 0;
               const absPct = Math.abs(Math.round(item.deltaPct || 18));
-              const topicHex = TOPIC_COLORS[item.topic]?.hex || '#14B8A6';
+              const topicHex = TOPIC_COLORS[item.topic]?.hex || '#E05A2B';
 
               return (
                 <li
                   key={idx}
-                  className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 ${
-                    isDark
-                      ? 'bg-slate-900/60 border-slate-800/80'
-                      : 'bg-slate-50/80 border-slate-200/80'
-                  }`}
+                  className="p-4 flex items-start justify-between gap-3"
                 >
                   <div className="space-y-1 min-w-0 flex-1">
                     <div
-                      className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular ${
-                        isDark ? 'text-slate-400' : 'text-slate-500'
+                      className={`flex flex-wrap items-center gap-2 text-[11px] font-mono-tabular ${
+                        isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => onSelectCountry(item.country)}
-                        className="hover:text-teal-400 hover:underline cursor-pointer"
+                        className="hover:text-[#E05A2B] hover:underline cursor-pointer"
                       >
                         {getCountryFlag(item.country)} {item.country}
                       </button>
@@ -163,15 +168,14 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
                       </span>
                     </div>
                     <h3 className="text-sm font-semibold leading-snug">{item.title}</h3>
-                    <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                    <p className={`text-xs ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
                       {item.detail}
                     </p>
                   </div>
 
-                  {/* Up / Down Arrow + Percentage */}
                   <div
                     className={`font-mono-tabular text-xs font-bold flex items-center gap-0.5 shrink-0 pt-0.5 ${
-                      isDown ? 'text-emerald-400' : 'text-rose-400'
+                      isDown ? 'text-emerald-500' : 'text-rose-500'
                     }`}
                   >
                     {isDown ? (
@@ -190,20 +194,19 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
           </ul>
         )}
 
-        {/* Countries with Unusual Activity & Big Market Moves */}
+        {/* Unusual Country Activity & Big Market Moves */}
         <div
-          className={`pt-3 mt-3 border-t grid grid-cols-1 sm:grid-cols-2 gap-4 ${
-            isDark ? 'border-slate-800/80' : 'border-slate-200'
+          className={`p-4 grid grid-cols-1 sm:grid-cols-2 gap-4 ${
+            isDark ? 'bg-[#090A0D]/50' : 'bg-[#EFEAE0]/40'
           }`}
         >
-          {/* Unusual Country Activity */}
           <div>
             <h3
-              className={`text-xs font-semibold mb-2 ${
-                isDark ? 'text-slate-300' : 'text-slate-700'
+              className={`text-[11px] font-mono-tabular uppercase tracking-wider font-semibold mb-2 ${
+                isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
               }`}
             >
-              Countries with Unusual Activity (24h)
+              Unusual Country Activity (24h)
             </h3>
             <ul className="space-y-1.5">
               {whatChanged.unusualCountries.slice(0, 3).map((u, i) => (
@@ -213,12 +216,12 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
                 >
                   <div className="truncate">
                     <span className="font-semibold">{u.country}</span>
-                    <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>
+                    <span className={isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}>
                       {' '}
                       — {u.reason}
                     </span>
                   </div>
-                  <span className="font-mono-tabular font-semibold text-amber-400 shrink-0 flex items-center">
+                  <span className="font-mono-tabular font-semibold text-[#E05A2B] shrink-0 flex items-center">
                     <ArrowUpRight className="w-3.5 h-3.5" />+{Math.abs(Math.round(u.deltaPct))}%
                   </span>
                 </li>
@@ -226,11 +229,10 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
             </ul>
           </div>
 
-          {/* Biggest 24h Market Moves */}
           <div>
             <h3
-              className={`text-xs font-semibold mb-2 ${
-                isDark ? 'text-slate-300' : 'text-slate-700'
+              className={`text-[11px] font-mono-tabular uppercase tracking-wider font-semibold mb-2 ${
+                isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
               }`}
             >
               Largest 24h Market Moves
@@ -249,7 +251,7 @@ export const WhatChangedPanel: React.FC<WhatChangedPanelProps> = ({
                     </span>
                     <span
                       className={`font-semibold flex items-center ${
-                        isUp ? 'text-emerald-400' : 'text-rose-400'
+                        isUp ? 'text-emerald-500' : 'text-rose-500'
                       }`}
                     >
                       {isUp ? (
