@@ -853,6 +853,14 @@ export default function App() {
             <span>
               Supabase (<code>stories</code>: {supabaseState.storiesCount}, <code>snapshots</code>: {supabaseState.snapshotsCount}, <code>briefings</code>: {supabaseState.briefingsCount})
             </span>
+            {supabaseState.error && (
+              <>
+                <span aria-hidden="true">·</span>
+                <span className="text-rose-500 font-semibold">
+                  Error: {supabaseState.error}
+                </span>
+              </>
+            )}
             {(supabaseState.storiesEmpty ||
               supabaseState.snapshotsEmpty ||
               supabaseState.briefingsEmpty) && (

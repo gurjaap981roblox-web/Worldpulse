@@ -483,9 +483,14 @@ export async function runGeminiPipeline(
       });
 
       if (response.ok) {
+        const data = await response.json();
+        if (data.quotaExhausted || data.fallback) {
+          // Free-tier quota reached; stop making further LLM calls this refresh and use baseline
+          callsMadeThisRefresh = maxAvailableCalls;
+          break;
+        }
         callsMadeThisRefresh += 1;
         incrementAiCallsUsed(1);
-        const data = await response.json();
         const analyzedList = Array.isArray(data.items) ? data.items : [];
 
         for (const analyzed of analyzedList) {
