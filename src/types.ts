@@ -209,6 +209,22 @@ export interface CountryBrief {
   generatedAt: number;
 }
 
+export interface SpeechSummaryResult {
+  id: string;
+  found: boolean;
+  speechTitle: string;
+  speaker: string;
+  when: string;
+  where: string;
+  executiveSummary: string;
+  keyTakeaways: string[];
+  notableQuotes: string[];
+  policyOrEconomicImpact: string;
+  confidence: number;
+  sources: Array<{ title: string; url: string }>;
+  generatedAt: number;
+}
+
 export interface AppSettings {
   followedTopics: Topic[];
   followedRegions: WorldRegion[];

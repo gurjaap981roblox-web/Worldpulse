@@ -101,12 +101,12 @@ export const TopBar: React.FC<TopBarProps> = ({
               04. Economy &amp; FX
             </a>
             <a
-              href="#disasters"
+              href="#speech-dossier"
               className={`whitespace-nowrap shrink-0 hover:text-[#E05A2B] transition-colors ${
                 isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
               }`}
             >
-              05. Seismic
+              05. Speeches
             </a>
           </nav>
 

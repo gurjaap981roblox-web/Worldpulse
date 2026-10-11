@@ -735,6 +735,142 @@ Generate a concise, neutral country brief in JSON.`;
     }
   });
 
+  // 7. Summarize any speech by asking When, Where, and optional Speaker (Google Search Grounded)
+  app.post('/api/ai/speech-summary', async (req, res) => {
+    const clientIp = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'default');
+    const rate = checkRateLimit(clientIp);
+    if (!rate.allowed) {
+      return res.status(429).json({ error: 'Session rate limit reached.', remainingQuota: 0 });
+    }
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({
+        error: 'GEMINI_API_KEY is not configured in Settings > Secrets.',
+        remainingQuota: rate.remaining,
+      });
+    }
+
+    const speaker = String(req.body?.speaker || '').trim().slice(0, 120);
+    const when = String(req.body?.when || '').trim().slice(0, 120);
+    const where = String(req.body?.where || '').trim().slice(0, 120);
+
+    if (!when && !where && !speaker) {
+      return res.status(400).json({ error: 'Please specify when and where the speech took place.' });
+    }
+
+    const systemInstruction = `You are the Chief Speech & Diplomatic Address Analyst for WorldPulse.
+CRITICAL RULES:
+1. Use Google Search to locate the real speech, public address, press conference, or remarks matching the requested Speaker, When (date/timeframe), and Where (location/venue/event).
+2. NEVER invent facts or fabricate quotes. If no verified speech or public remarks can be found for that time and place, set "found": false and explain clearly in "executiveSummary" that no verified record was found.
+3. Maintain a strictly neutral, objective, non-partisan tone.
+4. Return ONLY a valid JSON object matching this exact structure (no markdown code fences around it):
+{
+  "found": true,
+  "speechTitle": "Official title or occasion of the speech",
+  "speaker": "Full name and official title/role of speaker",
+  "when": "Confirmed date of speech",
+  "where": "Confirmed location, venue, or summit",
+  "executiveSummary": "2-paragraph neutral synthesis of the speech's core message and context",
+  "keyTakeaways": ["Takeaway 1", "Takeaway 2", "Takeaway 3", "Takeaway 4"],
+  "notableQuotes": ["Key quote or direct statement 1", "Key statement 2"],
+  "policyOrEconomicImpact": "1-2 sentences on the geopolitical, economic, or market implications",
+  "confidence": 0.92
+}`;
+
+    const userPrompt = `Find and summarize the speech or public address with the following parameters:
+<untrusted_query>
+Speaker / Person (if specified): ${speaker || 'Identify the primary speaker from the event/location and date'}
+When (Date / Timeframe): ${when || 'Most recent'}
+Where (Location / Venue / Event): ${where || 'Global'}
+</untrusted_query>`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.1,
+          tools: [{ googleSearch: {} }],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        },
+      });
+
+      const rawText = response.text?.trim() || '';
+      const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+      const groundedSources: Array<{ title: string; url: string }> = [];
+
+      for (const chunk of chunks) {
+        if (chunk.web?.uri) {
+          groundedSources.push({
+            title: chunk.web.title || new URL(chunk.web.uri).hostname,
+            url: chunk.web.uri,
+          });
+        }
+      }
+
+      // Extract JSON block safely even if model wrapped it in markdown fences
+      let parsed: Record<string, unknown> | null = null;
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch {
+          parsed = null;
+        }
+      }
+
+      if (parsed && typeof parsed.executiveSummary === 'string') {
+        return res.json({
+          speech: {
+            found: Boolean(parsed.found ?? true),
+            speechTitle: String(parsed.speechTitle || `${speaker || 'Public'} Address in ${where || 'Global Forum'}`),
+            speaker: String(parsed.speaker || speaker || 'Public Official'),
+            when: String(parsed.when || when || 'Recent'),
+            where: String(parsed.where || where || 'Global'),
+            executiveSummary: String(parsed.executiveSummary),
+            keyTakeaways: Array.isArray(parsed.keyTakeaways)
+              ? parsed.keyTakeaways.map((k) => String(k))
+              : [],
+            notableQuotes: Array.isArray(parsed.notableQuotes)
+              ? parsed.notableQuotes.map((q) => String(q))
+              : [],
+            policyOrEconomicImpact: String(parsed.policyOrEconomicImpact || 'No data'),
+            confidence: Number(parsed.confidence) || 0.85,
+            sources: groundedSources.slice(0, 6),
+            generatedAt: Date.now(),
+          },
+          remainingQuota: rate.remaining,
+        });
+      }
+
+      // Fallback if response was plain text instead of JSON
+      return res.json({
+        speech: {
+          found: Boolean(rawText),
+          speechTitle: `${speaker ? `${speaker} — ` : ''}Address at ${where || 'Public Forum'} (${when || 'Recent'})`,
+          speaker: speaker || 'See summary below',
+          when: when || 'Recent',
+          where: where || 'Global Forum',
+          executiveSummary: rawText || 'No data returned for the specified speech parameters.',
+          keyTakeaways: [],
+          notableQuotes: [],
+          policyOrEconomicImpact: 'See grounded sources for full transcript context.',
+          confidence: groundedSources.length > 0 ? 0.85 : 0.5,
+          sources: groundedSources.slice(0, 6),
+          generatedAt: Date.now(),
+        },
+        remainingQuota: rate.remaining,
+      });
+    } catch (err: unknown) {
+      return res.status(500).json({
+        error: err instanceof Error ? err.message : 'Speech lookup failed',
+        remainingQuota: rate.remaining,
+      });
+    }
+  });
+
   // Mount Vite middleware in development or static dist in production
   const distPath = path.join(__dirname, 'dist');
   if (process.env.NODE_ENV === 'production' && fs.existsSync(distPath)) {

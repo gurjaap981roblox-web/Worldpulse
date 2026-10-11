@@ -6,6 +6,7 @@ import {
   FxRateShift,
   MacroCountryIndicator,
   Snapshot,
+  SpeechSummaryResult,
   Story,
   Topic,
   WhatChangedAnalysis,
@@ -19,6 +20,7 @@ const STORAGE_KEYS = {
   SNAPSHOTS: 'worldpulse_snapshots_v1',
   LAST_STATE: 'worldpulse_last_state_v1',
   AI_BUDGET: 'worldpulse_ai_budget_v1',
+  SPEECH_HISTORY: 'worldpulse_speech_history_v1',
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -261,11 +263,23 @@ export function savePersistedDashboardState(state: PersistedDashboardState): voi
   safeSetItem(STORAGE_KEYS.LAST_STATE, state);
 }
 
+export function loadSpeechHistory(): SpeechSummaryResult[] {
+  return safeGetItem<SpeechSummaryResult[]>(STORAGE_KEYS.SPEECH_HISTORY, []);
+}
+
+export function saveSpeechToHistory(speech: SpeechSummaryResult): SpeechSummaryResult[] {
+  const existing = loadSpeechHistory().filter((item) => item.id !== speech.id);
+  const updated = [speech, ...existing].slice(0, 12);
+  safeSetItem(STORAGE_KEYS.SPEECH_HISTORY, updated);
+  return updated;
+}
+
 export function clearAllWorldPulseCache(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEYS.AI_ITEM_CACHE);
     window.localStorage.removeItem(STORAGE_KEYS.SNAPSHOTS);
     window.localStorage.removeItem(STORAGE_KEYS.LAST_STATE);
+    window.localStorage.removeItem(STORAGE_KEYS.SPEECH_HISTORY);
   } catch {
     // ignore
   }

@@ -47,6 +47,7 @@ import { HeroBriefing } from './components/HeroBriefing';
 import { WorldMapPanel } from './components/WorldMapPanel';
 import { TopTenList } from './components/TopTenList';
 import { EconomicChangePanel } from './components/EconomicChangePanel';
+import { SpeechArchivePanel } from './components/SpeechArchivePanel';
 import { DisastersPanel } from './components/DisastersPanel';
 import { WhatChangedPanel } from './components/WhatChangedPanel';
 import { RisingTopicsStrip } from './components/RisingTopicsStrip';
@@ -507,6 +508,12 @@ export default function App() {
           countriesCount={new Set(filteredStories.map((s) => s.country)).size}
           onExportText={handleExportText}
           onPrintPdf={handlePrintPdf}
+        />
+
+        {/* Diplomatic & Public Address Speech Summarizer (Ask When & Where) */}
+        <SpeechArchivePanel
+          stories={stories}
+          settings={settings}
         />
 
         {/* Tablet-First 12-Column Architectural Grid */}

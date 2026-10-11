@@ -7,6 +7,7 @@ import {
   RawFeedItem,
   RisingTopicMetric,
   Snapshot,
+  SpeechSummaryResult,
   Story,
   Topic,
   WhatChangedAnalysis,
@@ -744,4 +745,135 @@ export async function verifyBreakingStoryWithSearch(
         }))
       : [],
   };
+}
+
+// Summarize any speech given by anyone by asking When and Where (with optional Speaker)
+export async function summarizeSpeechByWhenWhere(
+  params: {
+    when: string;
+    where: string;
+    speaker?: string;
+  },
+  stories: Story[],
+  settings: AppSettings
+): Promise<SpeechSummaryResult> {
+  const cleanWhen = sanitizeText(params.when.trim(), 120);
+  const cleanWhere = sanitizeText(params.where.trim(), 120);
+  const cleanSpeaker = sanitizeText((params.speaker || '').trim(), 120);
+  const id = `speech-${cleanWhen.toLowerCase()}-${cleanWhere.toLowerCase()}-${cleanSpeaker.toLowerCase()}`.replace(
+    /[^a-z0-9-]+/g,
+    '-'
+  );
+
+  // Build a deterministic local fallback from live stories if AI is paused or unavailable
+  const buildLocalFallback = (reasonNote: string): SpeechSummaryResult => {
+    const queryTokens = `${cleanSpeaker} ${cleanWhere} ${cleanWhen}`
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 2);
+
+    const matchingStories = stories.filter((s) => {
+      const hay = `${s.headline} ${s.summary} ${s.countryName}`.toLowerCase();
+      return queryTokens.some((tok) => hay.includes(tok));
+    });
+
+    if (matchingStories.length > 0) {
+      const top = matchingStories[0];
+      return {
+        id,
+        found: true,
+        speechTitle: top.headline,
+        speaker: cleanSpeaker || `${top.countryName} Official / Representative`,
+        when: cleanWhen || new Date(top.time).toISOString().slice(0, 10),
+        where: cleanWhere || top.countryName,
+        executiveSummary: `${top.summary} (${reasonNote})`,
+        keyTakeaways: matchingStories.slice(0, 4).map((m) => m.headline),
+        notableQuotes: ['No direct verbatim transcript in RSS wire; see primary source links below.'],
+        policyOrEconomicImpact: `Topic classified under ${top.topic} with severity score ${top.importance.toFixed(1)}/10.`,
+        confidence: top.confidence,
+        sources: top.sources.map((src) => ({ title: src.name, url: src.url })),
+        generatedAt: Date.now(),
+      };
+    }
+
+    return {
+      id,
+      found: false,
+      speechTitle: `Speech Query: ${cleanWhere || 'Global'} (${cleanWhen || 'Unspecified Time'})`,
+      speaker: cleanSpeaker || 'No data',
+      when: cleanWhen || 'No data',
+      where: cleanWhere || 'No data',
+      executiveSummary: `No data — ${reasonNote}`,
+      keyTakeaways: [],
+      notableQuotes: [],
+      policyOrEconomicImpact: 'No data',
+      confidence: 0,
+      sources: [],
+      generatedAt: Date.now(),
+    };
+  };
+
+  if (settings.pauseAi) {
+    return buildLocalFallback('AI synthesis is currently paused in Settings; showing matching live wire dispatches.');
+  }
+
+  if (getAiCallsUsedToday() >= settings.dailyAiBudget) {
+    return buildLocalFallback('Daily AI call budget reached; showing matching live wire dispatches.');
+  }
+
+  try {
+    const response = await fetch('/api/ai/speech-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        when: cleanWhen,
+        where: cleanWhere,
+        speaker: cleanSpeaker,
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      return buildLocalFallback(
+        errData?.error || 'Live AI speech lookup service returned an error; showing matching wire dispatches.'
+      );
+    }
+
+    incrementAiCallsUsed(1);
+    const data = await response.json();
+    const s = data.speech;
+    if (!s) {
+      return buildLocalFallback('Empty response from speech analyzer.');
+    }
+
+    return {
+      id,
+      found: Boolean(s.found),
+      speechTitle: sanitizeText(s.speechTitle, 180) || 'Public Address',
+      speaker: sanitizeText(s.speaker, 140) || cleanSpeaker || 'Public Official',
+      when: sanitizeText(s.when, 100) || cleanWhen || 'Recent',
+      where: sanitizeText(s.where, 120) || cleanWhere || 'Global',
+      executiveSummary: sanitizeText(s.executiveSummary, 1200) || 'No data',
+      keyTakeaways: Array.isArray(s.keyTakeaways)
+        ? s.keyTakeaways.slice(0, 6).map((k: unknown) => sanitizeText(k, 240))
+        : [],
+      notableQuotes: Array.isArray(s.notableQuotes)
+        ? s.notableQuotes.slice(0, 4).map((q: unknown) => sanitizeText(q, 280))
+        : [],
+      policyOrEconomicImpact: sanitizeText(s.policyOrEconomicImpact, 400) || 'No data',
+      confidence: Math.max(0, Math.min(1, Number(s.confidence) || 0.85)),
+      sources: Array.isArray(s.sources)
+        ? s.sources
+            .slice(0, 6)
+            .map((src: { title?: string; url?: string }) => ({
+              title: sanitizeText(src.title || 'Verified Source', 90),
+              url: sanitizeUrl(src.url),
+            }))
+            .filter((src: { title: string; url: string }) => src.url !== '#')
+        : [],
+      generatedAt: Date.now(),
+    };
+  } catch {
+    return buildLocalFallback('Network error while contacting speech synthesis endpoint.');
+  }
 }
