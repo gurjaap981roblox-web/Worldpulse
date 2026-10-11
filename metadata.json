@@ -1,0 +1,6 @@
+{
+  "name": "WorldPulse",
+  "description": "Live world-monitoring dashboard aggregating global news, seismic activity, natural events, markets, and climate alerts with Gemini AI synthesis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

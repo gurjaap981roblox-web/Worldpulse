@@ -1,0 +1,94 @@
+/* WorldPulse Design System & Map Marker Styles */
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+body {
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+}
+
+.font-mono-tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom Map Marker Pulse Animation for stories under 1 hour old */
+@keyframes wp-marker-pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scale(2.15);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(2.15);
+    opacity: 0;
+  }
+}
+
+.wp-pulse-ring {
+  animation: wp-marker-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .wp-pulse-ring,
+  .animate-pulse,
+  .animate-spin {
+    animation: none !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Leaflet container overrides for dark & light command center look */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+  background-color: #070b14 !important;
+}
+
+html.light .leaflet-container {
+  background-color: #e2e8f0 !important;
+}
+
+.wp-custom-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.wp-marker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  cursor: pointer;
+  outline: none;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.wp-marker-btn:hover,
+.wp-marker-btn:focus-visible {
+  transform: scale(1.22);
+}
+
+.wp-marker-btn:focus-visible {
+  box-shadow: 0 0 0 3px #14b8a6, 0 0 0 5px #070b14;
+}
+
+/* Print stylesheet for PDF Briefing Export */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+}
