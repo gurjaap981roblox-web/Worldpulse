@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Printer } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ChevronDown, ChevronUp, FileText, Printer, Square, Volume2 } from 'lucide-react';
 import { AppSettings, DailyBriefing } from '../types';
-import { formatTimeInTz } from '../utils/sanitize';
+import { formatTimeInTz, UI_TRANSLATIONS } from '../utils/sanitize';
 
 interface HeroBriefingProps {
   briefing: DailyBriefing | null;
@@ -23,7 +23,48 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
   onPrintPdf,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const isDark = settings.theme === 'dark';
+  const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
+
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const handleToggleVoiceBriefing = () => {
+    if (!('speechSynthesis' in window) || !briefing) return;
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const spokenText = [
+      `WorldPulse Daily Briefing. ${briefing.headline}.`,
+      'Key Highlights:',
+      ...briefing.highlights.map((h, i) => `Number ${i + 1}: ${h}.`),
+      ...briefing.paragraphs,
+    ].join(' ');
+
+    const utterance = new SpeechSynthesisUtterance(spokenText);
+    utterance.lang =
+      settings.language === 'hi'
+        ? 'hi-IN'
+        : settings.language === 'pa'
+        ? 'pa-IN'
+        : 'en-US';
+    utterance.rate = 1.0;
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    setIsSpeaking(true);
+    window.speechSynthesis.speak(utterance);
+  };
 
   if (isLoading && !briefing) {
     return (
@@ -58,7 +99,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
         }`}
       >
         <p className="text-sm font-mono-tabular">
-          No data available for Daily Briefing. Trigger Refresh to pull live feeds.
+          {labels.collectingData}
         </p>
       </section>
     );
@@ -106,8 +147,23 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           </span>
         </div>
 
-        {/* Export actions */}
+        {/* Voice Briefing & Export actions */}
         <div className="flex items-center gap-2 no-print">
+          <button
+            type="button"
+            onClick={handleToggleVoiceBriefing}
+            className={`min-h-[38px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+              isSpeaking
+                ? 'bg-[#E05A2B] border-[#E05A2B] text-white font-semibold'
+                : isDark
+                ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE] hover:border-[#E05A2B]'
+                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#181615] hover:border-[#E05A2B]'
+            }`}
+            title="Listen to Voice Briefing using browser speech synthesis"
+          >
+            {isSpeaking ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-[#E05A2B]" />}
+            <span>{isSpeaking ? 'Stop Audio' : labels.voiceBriefing}</span>
+          </button>
           <button
             type="button"
             onClick={onExportText}

@@ -1,6 +1,7 @@
 import {
   CityWeather,
   CoinMarket,
+  ExtraMarketAsset,
   FxRateShift,
   MacroCountryIndicator,
   RawFeedItem,
@@ -16,11 +17,15 @@ import {
 } from '../utils/sanitize';
 
 export const INITIAL_SOURCE_STATUSES: Record<SourceId, SourceStatus> = {
+  supabase: { id: 'supabase', name: 'Supabase Primary Database', category: 'Primary DB', status: 'loading', lastSuccess: null, itemCount: 0 },
   usgs: { id: 'usgs', name: 'USGS Earthquakes (M4.5+)', category: 'Seismic', status: 'loading', lastSuccess: null, itemCount: 0 },
   eonet: { id: 'eonet', name: 'NASA EONET Natural Events', category: 'Disasters', status: 'loading', lastSuccess: null, itemCount: 0 },
   bbc: { id: 'bbc', name: 'BBC World News RSS', category: 'News Wire', status: 'loading', lastSuccess: null, itemCount: 0 },
   aljazeera: { id: 'aljazeera', name: 'Al Jazeera Global RSS', category: 'News Wire', status: 'loading', lastSuccess: null, itemCount: 0 },
   reuters: { id: 'reuters', name: 'Reuters World Wire', category: 'News Wire', status: 'loading', lastSuccess: null, itemCount: 0 },
+  who: { id: 'who', name: 'WHO Disease Outbreaks', category: 'Health', status: 'loading', lastSuccess: null, itemCount: 0 },
+  cyber: { id: 'cyber', name: 'Cyber Threat Advisories', category: 'Cyber', status: 'loading', lastSuccess: null, itemCount: 0 },
+  india: { id: 'india', name: 'India & Punjab Wire', category: 'Regional', status: 'loading', lastSuccess: null, itemCount: 0 },
   gdelt: { id: 'gdelt', name: 'GDELT DOC 2.0 Global', category: 'Global Media', status: 'loading', lastSuccess: null, itemCount: 0 },
   fx: { id: 'fx', name: 'ECB Sovereign FX Rates', category: 'Macro & FX', status: 'loading', lastSuccess: null, itemCount: 0 },
   worldbank: { id: 'worldbank', name: 'World Bank G20 Macro', category: 'Economy', status: 'loading', lastSuccess: null, itemCount: 0 },
@@ -201,8 +206,10 @@ async function fetchNasaEonet(): Promise<RawFeedItem[]> {
   return items;
 }
 
-// 3. News RSS via Server Proxy (BBC, Al Jazeera, Reuters)
-async function fetchRssSource(sourceKey: 'bbc' | 'aljazeera' | 'reuters'): Promise<RawFeedItem[]> {
+// 3. News RSS via Server Proxy (BBC, Al Jazeera, Reuters, WHO, Cyber, India/Punjab)
+async function fetchRssSource(
+  sourceKey: 'bbc' | 'aljazeera' | 'reuters' | 'who' | 'cyber' | 'india'
+): Promise<RawFeedItem[]> {
   interface ProxyRssResponse {
     source: string;
     status: string;
@@ -223,10 +230,21 @@ async function fetchRssSource(sourceKey: 'bbc' | 'aljazeera' | 'reuters'): Promi
   return (data.items || []).slice(0, 14).map((item, idx) => {
     const cleanTitle = sanitizeText(item.title, 200);
     const cleanText = sanitizeText(item.text, 340);
-    const countryMeta = getCountryMeta('', `${cleanTitle} ${cleanText}`);
+    const detectedMeta = getCountryMeta('', `${cleanTitle} ${cleanText}`);
+    const countryMeta =
+      sourceKey === 'india' && detectedMeta.code === 'GL'
+        ? getCountryMeta('IN')
+        : detectedMeta;
     const hash = cleanTitle.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), idx);
     const latJitter = ((hash % 19) - 9) * 0.22;
     const lngJitter = (((hash * 7) % 19) - 9) * 0.25;
+
+    // For Punjab-specific articles in the India feed, center near Chandigarh/Amritsar (30.73, 76.77)
+    const isPb = /punjab|chandigarh|amritsar|ludhiana|jalandhar|patiala|mohali|bathinda/i.test(
+      `${cleanTitle} ${cleanText}`
+    );
+    const baseLat = isPb ? 30.9 : countryMeta.lat;
+    const baseLng = isPb ? 75.85 : countryMeta.lng;
 
     return {
       id: `rss-${sourceKey}-${hash}-${idx}`,
@@ -235,9 +253,9 @@ async function fetchRssSource(sourceKey: 'bbc' | 'aljazeera' | 'reuters'): Promi
       text: cleanText,
       url: sanitizeUrl(item.url),
       time: item.time || Date.now(),
-      country: countryMeta.code,
-      lat: Math.max(-80, Math.min(80, countryMeta.lat + latJitter)),
-      lng: Math.max(-179, Math.min(179, countryMeta.lng + lngJitter)),
+      country: isPb ? 'IN' : countryMeta.code,
+      lat: Math.max(-80, Math.min(80, baseLat + latJitter)),
+      lng: Math.max(-179, Math.min(179, baseLng + lngJitter)),
     };
   });
 }
@@ -653,10 +671,32 @@ export interface AllSourcesFetchResult {
   rawItems: RawFeedItem[];
   coins: CoinMarket[];
   fxRates: FxRateShift[];
+  extraMarkets: ExtraMarketAsset[];
   macroIndicators: MacroCountryIndicator[];
   weather: CityWeather[];
   wikiTrends: WikiTrend[];
+  acledInfo: { configured: boolean; message: string };
   statuses: Record<SourceId, SourceStatus>;
+}
+
+async function fetchExtraMarkets(): Promise<ExtraMarketAsset[]> {
+  const data = await fetchJsonWithTimeout<{ assets?: ExtraMarketAsset[] }>('/api/markets/extra', 8000);
+  return Array.isArray(data.assets) ? data.assets : [];
+}
+
+async function fetchAcledInfo(): Promise<{ configured: boolean; message: string }> {
+  try {
+    const data = await fetchJsonWithTimeout<{ configured: boolean; message: string }>('/api/conflicts/acled', 6000);
+    return {
+      configured: Boolean(data.configured),
+      message: sanitizeText(data.message, 260),
+    };
+  } catch {
+    return {
+      configured: false,
+      message: 'ACLED API key not configured — skipping direct ACLED feed.',
+    };
+  }
 }
 
 export async function fetchAllWorldSources(
@@ -666,9 +706,14 @@ export async function fetchAllWorldSources(
   const rawItems: RawFeedItem[] = [];
   let coins: CoinMarket[] = [];
   let fxRates: FxRateShift[] = [];
+  let extraMarkets: ExtraMarketAsset[] = [];
   let macroIndicators: MacroCountryIndicator[] = [];
   let weather: CityWeather[] = [];
   let wikiTrends: WikiTrend[] = [];
+  let acledInfo = {
+    configured: false,
+    message: 'ACLED API key not configured — skipping direct ACLED feed.',
+  };
 
   const updateStatus = (
     id: SourceId,
@@ -726,6 +771,27 @@ export async function fetchAllWorldSources(
       })
       .catch((err) => updateStatus('reuters', false, 0, err)),
 
+    fetchRssSource('who')
+      .then((items) => {
+        rawItems.push(...items);
+        updateStatus('who', true, items.length);
+      })
+      .catch((err) => updateStatus('who', false, 0, err)),
+
+    fetchRssSource('cyber')
+      .then((items) => {
+        rawItems.push(...items);
+        updateStatus('cyber', true, items.length);
+      })
+      .catch((err) => updateStatus('cyber', false, 0, err)),
+
+    fetchRssSource('india')
+      .then((items) => {
+        rawItems.push(...items);
+        updateStatus('india', true, items.length);
+      })
+      .catch((err) => updateStatus('india', false, 0, err)),
+
     fetchGdeltArticles()
       .then((items) => {
         rawItems.push(...items);
@@ -770,15 +836,33 @@ export async function fetchAllWorldSources(
         updateStatus('wikipedia', true, trends.length);
       })
       .catch((err) => updateStatus('wikipedia', false, 0, err)),
+
+    fetchExtraMarkets()
+      .then((assets) => {
+        extraMarkets = assets;
+      })
+      .catch(() => {
+        // ignore extra markets error
+      }),
+
+    fetchAcledInfo()
+      .then((info) => {
+        acledInfo = info;
+      })
+      .catch(() => {
+        // ignore acled error
+      }),
   ]);
 
   return {
     rawItems,
     coins,
     fxRates,
+    extraMarkets,
     macroIndicators,
     weather,
     wikiTrends,
+    acledInfo,
     statuses,
   };
 }

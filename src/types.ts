@@ -4,12 +4,27 @@ export type Topic =
   | 'Economy'
   | 'Markets'
   | 'Tech'
+  | 'Cyber'
   | 'Health'
   | 'Climate'
   | 'Disaster'
   | 'Science'
   | 'Sports'
   | 'Other';
+
+export type AppLanguage = 'en' | 'hi' | 'pa';
+
+export type DashboardTab =
+  | 'overview'
+  | 'countries'
+  | 'india'
+  | 'cyber'
+  | 'health'
+  | 'conflict'
+  | 'myfeed'
+  | 'saved';
+
+export type MobileNavTab = 'home' | 'map' | 'changes' | 'search' | 'saved';
 
 export type WorldRegion =
   | 'All'
@@ -63,6 +78,8 @@ export interface Story {
   disasterCategory?: string;
   verificationNote?: string;
   groundedSources?: Array<{ title: string; url: string }>;
+  status?: string;
+  origin?: 'supabase' | 'fallback';
 }
 
 export interface DailyBriefing {
@@ -166,6 +183,7 @@ export interface WikiTrend {
 }
 
 export type SourceId =
+  | 'supabase'
   | 'usgs'
   | 'eonet'
   | 'gdelt'
@@ -176,7 +194,10 @@ export type SourceId =
   | 'wikipedia'
   | 'bbc'
   | 'aljazeera'
-  | 'reuters';
+  | 'reuters'
+  | 'who'
+  | 'cyber'
+  | 'india';
 
 export interface SourceStatus {
   id: SourceId;
@@ -228,6 +249,7 @@ export interface SpeechSummaryResult {
 export interface AppSettings {
   followedTopics: Topic[];
   followedRegions: WorldRegion[];
+  followedCountries: string[]; // ISO-2 country codes followed by user
   refreshIntervalMinutes: number;
   modelChoice: 'fast' | 'quality';
   units: 'metric' | 'imperial';
@@ -238,4 +260,73 @@ export interface AppSettings {
   referenceLat: number;
   referenceLng: number;
   referenceCity: string;
+  language: AppLanguage;
+  minImportance: number; // 1 to 10 ("show 7+ only")
+  strictSupabaseOnly: boolean;
 }
+
+export interface ExtraMarketAsset {
+  id: string;
+  symbol: string;
+  name: string;
+  category: 'Index' | 'Commodity' | 'FX';
+  price: number | null;
+  changePct: number | null;
+  unit: string;
+  asOf: string;
+  url: string;
+}
+
+export interface SupabaseTableState {
+  storiesCount: number;
+  snapshotsCount: number;
+  briefingsCount: number;
+  storiesEmpty: boolean;
+  snapshotsEmpty: boolean;
+  briefingsEmpty: boolean;
+  usingFallback: boolean;
+  lastCheckedAt: number | null;
+  latestDataTimestamp: number | null;
+  acledConfigured: boolean;
+  error?: string;
+}
+
+export interface CustomAlertRule {
+  id: string;
+  name: string;
+  ruleType: 'story' | 'market';
+  minImportance?: number;
+  topic?: Topic | 'All';
+  country?: string; // ISO-2 or 'ALL'
+  assetSymbol?: string; // e.g. 'BTC', 'ETH', 'USD/INR', 'GOLD'
+  movePctThreshold?: number; // e.g. 5 for 5%
+  enabled: boolean;
+  createdAt: number;
+  lastTriggeredAt?: number;
+}
+
+export interface AskWorldCitation {
+  storyId: string;
+  headline: string;
+  country: string;
+  url: string;
+  sourceName: string;
+}
+
+export interface AskWorldMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  notEnoughData?: boolean;
+  citations?: AskWorldCitation[];
+  createdAt: number;
+}
+
+export interface TranslatedStoryCacheEntry {
+  storyId: string;
+  lang: AppLanguage;
+  headline: string;
+  summary: string;
+  translatedAt: number;
+}
+

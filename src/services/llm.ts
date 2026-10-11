@@ -1,5 +1,7 @@
 import {
+  AppLanguage,
   AppSettings,
+  AskWorldMessage,
   ChangeEntry,
   CoinMarket,
   CountryBrief,
@@ -10,6 +12,7 @@ import {
   SpeechSummaryResult,
   Story,
   Topic,
+  TranslatedStoryCacheEntry,
   WhatChangedAnalysis,
 } from '../types';
 import {
@@ -26,9 +29,11 @@ import {
 import {
   CachedAiItem,
   getAiCallsUsedToday,
+  getCachedTranslation,
   incrementAiCallsUsed,
   loadAiItemCache,
   saveAiItemCache,
+  saveTranslationToCache,
 } from './storage';
 
 const MAX_CALLS_PER_REFRESH = 10;
@@ -379,6 +384,7 @@ export function computeRisingTopics(
     Economy: 0,
     Markets: 0,
     Tech: 0,
+    Cyber: 0,
     Health: 0,
     Climate: 0,
     Disaster: 0,
@@ -877,3 +883,167 @@ export async function summarizeSpeechByWhenWhere(
     return buildLocalFallback('Network error while contacting speech synthesis endpoint.');
   }
 }
+
+// Section 5: "Ask the World" Chat that answers ONLY from Supabase/monitored stories with source links
+export async function askTheWorldQuery(
+  question: string,
+  stories: Story[],
+  settings: AppSettings
+): Promise<AskWorldMessage> {
+  const cleanQuestion = sanitizeText(question, 350);
+
+  if (stories.length === 0) {
+    return {
+      id: `ask-${Date.now()}`,
+      role: 'assistant',
+      text: 'Not enough data in the current monitored stories to answer this question. (Collecting data, check back soon.)',
+      notEnoughData: true,
+      citations: [],
+      createdAt: Date.now(),
+    };
+  }
+
+  // Deterministic keyword fallback if AI is paused or budget reached
+  const buildKeywordFallback = (note: string): AskWorldMessage => {
+    const tokens = cleanQuestion
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, ' ')
+      .split(/\s+/)
+      .filter((t) => t.length > 2);
+
+    const matched = stories.filter((s) => {
+      const hay = `${s.headline} ${s.summary} ${s.countryName} ${s.country} ${s.topic}`.toLowerCase();
+      return tokens.some((tok) => hay.includes(tok));
+    });
+
+    if (matched.length === 0) {
+      return {
+        id: `ask-${Date.now()}`,
+        role: 'assistant',
+        text: 'Not enough data in the current monitored stories to answer this question.',
+        notEnoughData: true,
+        citations: [],
+        createdAt: Date.now(),
+      };
+    }
+
+    const top = matched.slice(0, 3);
+    const summaryText = top
+      .map((s) => `• [${s.countryName} · ${s.topic}] ${s.headline}: ${s.summary}`)
+      .join('\n');
+
+    return {
+      id: `ask-${Date.now()}`,
+      role: 'assistant',
+      text: `Based strictly on ${top.length} monitored dispatch(es) (${note}):\n${summaryText}`,
+      notEnoughData: false,
+      citations: top.map((s) => ({
+        storyId: s.id,
+        headline: s.headline,
+        country: s.country,
+        url: s.sources[0]?.url || '#',
+        sourceName: s.sources[0]?.name || 'Verified Source',
+      })),
+      createdAt: Date.now(),
+    };
+  };
+
+  if (settings.pauseAi) {
+    return buildKeywordFallback('AI paused in Settings');
+  }
+
+  if (getAiCallsUsedToday() >= settings.dailyAiBudget) {
+    return buildKeywordFallback('Daily AI budget reached');
+  }
+
+  try {
+    const payloadStories = stories.slice(0, 45).map((s) => ({
+      id: s.id,
+      headline: s.headline,
+      summary: s.summary,
+      country: `${s.countryName} (${s.country})`,
+      topic: s.topic,
+      importance: s.importance,
+      sourceName: s.sources[0]?.name || 'Verified Source',
+      url: s.sources[0]?.url || '#',
+    }));
+
+    const res = await fetch('/api/ai/ask-world', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        question: cleanQuestion,
+        stories: payloadStories,
+      }),
+    });
+
+    if (!res.ok) {
+      return buildKeywordFallback('Using direct story matching');
+    }
+
+    incrementAiCallsUsed(1);
+    const data = await res.json();
+    return {
+      id: `ask-${Date.now()}`,
+      role: 'assistant',
+      text: sanitizeText(data.answer, 1200) || 'Not enough data.',
+      notEnoughData: Boolean(data.notEnoughData),
+      citations: Array.isArray(data.citations)
+        ? data.citations.map((c: Record<string, unknown>) => ({
+            storyId: sanitizeText(c.storyId, 80),
+            headline: sanitizeText(c.headline, 160),
+            country: sanitizeText(c.country, 40),
+            url: sanitizeUrl(c.url),
+            sourceName: sanitizeText(c.sourceName, 60),
+          }))
+        : [],
+      createdAt: Date.now(),
+    };
+  } catch {
+    return buildKeywordFallback('Using direct story matching');
+  }
+}
+
+// Section 5: On-demand Hindi ('hi') and Punjabi ('pa') translation of summaries, cached, with "AI translated" label
+export async function translateStoryOnDemand(
+  story: Story,
+  lang: AppLanguage,
+  settings: AppSettings
+): Promise<TranslatedStoryCacheEntry | null> {
+  if (lang === 'en') return null;
+
+  const existing = getCachedTranslation(story.id, lang);
+  if (existing) return existing;
+
+  if (settings.pauseAi || getAiCallsUsedToday() >= settings.dailyAiBudget) {
+    return null;
+  }
+
+  try {
+    const res = await fetch('/api/ai/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        headline: story.headline,
+        summary: story.summary,
+        lang,
+      }),
+    });
+
+    if (!res.ok) return null;
+    incrementAiCallsUsed(1);
+    const data = await res.json();
+    const entry: TranslatedStoryCacheEntry = {
+      storyId: story.id,
+      lang,
+      headline: sanitizeText(data.headline || story.headline, 240),
+      summary: sanitizeText(data.summary || story.summary, 600),
+      translatedAt: Date.now(),
+    };
+    saveTranslationToCache(entry);
+    return entry;
+  } catch {
+    return null;
+  }
+}
+

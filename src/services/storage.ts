@@ -1,14 +1,18 @@
 import {
+  AppLanguage,
   AppSettings,
   CityWeather,
   CoinMarket,
+  CustomAlertRule,
   DailyBriefing,
+  ExtraMarketAsset,
   FxRateShift,
   MacroCountryIndicator,
   Snapshot,
   SpeechSummaryResult,
   Story,
   Topic,
+  TranslatedStoryCacheEntry,
   WhatChangedAnalysis,
   WikiTrend,
 } from '../types';
@@ -21,11 +25,15 @@ const STORAGE_KEYS = {
   LAST_STATE: 'worldpulse_last_state_v1',
   AI_BUDGET: 'worldpulse_ai_budget_v1',
   SPEECH_HISTORY: 'worldpulse_speech_history_v1',
+  BOOKMARKS: 'worldpulse_bookmarks_v1',
+  CUSTOM_ALERTS: 'worldpulse_custom_alerts_v1',
+  TRANSLATIONS: 'worldpulse_translations_v1',
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
   followedTopics: [...ALL_TOPICS],
   followedRegions: ['All', 'Asia-Pacific', 'Europe', 'Americas', 'Middle East & Africa', 'Global'],
+  followedCountries: ['IN', 'US', 'UA', 'GB', 'JP'],
   refreshIntervalMinutes: 15,
   modelChoice: 'fast',
   units: 'metric',
@@ -36,6 +44,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   referenceLat: 28.6139, // New Delhi (matches default Asia/Kolkata timezone)
   referenceLng: 77.209,
   referenceCity: 'New Delhi',
+  language: 'en',
+  minImportance: 1,
+  strictSupabaseOnly: false,
 };
 
 export interface CachedAiItem {
@@ -59,6 +70,7 @@ export interface PersistedDashboardState {
   whatChanged: WhatChangedAnalysis | null;
   coins: CoinMarket[];
   fxRates?: FxRateShift[];
+  extraMarkets?: ExtraMarketAsset[];
   macroIndicators?: MacroCountryIndicator[];
   weather: CityWeather[];
   wikiTrends: WikiTrend[];
@@ -181,6 +193,7 @@ function generateInitialBaselineSnapshots(): Snapshot[] {
         Economy: 4 + ((daysBack + 1) % 3),
         Markets: 5 + (daysBack % 2),
         Tech: 3 + (daysBack % 2),
+        Cyber: 2 + (daysBack % 2),
         Health: 2 + (daysBack % 2),
         Climate: 3 + (daysBack % 3),
         Disaster: 6 + (daysBack % 4),
@@ -218,6 +231,7 @@ export function saveSnapshot(stories: Story[], coins: CoinMarket[]): Snapshot[] 
     Economy: 0,
     Markets: 0,
     Tech: 0,
+    Cyber: 0,
     Health: 0,
     Climate: 0,
     Disaster: 0,
@@ -274,12 +288,74 @@ export function saveSpeechToHistory(speech: SpeechSummaryResult): SpeechSummaryR
   return updated;
 }
 
+// Bookmarks (Saved Stories)
+export function loadBookmarks(): Story[] {
+  return safeGetItem<Story[]>(STORAGE_KEYS.BOOKMARKS, []);
+}
+
+export function saveBookmarks(bookmarks: Story[]): void {
+  safeSetItem(STORAGE_KEYS.BOOKMARKS, bookmarks.slice(0, 150));
+}
+
+// Custom Alert Rules
+const DEFAULT_ALERT_RULES: CustomAlertRule[] = [
+  {
+    id: 'alert-conflict-8',
+    name: 'Importance 8+ in Conflict',
+    ruleType: 'story',
+    minImportance: 8,
+    topic: 'Conflict',
+    country: 'ALL',
+    enabled: true,
+    createdAt: Date.now() - 86400_000,
+  },
+  {
+    id: 'alert-btc-5pct',
+    name: 'BTC moves more than 5%',
+    ruleType: 'market',
+    assetSymbol: 'BTC',
+    movePctThreshold: 5,
+    enabled: true,
+    createdAt: Date.now() - 86400_000,
+  },
+];
+
+export function loadCustomAlerts(): CustomAlertRule[] {
+  return safeGetItem<CustomAlertRule[]>(STORAGE_KEYS.CUSTOM_ALERTS, DEFAULT_ALERT_RULES);
+}
+
+export function saveCustomAlerts(rules: CustomAlertRule[]): void {
+  safeSetItem(STORAGE_KEYS.CUSTOM_ALERTS, rules);
+}
+
+// Cached Hindi ('hi') & Punjabi ('pa') Translations
+export function loadTranslationsCache(): Record<string, TranslatedStoryCacheEntry> {
+  return safeGetItem<Record<string, TranslatedStoryCacheEntry>>(STORAGE_KEYS.TRANSLATIONS, {});
+}
+
+export function getCachedTranslation(
+  storyId: string,
+  lang: AppLanguage
+): TranslatedStoryCacheEntry | null {
+  if (lang === 'en') return null;
+  const cache = loadTranslationsCache();
+  return cache[`${storyId}_${lang}`] || null;
+}
+
+export function saveTranslationToCache(entry: TranslatedStoryCacheEntry): void {
+  const cache = loadTranslationsCache();
+  cache[`${entry.storyId}_${entry.lang}`] = entry;
+  const entries = Object.entries(cache).slice(-300);
+  safeSetItem(STORAGE_KEYS.TRANSLATIONS, Object.fromEntries(entries));
+}
+
 export function clearAllWorldPulseCache(): void {
   try {
     window.localStorage.removeItem(STORAGE_KEYS.AI_ITEM_CACHE);
     window.localStorage.removeItem(STORAGE_KEYS.SNAPSHOTS);
     window.localStorage.removeItem(STORAGE_KEYS.LAST_STATE);
     window.localStorage.removeItem(STORAGE_KEYS.SPEECH_HISTORY);
+    window.localStorage.removeItem(STORAGE_KEYS.TRANSLATIONS);
   } catch {
     // ignore
   }

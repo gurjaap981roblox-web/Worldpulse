@@ -1,10 +1,11 @@
 import React from 'react';
 import { ArrowDownRight, ArrowUpRight, ExternalLink } from 'lucide-react';
-import { AppSettings, CoinMarket, FxRateShift, WikiTrend } from '../types';
+import { AppSettings, CoinMarket, ExtraMarketAsset, FxRateShift, WikiTrend } from '../types';
 
 interface MarketsTickerProps {
   coins: CoinMarket[];
   fxRates: FxRateShift[];
+  extraMarkets?: ExtraMarketAsset[];
   wikiTrends: WikiTrend[];
   isLoading: boolean;
   settings: AppSettings;
@@ -13,6 +14,7 @@ interface MarketsTickerProps {
 export const MarketsTicker: React.FC<MarketsTickerProps> = ({
   coins,
   fxRates,
+  extraMarkets = [],
   wikiTrends,
   isLoading,
   settings,
@@ -21,14 +23,14 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
 
   return (
     <section
-      aria-label="Live sovereign FX, digital assets, and global attention index"
+      aria-label="Live sovereign FX, stock indices, commodities, digital assets, and global attention index"
       className={`border transition-colors duration-200 ${
         isDark
           ? 'bg-[#101217] border-[#222631] text-[#F3F2EE]'
           : 'bg-[#FCFAF5] border-[#DCD5C7] text-[#181615]'
       }`}
     >
-      {/* Row 1: Sovereign FX + Benchmark Digital Assets Ledger Ribbon */}
+      {/* Row 1: Stock Indices, Gold, Oil, USD/INR, Sovereign FX + Benchmark Digital Assets Ledger Ribbon */}
       <div
         className={`flex items-stretch overflow-x-auto no-scrollbar divide-x ${
           isDark ? 'divide-[#222631]' : 'divide-[#DCD5C7]'
@@ -42,8 +44,56 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
           <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
             Live Tape
           </span>
-          <span className="text-xs font-semibold whitespace-nowrap">FX &amp; Markets</span>
+          <span className="text-xs font-semibold whitespace-nowrap">Indices · Gold · Oil · FX · Crypto</span>
         </div>
+
+        {/* Extra Markets: Stock Indices, Gold, Oil, USD/INR */}
+        {extraMarkets.map((asset) => {
+          const isUp = (asset.changePct ?? 0) >= 0;
+          return (
+            <a
+              key={asset.id}
+              href={asset.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-3.5 py-2 flex flex-col justify-center whitespace-nowrap shrink-0 transition-colors ${
+                isDark ? 'hover:bg-[#151820]' : 'hover:bg-[#EFEAE0]/50'
+              }`}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] font-mono-tabular">
+                <span className="font-bold text-[#E05A2B]">{asset.symbol}</span>
+                <span className={isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}>{asset.category}</span>
+              </div>
+              <div className="flex items-center gap-2 font-mono-tabular text-xs mt-0.5">
+                {asset.price !== null ? (
+                  <>
+                    <span className="font-semibold">
+                      {asset.unit === '$' || asset.unit === '₹' ? asset.unit : ''}
+                      {asset.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </span>
+                    {asset.changePct !== null && (
+                      <span
+                        className={`text-[11px] font-semibold inline-flex items-center ${
+                          isUp ? 'text-emerald-500' : 'text-rose-500'
+                        }`}
+                      >
+                        {isUp ? (
+                          <ArrowUpRight className="w-3 h-3" />
+                        ) : (
+                          <ArrowDownRight className="w-3 h-3" />
+                        )}
+                        {isUp ? '+' : ''}
+                        {asset.changePct.toFixed(2)}%
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className={isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}>No data</span>
+                )}
+              </div>
+            </a>
+          );
+        })}
 
         {/* Key Sovereign FX pairs first */}
         {fxRates.slice(0, 5).map((fx) => {
