@@ -73,12 +73,36 @@ body {
   animation: wp-marker-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
 }
 
+/* Slow-scrolling Live Pulse headline ticker */
+@keyframes wp-live-ticker {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.wp-live-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: wp-live-ticker 52s linear infinite;
+}
+
+.wp-live-ticker-track.is-paused,
+.wp-live-ticker-track:hover,
+.wp-live-ticker-track:focus-within {
+  animation-play-state: paused !important;
+}
+
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .wp-pulse-ring,
+  .wp-live-ticker-track,
   .animate-pulse,
   .animate-spin {
     animation: none !important;
+    transform: none !important;
   }
   * {
     transition-duration: 0.01ms !important;

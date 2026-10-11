@@ -2,12 +2,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import {
   ExternalLink,
+  Flame,
   Globe,
   Maximize2,
+  Satellite,
   SearchCheck,
   X,
 } from 'lucide-react';
-import { AppSettings, Story, Topic } from '../types';
+import { AppSettings, MapFocusTarget, MapStyleMode, Story, Topic } from '../types';
 import {
   formatRelativeTime,
   formatTimeInTz,
@@ -26,6 +28,11 @@ interface WorldMapPanelProps {
   onVerifyStory: (story: Story) => Promise<void>;
   verifyingStoryId: string | null;
   settings: AppSettings;
+  mapStyle?: MapStyleMode;
+  onChangeMapStyle?: (style: MapStyleMode) => void;
+  mapFocusTarget?: MapFocusTarget | null;
+  selectedCountryFilter?: string | null;
+  onClearCountryFilter?: () => void;
 }
 
 export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
@@ -38,6 +45,11 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
   onVerifyStory,
   verifyingStoryId,
   settings,
+  mapStyle = 'dark',
+  onChangeMapStyle,
+  mapFocusTarget,
+  selectedCountryFilter,
+  onClearCountryFilter,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -49,6 +61,36 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
   const [sheetTranslateY, setSheetTranslateY] = useState(0);
 
   const isDark = settings.theme === 'dark';
+
+  const prefersReducedMotion = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const getTileUrls = (styleMode: MapStyleMode, darkTheme: boolean) => {
+    if (styleMode === 'satellite') {
+      return {
+        base: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        ref: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+      };
+    }
+    if (styleMode === 'heatmap') {
+      return {
+        base: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        ref: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      };
+    }
+    // 'dark' or theme-adaptive default
+    const useDarkCanvas = styleMode === 'dark' || darkTheme;
+    return {
+      base: useDarkCanvas
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      ref: useDarkCanvas
+        ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
+        : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+    };
+  };
 
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
@@ -63,20 +105,14 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
       worldCopyJump: true,
     });
 
-    const baseTileUrl = isDark
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+    const urls = getTileUrls(mapStyle, isDark);
 
-    const refTileUrl = isDark
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
-      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
-
-    const tileLayer = L.tileLayer(baseTileUrl, {
+    const tileLayer = L.tileLayer(urls.base, {
       attribution: 'Tiles &copy; Esri, HERE, Garmin, OpenStreetMap',
       maxZoom: 16,
     }).addTo(map);
 
-    const labelLayer = L.tileLayer(refTileUrl, {
+    const labelLayer = L.tileLayer(urls.ref, {
       maxZoom: 16,
       opacity: 0.85,
     }).addTo(map);
@@ -101,17 +137,10 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
   useEffect(() => {
     if (!tileLayerRef.current || !labelLayerRef.current) return;
-    const baseTileUrl = isDark
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
-
-    const refTileUrl = isDark
-      ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
-      : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}';
-
-    tileLayerRef.current.setUrl(baseTileUrl);
-    labelLayerRef.current.setUrl(refTileUrl);
-  }, [isDark]);
+    const urls = getTileUrls(mapStyle, isDark);
+    tileLayerRef.current.setUrl(urls.base);
+    labelLayerRef.current.setUrl(urls.ref);
+  }, [isDark, mapStyle]);
 
   useEffect(() => {
     const group = markersLayerRef.current;
@@ -119,6 +148,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
     group.clearLayers();
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    const reducedMotion = prefersReducedMotion();
 
     stories.forEach((story) => {
       if (typeof story.lat !== 'number' || typeof story.lng !== 'number') return;
@@ -126,11 +156,48 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
       const colorHex = TOPIC_COLORS[story.topic]?.hex || '#E05A2B';
       const dotDiameter = Math.round(11 + (story.importance / 10) * 16);
-      const isUnderOneHour = story.time >= oneHourAgo;
+      const isUnderOneHour = story.time >= oneHourAgo && !reducedMotion;
       const isSelected = selectedStory?.id === story.id;
       const srLabel = `${story.topic} in ${story.countryName}: ${story.headline} (Importance ${story.importance.toFixed(1)} out of 10)`;
 
-      const html = `
+      const heatRadius = Math.round(54 + story.importance * 9);
+      const html =
+        mapStyle === 'heatmap'
+          ? `
+        <button
+          type="button"
+          class="wp-marker-btn"
+          style="width: 44px; height: 44px; position: relative;"
+          aria-label="${srLabel.replace(/"/g, '&quot;')}"
+          title="${story.headline.replace(/"/g, '&quot;')}"
+        >
+          <span
+            aria-hidden="true"
+            style="
+              position: absolute;
+              width: ${heatRadius}px;
+              height: ${heatRadius}px;
+              border-radius: 9999px;
+              background: radial-gradient(circle, rgba(239,68,68,0.72) 0%, rgba(249,115,22,0.46) 38%, rgba(234,179,8,0.18) 68%, rgba(234,179,8,0) 100%);
+              pointer-events: none;
+              z-index: 1;
+            "
+          ></span>
+          <span
+            style="
+              width: ${Math.max(8, Math.round(dotDiameter * 0.55))}px;
+              height: ${Math.max(8, Math.round(dotDiameter * 0.55))}px;
+              border-radius: 9999px;
+              background-color: #FEF08A;
+              border: ${isSelected ? '2.5px solid #ffffff' : '1.5px solid #DC2626'};
+              display: block;
+              position: relative;
+              z-index: 2;
+            "
+          ></span>
+        </button>
+      `
+          : `
         <button
           type="button"
           class="wp-marker-btn"
@@ -178,21 +245,54 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
       marker.addTo(group);
     });
-  }, [stories, selectedStory, onSelectStory]);
+  }, [stories, selectedStory, onSelectStory, mapStyle]);
 
   useEffect(() => {
     if (selectedStory && mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo(
-        [selectedStory.lat, selectedStory.lng],
-        Math.max(3, mapInstanceRef.current.getZoom()),
-        { duration: 0.6 }
-      );
+      if (prefersReducedMotion()) {
+        mapInstanceRef.current.setView(
+          [selectedStory.lat, selectedStory.lng],
+          Math.max(3, mapInstanceRef.current.getZoom()),
+          { animate: false }
+        );
+      } else {
+        mapInstanceRef.current.flyTo(
+          [selectedStory.lat, selectedStory.lng],
+          Math.max(3, mapInstanceRef.current.getZoom()),
+          { duration: 0.6 }
+        );
+      }
     }
   }, [selectedStory]);
 
+  useEffect(() => {
+    if (mapFocusTarget && mapInstanceRef.current) {
+      if (prefersReducedMotion()) {
+        mapInstanceRef.current.setView(
+          [mapFocusTarget.lat, mapFocusTarget.lng],
+          mapFocusTarget.zoom,
+          { animate: false }
+        );
+      } else {
+        mapInstanceRef.current.flyTo(
+          [mapFocusTarget.lat, mapFocusTarget.lng],
+          mapFocusTarget.zoom,
+          { duration: 0.65 }
+        );
+      }
+    }
+  }, [mapFocusTarget]);
+
   const handleResetView = () => {
+    if (onClearCountryFilter) {
+      onClearCountryFilter();
+    }
     if (mapInstanceRef.current) {
-      mapInstanceRef.current.flyTo([22, 18], 2, { duration: 0.6 });
+      if (prefersReducedMotion()) {
+        mapInstanceRef.current.setView([22, 18], 2, { animate: false });
+      } else {
+        mapInstanceRef.current.flyTo([22, 18], 2, { duration: 0.6 });
+      }
     }
   };
 
@@ -247,19 +347,34 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={handleResetView}
-            className={`min-h-[40px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
-              isDark
-                ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE] hover:border-[#F3F2EE]'
-                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#666159] hover:text-[#181615] hover:border-[#181615]'
-            }`}
-            title="Reset world map zoom"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            <span>Reset Frame</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedCountryFilter && onClearCountryFilter && (
+              <button
+                type="button"
+                onClick={onClearCountryFilter}
+                className="min-h-[44px] px-3 py-1.5 border border-[#E05A2B] bg-[#E05A2B]/15 text-[#E05A2B] text-xs font-mono-tabular font-semibold flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                title="Clear country filter"
+              >
+                <span>{getCountryFlag(selectedCountryFilter)}</span>
+                <span>Filter: {selectedCountryFilter}</span>
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={handleResetView}
+              className={`min-h-[44px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                isDark
+                  ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE] hover:border-[#F3F2EE]'
+                  : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#666159] hover:text-[#181615] hover:border-[#181615]'
+              }`}
+              title="Reset world map zoom"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Reset Frame</span>
+            </button>
+          </div>
         </div>
 
         {/* Map Filter Chips */}

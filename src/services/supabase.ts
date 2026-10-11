@@ -218,6 +218,65 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
           ? (row.countryCounts as Record<string, number>)
           : {};
 
+      const rawPricesObj =
+        row.top_coin_prices && typeof row.top_coin_prices === 'object'
+          ? (row.top_coin_prices as Record<string, unknown>)
+          : row.topCoinPrices && typeof row.topCoinPrices === 'object'
+          ? (row.topCoinPrices as Record<string, unknown>)
+          : row.markets && typeof row.markets === 'object'
+          ? (row.markets as Record<string, unknown>)
+          : {};
+
+      const topCoinPrices: Record<string, number> = {};
+      for (const [k, v] of Object.entries(rawPricesObj)) {
+        const num = Number(v);
+        if (Number.isFinite(num) && num > 0) {
+          topCoinPrices[k.toUpperCase()] = num;
+        }
+      }
+      // Support direct columns on snapshots table (e.g. btc, btc_price, eth, eth_price, gold, gold_price)
+      const directBtc = Number(row.btc_price ?? row.btc ?? row.BTC);
+      if (Number.isFinite(directBtc) && directBtc > 0) topCoinPrices.BTC = directBtc;
+      const directEth = Number(row.eth_price ?? row.eth ?? row.ETH);
+      if (Number.isFinite(directEth) && directEth > 0) topCoinPrices.ETH = directEth;
+      const directGold = Number(row.gold_price ?? row.gold ?? row.xau ?? row.GOLD ?? row.XAU);
+      if (Number.isFinite(directGold) && directGold > 0) topCoinPrices.GOLD = directGold;
+
+      const rawChangesObj =
+        row.top_coin_changes && typeof row.top_coin_changes === 'object'
+          ? (row.top_coin_changes as Record<string, unknown>)
+          : row.topCoinChanges && typeof row.topCoinChanges === 'object'
+          ? (row.topCoinChanges as Record<string, unknown>)
+          : {};
+
+      const topCoinChanges: Record<string, number> = {};
+      for (const [k, v] of Object.entries(rawChangesObj)) {
+        const num = Number(v);
+        if (Number.isFinite(num)) {
+          topCoinChanges[k.toUpperCase()] = num;
+        }
+      }
+      const directBtcChg = Number(row.btc_change ?? row.btc_change_24h);
+      if (Number.isFinite(directBtcChg)) topCoinChanges.BTC = directBtcChg;
+      const directEthChg = Number(row.eth_change ?? row.eth_change_24h);
+      if (Number.isFinite(directEthChg)) topCoinChanges.ETH = directEthChg;
+      const directGoldChg = Number(row.gold_change ?? row.gold_change_24h);
+      if (Number.isFinite(directGoldChg)) topCoinChanges.GOLD = directGoldChg;
+
+      const rawSourcesHealth =
+        row.source_timestamps && typeof row.source_timestamps === 'object'
+          ? (row.source_timestamps as Record<string, unknown>)
+          : row.sources_health && typeof row.sources_health === 'object'
+          ? (row.sources_health as Record<string, unknown>)
+          : {};
+      const sourceTimestamps: Record<string, number> = {};
+      for (const [k, v] of Object.entries(rawSourcesHealth)) {
+        const parsed = typeof v === 'number' ? v : Date.parse(String(v));
+        if (Number.isFinite(parsed) && parsed > 0) {
+          sourceTimestamps[k.toLowerCase()] = parsed;
+        }
+      }
+
       return {
         id: sanitizeText(String(row.id || `sb-snap-${idx}`), 80),
         timestamp: validTs,
@@ -227,9 +286,33 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
           : [],
         topicCounts,
         countryCounts,
-        topCoinPrices: {},
+        topCoinPrices,
+        topCoinChanges,
+        sourceTimestamps,
       };
     });
+
+    // Sort snapshots newest first and derive 24h changes from prior snapshot if not explicitly provided
+    snapshots.sort((a, b) => b.timestamp - a.timestamp);
+    if (snapshots.length >= 2) {
+      const newest = snapshots[0];
+      const older = snapshots[1];
+      const nextChanges: Record<string, number> = { ...(newest.topCoinChanges || {}) };
+      for (const sym of ['BTC', 'ETH', 'GOLD']) {
+        if (
+          nextChanges[sym] === undefined &&
+          newest.topCoinPrices[sym] &&
+          older.topCoinPrices[sym] &&
+          older.topCoinPrices[sym] > 0
+        ) {
+          nextChanges[sym] =
+            ((newest.topCoinPrices[sym] - older.topCoinPrices[sym]) /
+              older.topCoinPrices[sym]) *
+            100;
+        }
+      }
+      newest.topCoinChanges = nextChanges;
+    }
 
     // Normalize & sanitize briefing from Supabase
     let briefing: DailyBriefing | null = null;

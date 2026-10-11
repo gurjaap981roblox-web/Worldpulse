@@ -37,6 +37,8 @@ import {
   ExtraMarketAsset,
   FxRateShift,
   MacroCountryIndicator,
+  MapFocusTarget,
+  MapStyleMode,
   MobileNavTab,
   Snapshot,
   SourceId,
@@ -88,6 +90,7 @@ import { TopBar } from './components/TopBar';
 import { HeroBriefing } from './components/HeroBriefing';
 import { SpeechArchivePanel } from './components/SpeechArchivePanel';
 import { WorldMapPanel } from './components/WorldMapPanel';
+import { LivePulseSection } from './components/LivePulseSection';
 import { TopTenList } from './components/TopTenList';
 import { EconomicChangePanel } from './components/EconomicChangePanel';
 import { DisastersPanel } from './components/DisastersPanel';
@@ -143,7 +146,10 @@ export default function App() {
   );
   const [minutesAgo, setMinutesAgo] = useState<number>(0);
 
-  // Supabase Primary Table State & ACLED status
+  // Supabase Primary Table State & Strict Supabase-only arrays for Live Pulse
+  const [supabaseStories, setSupabaseStories] = useState<Story[]>([]);
+  const [supabaseSnapshots, setSupabaseSnapshots] = useState<Snapshot[]>([]);
+  const [supabaseBriefing, setSupabaseBriefing] = useState<DailyBriefing | null>(null);
   const [supabaseState, setSupabaseState] = useState<SupabaseTableState>({
     storiesCount: 0,
     snapshotsCount: 0,
@@ -181,6 +187,9 @@ export default function App() {
   const [searchInput, setSearchInput] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<'All' | Topic>('All');
+  const [selectedCountryFilter, setSelectedCountryFilter] = useState<string | null>(null);
+  const [mapStyle, setMapStyle] = useState<MapStyleMode>('dark');
+  const [mapFocusTarget, setMapFocusTarget] = useState<MapFocusTarget | null>(null);
   const [selectedStory, setSelectedStory] = useState<Story | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
@@ -372,6 +381,9 @@ export default function App() {
     try {
       // Step 1: Query Supabase (stories, snapshots, briefings)
       const sbResult = await fetchFromSupabasePrimary();
+      setSupabaseStories(sbResult.stories);
+      setSupabaseSnapshots(sbResult.snapshots);
+      setSupabaseBriefing(sbResult.briefing);
       setSupabaseState(sbResult.tableState);
 
       const updatedStatuses: Record<SourceId, SourceStatus> = {
@@ -581,6 +593,9 @@ export default function App() {
       if (selectedTopicFilter !== 'All' && story.topic !== selectedTopicFilter) {
         return false;
       }
+      if (selectedCountryFilter && story.country !== selectedCountryFilter) {
+        return false;
+      }
       if (debouncedQuery) {
         const hay = `${story.headline} ${story.summary} ${story.countryName} ${story.country} ${story.topic} ${story.sources.map((s) => s.name).join(' ')}`.toLowerCase();
         if (!hay.includes(debouncedQuery)) return false;
@@ -593,6 +608,7 @@ export default function App() {
     settings.followedTopics,
     settings.followedRegions,
     selectedTopicFilter,
+    selectedCountryFilter,
     debouncedQuery,
   ]);
 
@@ -1317,7 +1333,7 @@ export default function App() {
 
         {/* Tablet-First 12-Column Architectural Grid (All Existing Panels Preserved) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Left Column (7/12): Map Monitor + Economic & FX Change + Disasters */}
+          {/* Left Column (7/12): Map Monitor + Live Pulse + Economic & FX Change + Disasters */}
           <div className="lg:col-span-7 space-y-5">
             <WorldMapPanel
               stories={filteredStories}
@@ -1328,6 +1344,28 @@ export default function App() {
               onSelectCountry={(code) => setSelectedCountryCode(code)}
               onVerifyStory={handleVerifyStory}
               verifyingStoryId={verifyingStoryId}
+              settings={settings}
+              mapStyle={mapStyle}
+              onChangeMapStyle={setMapStyle}
+              mapFocusTarget={mapFocusTarget}
+              selectedCountryFilter={selectedCountryFilter}
+              onClearCountryFilter={() => setSelectedCountryFilter(null)}
+            />
+
+            <LivePulseSection
+              supabaseStories={supabaseStories}
+              supabaseSnapshots={supabaseSnapshots}
+              supabaseBriefing={supabaseBriefing}
+              supabaseState={supabaseState}
+              isLoading={isRefreshing && supabaseState.lastCheckedAt === null}
+              selectedTopicFilter={selectedTopicFilter}
+              onSelectTopicFilter={setSelectedTopicFilter}
+              selectedCountryFilter={selectedCountryFilter}
+              onSelectCountryFilter={setSelectedCountryFilter}
+              onSelectStory={(story) => setSelectedStory(story)}
+              onPanMap={(target) => setMapFocusTarget(target)}
+              mapStyle={mapStyle}
+              onChangeMapStyle={setMapStyle}
               settings={settings}
             />
 

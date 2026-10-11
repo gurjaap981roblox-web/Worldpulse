@@ -26,6 +26,24 @@ export type DashboardTab =
 
 export type MobileNavTab = 'home' | 'map' | 'changes' | 'search' | 'saved';
 
+export type MapStyleMode = 'dark' | 'satellite' | 'heatmap';
+
+export type LivePulseRegion =
+  | 'Asia'
+  | 'Europe'
+  | 'Africa'
+  | 'Americas'
+  | 'Middle East'
+  | 'Oceania';
+
+export interface MapFocusTarget {
+  lat: number;
+  lng: number;
+  zoom: number;
+  label?: string;
+  ts: number;
+}
+
 export type WorldRegion =
   | 'All'
   | 'Asia-Pacific'
@@ -217,6 +235,8 @@ export interface Snapshot {
   topicCounts: Record<Topic, number>;
   countryCounts: Record<string, number>;
   topCoinPrices: Record<string, number>;
+  topCoinChanges?: Record<string, number>;
+  sourceTimestamps?: Record<string, number>;
 }
 
 export interface CountryBrief {
