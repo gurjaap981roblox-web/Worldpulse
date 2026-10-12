@@ -4,7 +4,12 @@ import {
   Calendar,
   Check,
   Copy,
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  FileText,
   Filter,
+  Printer,
   RotateCcw,
   Search,
   Sparkles,
@@ -28,33 +33,48 @@ import {
 } from '../utils/sanitize';
 import { loadFilterPresets, saveFilterPresets } from '../services/storage';
 
-// Boolean (AND / OR) + "exact phrase" + keyword search matcher across headline, summary, country, topic
+// Boolean (AND / OR) + "exact phrase" + -exclusion keyword search matcher
 export function matchesBooleanSearchQuery(story: Story, rawQuery: string): boolean {
-  const q = rawQuery.trim();
+  const q = (rawQuery || '').trim();
   if (!q) return true;
 
-  const haystack = `${story.headline} ${story.summary} ${story.countryName} ${story.country} ${story.topic} ${story.sources
+  const haystack = `${story.headline} ${story.summary} ${story.countryName} ${story.country} ${story.topic} ${(story.sources || [])
     .map((s) => s.name)
     .join(' ')}`.toLowerCase();
 
-  // Support OR groups first (case-insensitive " OR ")
   const orGroups = q.split(/\s+OR\s+/i);
 
   return orGroups.some((orPart) => {
-    // Inside each OR group, support AND tokens and "exact phrases"
-    const cleanAndPart = orPart.replace(/\s+AND\s+/gi, ' ');
-    const exactPhrases: string[] = [];
-    const withoutQuotes = cleanAndPart.replace(/"([^"]+)"/g, (_, phrase) => {
-      if (phrase && phrase.trim()) {
-        exactPhrases.push(phrase.trim().toLowerCase());
-      }
+    const negativeTerms: string[] = [];
+    let cleanPart = orPart.replace(/\s+NOT\s+([^\s]+)/gi, (_, term) => {
+      negativeTerms.push(term.toLowerCase());
       return ' ';
     });
+    cleanPart = cleanPart.replace(/(?:^|\s)-([^\s]+)/g, (_, term) => {
+      negativeTerms.push(term.toLowerCase());
+      return ' ';
+    });
+
+    for (const neg of negativeTerms) {
+      if (neg && haystack.includes(neg)) {
+        return false;
+      }
+    }
+
+    const exactPhrases: string[] = [];
+    const withoutQuotes = cleanPart
+      .replace(/\s+AND\s+/gi, ' ')
+      .replace(/"([^"]+)"/g, (_, phrase) => {
+        if (phrase && phrase.trim()) {
+          exactPhrases.push(phrase.trim().toLowerCase());
+        }
+        return ' ';
+      });
 
     const terms = withoutQuotes
       .toLowerCase()
       .split(/\s+/)
-      .filter(Boolean);
+      .filter((t) => Boolean(t) && !t.startsWith('-'));
 
     const phrasesMatch = exactPhrases.every((ph) => haystack.includes(ph));
     const termsMatch = terms.every((term) => haystack.includes(term));
@@ -63,64 +83,119 @@ export function matchesBooleanSearchQuery(story: Story, rawQuery: string): boole
   });
 }
 
-interface SearchAndFilterBarProps {
+export interface SearchAndFilterBarProps {
   stories: Story[];
   filteredCount: number;
-  searchQuery: string;
-  onChangeSearchQuery: (q: string) => void;
+  searchQuery?: string;
+  searchInput?: string;
+  onChangeSearchQuery?: (q: string) => void;
+  onChangeSearchInput?: (q: string) => void;
   dateRange: DateRangeFilter;
   onChangeDateRange: (r: DateRangeFilter) => void;
-  customStartDate: string;
-  onChangeCustomStartDate: (d: string) => void;
-  customEndDate: string;
-  onChangeCustomEndDate: (d: string) => void;
+  customStartDate?: string;
+  onChangeCustomStartDate?: (d: string) => void;
+  customEndDate?: string;
+  onChangeCustomEndDate?: (d: string) => void;
   selectedCountry: string | null;
-  onChangeCountry: (c: string | null) => void;
+  onChangeCountry?: (c: string | null) => void;
+  onSelectCountry?: (c: string | null) => void;
   selectedTopic: 'All' | Topic;
-  onChangeTopic: (t: 'All' | Topic) => void;
-  selectedSource: string;
-  onChangeSource: (src: string) => void;
-  statusFilter: StoryStatusFilter;
-  onChangeStatusFilter: (st: StoryStatusFilter) => void;
-  minImportance: number;
-  onChangeMinImportance: (imp: number) => void;
+  onChangeTopic?: (t: 'All' | Topic) => void;
+  onSelectTopic?: (t: 'All' | Topic) => void;
+  selectedSource?: string;
+  onChangeSource?: (src: string) => void;
+  statusFilter?: StoryStatusFilter;
+  onChangeStatusFilter?: (st: StoryStatusFilter) => void;
+  minImportance?: number;
+  onChangeMinImportance?: (imp: number) => void;
   onClearAllFilters: () => void;
-  onCopyShareLink: () => void;
-  copiedShareLink: boolean;
+  onCopyShareLink?: () => void;
+  copiedShareLink?: boolean;
+  onCopyDeepLink?: () => void;
+  copiedDeepLink?: boolean;
+  presets?: SavedFilterPreset[];
+  onSavePreset?: (preset: SavedFilterPreset) => void;
+  onDeletePreset?: (presetId: string) => void;
+  onApplyPreset?: (preset: SavedFilterPreset) => void;
   searchInputRef?: React.RefObject<HTMLInputElement | null>;
   settings: AppSettings;
+  onUpdateSettings?: (settings: AppSettings) => void;
 }
 
 export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
   stories,
   filteredCount,
   searchQuery,
+  searchInput,
   onChangeSearchQuery,
+  onChangeSearchInput,
   dateRange,
   onChangeDateRange,
-  customStartDate,
+  customStartDate = '',
   onChangeCustomStartDate,
-  customEndDate,
+  customEndDate = '',
   onChangeCustomEndDate,
   selectedCountry,
   onChangeCountry,
+  onSelectCountry,
   selectedTopic,
   onChangeTopic,
-  selectedSource,
+  onSelectTopic,
+  selectedSource = 'All',
   onChangeSource,
-  statusFilter,
+  statusFilter = 'all',
   onChangeStatusFilter,
-  minImportance,
+  minImportance: propMinImp,
   onChangeMinImportance,
   onClearAllFilters,
   onCopyShareLink,
   copiedShareLink,
+  onCopyDeepLink,
+  copiedDeepLink,
+  presets: externalPresets,
+  onSavePreset: externalSavePreset,
+  onDeletePreset: externalDeletePreset,
+  onApplyPreset: externalApplyPreset,
   searchInputRef,
   settings,
+  onUpdateSettings,
 }) => {
-  const [presets, setPresets] = useState<SavedFilterPreset[]>(() => loadFilterPresets());
+  const currentQuery = searchInput !== undefined ? searchInput : (searchQuery || '');
+  const activeMinImp = propMinImp !== undefined ? propMinImp : (settings.minImportance || 1);
+
+  const handleQueryChange = (val: string) => {
+    if (onChangeSearchInput) onChangeSearchInput(val);
+    else if (onChangeSearchQuery) onChangeSearchQuery(val);
+  };
+
+  const handleCountryChange = (c: string | null) => {
+    if (onSelectCountry) onSelectCountry(c);
+    else if (onChangeCountry) onChangeCountry(c);
+  };
+
+  const handleTopicChange = (t: 'All' | Topic) => {
+    if (onSelectTopic) onSelectTopic(t);
+    else if (onChangeTopic) onChangeTopic(t);
+  };
+
+  const handleMinImpChange = (val: number) => {
+    if (onChangeMinImportance) onChangeMinImportance(val);
+    else if (onUpdateSettings) onUpdateSettings({ ...settings, minImportance: val });
+  };
+
+  const handleCopyLink = () => {
+    if (onCopyDeepLink) onCopyDeepLink();
+    else if (onCopyShareLink) onCopyShareLink();
+  };
+
+  const isLinkCopied = Boolean(copiedDeepLink || copiedShareLink);
+
+  const [localPresets, setLocalPresets] = useState<SavedFilterPreset[]>(() => loadFilterPresets());
+  const activePresets = externalPresets || localPresets;
+
   const [presetName, setPresetName] = useState('');
   const [showPresetForm, setShowPresetForm] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const isDark = settings.theme === 'dark';
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
@@ -129,18 +204,20 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
   const availableSources = useMemo(() => {
     const set = new Set<string>();
     for (const s of stories) {
-      for (const src of s.sources) {
+      for (const src of s.sources || []) {
         if (src.name) set.add(src.name);
       }
     }
     return ['All', ...Array.from(set).sort()];
   }, [stories]);
 
-  // Unique countries present in stories + Gazetteer top countries
+  // Unique countries present in stories + Gazetteer
   const countryOptions = useMemo(() => {
     const map = new Map<string, string>();
     for (const s of stories) {
-      map.set(s.country, s.countryName);
+      if (s.country && s.countryName) {
+        map.set(s.country, s.countryName);
+      }
     }
     for (const meta of Object.values(COUNTRY_GAZETTEER)) {
       if (!map.has(meta.code)) {
@@ -151,26 +228,26 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
   }, [stories]);
 
   const hasActiveFilters =
-    Boolean(searchQuery.trim()) ||
+    Boolean(currentQuery.trim()) ||
     dateRange !== '24h' ||
     Boolean(selectedCountry) ||
     selectedTopic !== 'All' ||
     selectedSource !== 'All' ||
     statusFilter !== 'all' ||
-    minImportance > 1;
+    activeMinImp > 1;
 
   const didYouMean = useMemo(() => {
-    if (filteredCount > 0 || !searchQuery.trim()) return null;
-    return getDidYouMeanSuggestion(searchQuery);
-  }, [filteredCount, searchQuery]);
+    if (filteredCount > 0 || !currentQuery.trim()) return null;
+    return getDidYouMeanSuggestion(currentQuery);
+  }, [filteredCount, currentQuery]);
 
   const handleSavePreset = (e: React.FormEvent) => {
     e.preventDefault();
-    const cleanName = presetName.trim() || `Preset ${presets.length + 1}`;
+    const cleanName = presetName.trim() || `Preset ${activePresets.length + 1}`;
     const newPreset: SavedFilterPreset = {
       id: `preset-${Date.now()}`,
       name: cleanName.slice(0, 32),
-      query: searchQuery,
+      query: currentQuery,
       dateRange,
       customStartDate,
       customEndDate,
@@ -178,32 +255,105 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       topic: selectedTopic,
       source: selectedSource,
       status: statusFilter,
-      minImportance,
+      minImportance: activeMinImp,
       createdAt: Date.now(),
     };
-    const next = [newPreset, ...presets].slice(0, 15);
-    setPresets(next);
-    saveFilterPresets(next);
+
+    if (externalSavePreset) {
+      externalSavePreset(newPreset);
+    } else {
+      const next = [newPreset, ...localPresets].slice(0, 15);
+      setLocalPresets(next);
+      saveFilterPresets(next);
+    }
     setPresetName('');
     setShowPresetForm(false);
   };
 
   const handleRestorePreset = (p: SavedFilterPreset) => {
-    onChangeSearchQuery(p.query);
+    if (externalApplyPreset) {
+      externalApplyPreset(p);
+      return;
+    }
+    handleQueryChange(p.query);
     onChangeDateRange(p.dateRange);
-    if (p.customStartDate) onChangeCustomStartDate(p.customStartDate);
-    if (p.customEndDate) onChangeCustomEndDate(p.customEndDate);
-    onChangeCountry(p.country === 'ALL' ? null : p.country);
-    onChangeTopic(p.topic);
-    onChangeSource(p.source || 'All');
-    onChangeStatusFilter(p.status || 'all');
-    onChangeMinImportance(p.minImportance || 1);
+    if (p.customStartDate && onChangeCustomStartDate) onChangeCustomStartDate(p.customStartDate);
+    if (p.customEndDate && onChangeCustomEndDate) onChangeCustomEndDate(p.customEndDate);
+    handleCountryChange(p.country === 'ALL' ? null : p.country);
+    handleTopicChange(p.topic);
+    if (onChangeSource) onChangeSource(p.source || 'All');
+    if (onChangeStatusFilter) onChangeStatusFilter(p.status || 'all');
+    handleMinImpChange(p.minImportance || 1);
   };
 
   const handleDeletePreset = (id: string) => {
-    const next = presets.filter((p) => p.id !== id);
-    setPresets(next);
-    saveFilterPresets(next);
+    if (externalDeletePreset) {
+      externalDeletePreset(id);
+    } else {
+      const next = localPresets.filter((p) => p.id !== id);
+      setLocalPresets(next);
+      saveFilterPresets(next);
+    }
+  };
+
+  // Export filtered stories to CSV
+  const handleExportCsv = () => {
+    const headers = ['ID', 'Headline', 'Country', 'Topic', 'Importance', 'Time', 'Source', 'URL'];
+    const rows = stories.map((s) => [
+      `"${s.id}"`,
+      `"${(s.headline || '').replace(/"/g, '""')}"`,
+      `"${s.countryName || s.country}"`,
+      `"${s.topic}"`,
+      s.importance,
+      `"${new Date(s.publishedAt || s.time).toISOString()}"`,
+      `"${(s.sources?.[0]?.name || '').replace(/"/g, '""')}"`,
+      `"${s.sources?.[0]?.url || ''}"`,
+    ]);
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `worldpulse_stories_${Date.now()}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  // Export filtered stories to JSON
+  const handleExportJson = () => {
+    const jsonContent = JSON.stringify(stories, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `worldpulse_stories_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  // Export filtered stories to Markdown
+  const handleExportMarkdown = () => {
+    const mdLines = [
+      `# WorldPulse Filtered Dispatches`,
+      `*Generated on ${new Date().toLocaleString()}*`,
+      ``,
+      ...stories.map((s, idx) => {
+        const flag = getCountryFlag(s.country);
+        const sourceName = s.sources?.[0]?.name || 'Wire';
+        const sourceUrl = s.sources?.[0]?.url || '#';
+        return `### ${idx + 1}. ${flag} ${s.headline}\n- **Topic:** ${s.topic} | **Importance:** ${s.importance}/10 | **Country:** ${s.countryName} (${s.country})\n- **Summary:** ${s.summary}\n- **Source:** [${sourceName}](${sourceUrl})\n`;
+      }),
+    ];
+    const blob = new Blob([mdLines.join('\n')], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `worldpulse_stories_${Date.now()}.md`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
   };
 
   return (
@@ -211,27 +361,27 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       aria-label="Search and filter stories"
       className="wp-glass-card p-4 sm:p-5 space-y-3.5 no-print"
     >
-      {/* Top Row: Search Box with Boolean / Phrase Hint + Preset & Share Actions */}
+      {/* Top Row: Search Box with Boolean / Phrase Hint + Preset, Export & Share Actions */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A78BFA] pointer-events-none" />
           <input
             ref={searchInputRef}
             type="search"
-            value={searchQuery}
-            onChange={(e) => onChangeSearchQuery(e.target.value)}
-            placeholder='Search headline, summary, country, topic (supports "exact phrase", AND, OR)...'
-            aria-label="Search stories by keyword, exact phrase, AND or OR"
+            value={currentQuery}
+            onChange={(e) => handleQueryChange(e.target.value)}
+            placeholder='Search headlines, topics, countries (supports "phrase", AND, OR, -excluded)...'
+            aria-label="Search stories by keyword, exact phrase, boolean AND, OR, or exclusion"
             className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-full border text-xs sm:text-sm font-mono-tabular transition-colors focus:outline-none ${
               isDark
                 ? 'bg-[#050309]/90 border-[#8B5CF6]/35 text-[#F6F4FF] placeholder:text-[#9389B0]'
                 : 'bg-white border-[#7C3AED]/30 text-[#140E24] placeholder:text-[#625680]'
             }`}
           />
-          {searchQuery && (
+          {currentQuery && (
             <button
               type="button"
-              onClick={() => onChangeSearchQuery('')}
+              onClick={() => handleQueryChange('')}
               aria-label="Clear search query"
               className="min-h-[44px] min-w-[44px] absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#9389B0] hover:text-white cursor-pointer"
             >
@@ -250,18 +400,76 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <span>{labels.savePreset}</span>
           </button>
 
+          {/* Export Dropdown Menu (CSV, JSON, Markdown, Print) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowExportMenu((prev) => !prev)}
+              className="wp-btn-secondary px-3.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              title="Export filtered stories"
+            >
+              <Download className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>Export</span>
+            </button>
+            {showExportMenu && (
+              <div
+                className={`absolute right-0 mt-2 w-48 rounded-2xl border p-2 space-y-1 shadow-2xl z-30 ${
+                  isDark
+                    ? 'bg-[#0B0713] border-[#8B5CF6]/40 text-[#F6F4FF]'
+                    : 'bg-white border-[#7C3AED]/30 text-[#140E24]'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={handleExportCsv}
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  <span>Export CSV</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportJson}
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                >
+                  <FileJson className="w-4 h-4 text-amber-400" />
+                  <span>Export JSON</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportMarkdown}
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                >
+                  <FileText className="w-4 h-4 text-sky-400" />
+                  <span>Export Markdown</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowExportMenu(false);
+                    window.print();
+                  }}
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                >
+                  <Printer className="w-4 h-4 text-[#A78BFA]" />
+                  <span>Print Dossier</span>
+                </button>
+              </div>
+            )}
+          </div>
+
           <button
             type="button"
-            onClick={onCopyShareLink}
+            onClick={handleCopyLink}
             className="wp-btn-secondary px-3.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             title="Copy shareable link with current search and filters"
           >
-            {copiedShareLink ? (
+            {isLinkCopied ? (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
               <Copy className="w-3.5 h-3.5 text-[#A78BFA]" />
             )}
-            <span>{copiedShareLink ? 'Copied Filter Link' : 'Share Filter Link'}</span>
+            <span>{isLinkCopied ? 'Copied Filter Link' : 'Share Filter Link'}</span>
           </button>
 
           {hasActiveFilters && (
@@ -325,6 +533,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           >
             <option value="24h">Last 24 hours</option>
             <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
             <option value="custom">Custom dates</option>
           </select>
         </div>
@@ -338,7 +547,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             id="filter-country"
             value={selectedCountry || 'ALL'}
             onChange={(e) =>
-              onChangeCountry(e.target.value === 'ALL' ? null : e.target.value)
+              handleCountryChange(e.target.value === 'ALL' ? null : e.target.value)
             }
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
@@ -363,7 +572,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           <select
             id="filter-topic"
             value={selectedTopic}
-            onChange={(e) => onChangeTopic(e.target.value as 'All' | Topic)}
+            onChange={(e) => handleTopicChange(e.target.value as 'All' | Topic)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
                 ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
@@ -387,7 +596,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           <select
             id="filter-source"
             value={selectedSource}
-            onChange={(e) => onChangeSource(e.target.value)}
+            onChange={(e) => onChangeSource && onChangeSource(e.target.value)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
                 ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
@@ -410,7 +619,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           <select
             id="filter-status"
             value={statusFilter}
-            onChange={(e) => onChangeStatusFilter(e.target.value as StoryStatusFilter)}
+            onChange={(e) => onChangeStatusFilter && onChangeStatusFilter(e.target.value as StoryStatusFilter)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
                 ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
@@ -426,7 +635,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
         {/* 6. Minimum Importance */}
         <div>
           <label htmlFor="filter-min-imp" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
-            {labels.minImportance}: {minImportance}+ / 10
+            {labels.minImportance}: {activeMinImp}+ / 10
           </label>
           <div className="flex items-center gap-2 min-h-[44px]">
             <input
@@ -435,15 +644,15 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               min={1}
               max={9}
               step={1}
-              value={minImportance}
-              onChange={(e) => onChangeMinImportance(Number(e.target.value))}
+              value={activeMinImp}
+              onChange={(e) => handleMinImpChange(Number(e.target.value))}
               className="flex-1 accent-[#8B5CF6] min-h-[44px] cursor-pointer"
             />
             <button
               type="button"
-              onClick={() => onChangeMinImportance(minImportance >= 7 ? 1 : 7)}
+              onClick={() => handleMinImpChange(activeMinImp >= 7 ? 1 : 7)}
               className={`min-h-[44px] px-2.5 rounded-lg border text-[11px] font-semibold cursor-pointer ${
-                minImportance >= 7
+                activeMinImp >= 7
                   ? 'bg-[#8B5CF6] border-[#A78BFA] text-white'
                   : isDark
                   ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#C4BDD9]'
@@ -465,7 +674,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <input
               type="date"
               value={customStartDate}
-              onChange={(e) => onChangeCustomStartDate(e.target.value)}
+              onChange={(e) => onChangeCustomStartDate && onChangeCustomStartDate(e.target.value)}
               className={`min-h-[44px] px-3 rounded-xl border ${
                 isDark
                   ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
@@ -478,7 +687,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <input
               type="date"
               value={customEndDate}
-              onChange={(e) => onChangeCustomEndDate(e.target.value)}
+              onChange={(e) => onChangeCustomEndDate && onChangeCustomEndDate(e.target.value)}
               className={`min-h-[44px] px-3 rounded-xl border ${
                 isDark
                   ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
@@ -496,13 +705,13 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             Active Filters ({filteredCount} matches):
           </span>
 
-          {searchQuery.trim() && (
+          {currentQuery.trim() && (
             <button
               type="button"
-              onClick={() => onChangeSearchQuery('')}
+              onClick={() => handleQueryChange('')}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Search: &ldquo;{searchQuery}&rdquo;</span>
+              <span>Search: &ldquo;{currentQuery}&rdquo;</span>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -513,7 +722,9 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               onClick={() => onChangeDateRange('24h')}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Date: {dateRange === '7d' ? 'Last 7 days' : 'Custom'}</span>
+              <span>
+                Date: {dateRange === '7d' ? 'Last 7 days' : dateRange === '30d' ? 'Last 30 days' : 'Custom'}
+              </span>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -521,7 +732,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           {selectedCountry && (
             <button
               type="button"
-              onClick={() => onChangeCountry(null)}
+              onClick={() => handleCountryChange(null)}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>
@@ -534,7 +745,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           {selectedTopic !== 'All' && (
             <button
               type="button"
-              onClick={() => onChangeTopic('All')}
+              onClick={() => handleTopicChange('All')}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Topic: {selectedTopic}</span>
@@ -545,7 +756,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           {selectedSource !== 'All' && (
             <button
               type="button"
-              onClick={() => onChangeSource('All')}
+              onClick={() => onChangeSource && onChangeSource('All')}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Source: {selectedSource}</span>
@@ -556,7 +767,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           {statusFilter !== 'all' && (
             <button
               type="button"
-              onClick={() => onChangeStatusFilter('all')}
+              onClick={() => onChangeStatusFilter && onChangeStatusFilter('all')}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Status: {statusFilter}</span>
@@ -564,13 +775,13 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             </button>
           )}
 
-          {minImportance > 1 && (
+          {activeMinImp > 1 && (
             <button
               type="button"
-              onClick={() => onChangeMinImportance(1)}
+              onClick={() => handleMinImpChange(1)}
               className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
-              <span>Importance: {minImportance}+</span>
+              <span>Importance: {activeMinImp}+</span>
               <X className="w-3.5 h-3.5" />
             </button>
           )}
@@ -578,12 +789,12 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       )}
 
       {/* Saved Filter Presets Row */}
-      {presets.length > 0 && (
+      {activePresets.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#8B5CF6]/15">
           <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA]">
             Saved Presets:
           </span>
-          {presets.map((p) => (
+          {activePresets.map((p) => (
             <div
               key={p.id}
               className="inline-flex items-center rounded-full border border-[#8B5CF6]/35 bg-[#8B5CF6]/10 overflow-hidden"
@@ -621,18 +832,18 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
           <div className="flex items-center gap-2 text-xs font-mono-tabular">
             <Sparkles className="w-4 h-4 text-[#A78BFA]" />
             <span>
-              No exact matches for &ldquo;{searchQuery}&rdquo;. {labels.didYouMean}{' '}
+              No exact matches for &ldquo;{currentQuery}&rdquo;. {labels.didYouMean}{' '}
               <strong>{didYouMean.label}</strong>?
             </span>
           </div>
           <button
             type="button"
             onClick={() => {
-              onChangeSearchQuery('');
+              handleQueryChange('');
               if (didYouMean.type === 'topic') {
-                onChangeTopic(didYouMean.value as Topic);
+                handleTopicChange(didYouMean.value as Topic);
               } else {
-                onChangeCountry(didYouMean.value);
+                handleCountryChange(didYouMean.value);
               }
             }}
             className="wp-btn-primary px-4 py-1.5 text-xs font-mono-tabular cursor-pointer"

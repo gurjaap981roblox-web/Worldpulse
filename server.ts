@@ -1390,9 +1390,11 @@ Preserve all numbers, dates, and proper nouns accurately. Do not add or omit fac
   });
 
   // 12. Public Read-Only Developer API (/api/v1/stories and /api/v1/top5)
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
+  const DEFAULT_SUPABASE_URL = 'https://vtmqvzokyrdbkeszziuh.supabase.co';
+  const DEFAULT_SUPABASE_PUBKEY = 'sb_publishable_oJf-t5OEoh0H9-fwprRVoA_J9gjRFSW';
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const supabasePubKey =
-    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || '';
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_PUBKEY;
 
   app.get('/api/v1/stories', async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -1463,6 +1465,116 @@ Preserve all numbers, dates, and proper nouns accurately. Do not add or omit fac
         error: err instanceof Error ? err.message : 'API error',
         data: [],
       });
+    }
+  });
+
+  // 13. Syndication Feeds: JSON Feed 1.1 (/api/feed.json) & RSS 2.0 XML (/api/feed.xml)
+  app.get('/api/feed.json', async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/feed+json; charset=utf-8');
+    try {
+      const country = req.query.country ? String(req.query.country).toUpperCase() : null;
+      const topic = req.query.topic ? String(req.query.topic) : null;
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+      const sbRes = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/stories?select=*&order=published_at.desc&limit=${limit}`,
+        6000,
+        { apikey: supabasePubKey, Authorization: `Bearer ${supabasePubKey}` }
+      );
+      let rows: Array<Record<string, any>> = [];
+      if (sbRes.ok) {
+        const json = await sbRes.json();
+        if (Array.isArray(json)) rows = json;
+      }
+
+      const filtered = rows.filter((r) => {
+        if (country && country !== 'ALL' && String(r.country || '').toUpperCase() !== country) return false;
+        if (topic && topic !== 'All' && String(r.topic || '').toLowerCase() !== topic.toLowerCase()) return false;
+        return true;
+      });
+
+      return res.json({
+        version: 'https://jsonfeed.org/version/1.1',
+        title: 'WorldPulse Global Intelligence Feed',
+        home_page_url: 'https://worldpulse.app',
+        feed_url: 'https://worldpulse.app/api/feed.json',
+        description: 'Verified dispatches, conflict monitoring, and seismic sensor telemetry.',
+        items: filtered.map((item) => ({
+          id: item.id || `item-${Date.now()}`,
+          url: item.sources?.[0]?.url || 'https://worldpulse.app',
+          title: item.headline || 'World Dispatch',
+          content_text: item.summary || '',
+          date_published: item.published_at || new Date().toISOString(),
+          tags: [item.topic, item.country].filter(Boolean),
+        })),
+      });
+    } catch {
+      return res.status(500).json({ error: 'Feed generation failed' });
+    }
+  });
+
+  app.get('/api/feed.xml', async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
+    try {
+      const country = req.query.country ? String(req.query.country).toUpperCase() : null;
+      const topic = req.query.topic ? String(req.query.topic) : null;
+      const limit = Math.min(50, Math.max(1, Number(req.query.limit) || 20));
+
+      const sbRes = await fetchWithTimeout(
+        `${supabaseUrl}/rest/v1/stories?select=*&order=published_at.desc&limit=${limit}`,
+        6000,
+        { apikey: supabasePubKey, Authorization: `Bearer ${supabasePubKey}` }
+      );
+      let rows: Array<Record<string, any>> = [];
+      if (sbRes.ok) {
+        const json = await sbRes.json();
+        if (Array.isArray(json)) rows = json;
+      }
+
+      const filtered = rows.filter((r) => {
+        if (country && country !== 'ALL' && String(r.country || '').toUpperCase() !== country) return false;
+        if (topic && topic !== 'All' && String(r.topic || '').toLowerCase() !== topic.toLowerCase()) return false;
+        return true;
+      });
+
+      const escapeXml = (unsafe: string) =>
+        (unsafe || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+
+      const itemsXml = filtered
+        .map(
+          (item) => `    <item>
+      <title>${escapeXml(item.headline || '')}</title>
+      <link>${escapeXml(item.sources?.[0]?.url || 'https://worldpulse.app')}</link>
+      <description>${escapeXml(item.summary || '')}</description>
+      <pubDate>${new Date(item.published_at || Date.now()).toUTCString()}</pubDate>
+      <guid>${escapeXml(String(item.id || ''))}</guid>
+      <category>${escapeXml(item.topic || 'General')}</category>
+    </item>`
+        )
+        .join('\n');
+
+      const rss = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>WorldPulse Global Intelligence Feed</title>
+    <link>https://worldpulse.app</link>
+    <description>Verified dispatches, conflict monitoring, and sensor telemetry.</description>
+    <language>en-us</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+${itemsXml}
+  </channel>
+</rss>`;
+
+      return res.send(rss);
+    } catch {
+      return res.status(500).send('<?xml version="1.0"?><error>RSS generation failed</error>');
     }
   });
 

@@ -43,16 +43,19 @@ import {
 } from '../utils/sanitize';
 import { isReturningVisitor } from '../services/storage';
 
-interface LandingPageProps {
+export interface LandingPageProps {
   stories: Story[];
-  supabaseStories: Story[];
+  supabaseStories?: Story[];
   briefing: DailyBriefing | null;
-  supabaseState: SupabaseTableState;
-  isLoading: boolean;
+  supabaseState?: SupabaseTableState;
+  isLoading?: boolean;
   settings: AppSettings;
-  onUpdateSettings: (next: AppSettings) => void;
-  onOpenDashboard: (initialQuestion?: string, selectedStory?: Story) => void;
+  onUpdateSettings?: (next: AppSettings) => void;
+  onOpenDashboard?: (initialQuestion?: string, selectedStory?: Story) => void;
+  onEnterApp?: (initialQuestion?: string, selectedStory?: Story) => void;
   onOpenLegalPage: (page: LegalPageId) => void;
+  onChangeLanguage?: (lang: AppLanguage) => void;
+  onToggleTheme?: () => void;
 }
 
 const CITY_NODES = [
@@ -255,19 +258,51 @@ const FAQ_ITEMS = [
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   stories,
-  supabaseStories,
+  supabaseStories = [],
   briefing,
-  supabaseState,
-  isLoading,
+  supabaseState = {
+    storiesCount: 0,
+    snapshotsCount: 0,
+    briefingsCount: 0,
+    sourcesHealth: {},
+    lastError: null,
+    isConfigured: true,
+  },
+  isLoading = false,
   settings,
   onUpdateSettings,
   onOpenDashboard,
+  onEnterApp,
   onOpenLegalPage,
+  onChangeLanguage,
+  onToggleTheme,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [heroQuestion, setHeroQuestion] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const returningUser = useMemo(() => isReturningVisitor(), []);
+
+  const handleOpenApp = (initialQuestion?: string, selectedStory?: Story) => {
+    if (onOpenDashboard) onOpenDashboard(initialQuestion, selectedStory);
+    else if (onEnterApp) onEnterApp(initialQuestion, selectedStory);
+  };
+
+  const handleToggleTheme = () => {
+    if (onToggleTheme) onToggleTheme();
+    else if (onUpdateSettings) {
+      onUpdateSettings({
+        ...settings,
+        theme: settings.theme === 'dark' ? 'light' : 'dark',
+      });
+    }
+  };
+
+  const handleLanguageChange = (lang: AppLanguage) => {
+    if (onChangeLanguage) onChangeLanguage(lang);
+    else if (onUpdateSettings) {
+      onUpdateSettings({ ...settings, language: lang });
+    }
+  };
 
   const isDark = settings.theme === 'dark';
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
@@ -294,11 +329,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const handleHeroAskSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onOpenDashboard(heroQuestion.trim() || 'What are the most important global events today?');
-  };
-
-  const handleLanguageChange = (lang: AppLanguage) => {
-    onUpdateSettings({ ...settings, language: lang });
+    handleOpenApp(heroQuestion.trim() || 'What are the most important global events today?');
   };
 
   return (
@@ -384,12 +415,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               type="button"
-              onClick={() =>
-                onUpdateSettings({
-                  ...settings,
-                  theme: settings.theme === 'dark' ? 'light' : 'dark',
-                })
-              }
+              onClick={handleToggleTheme}
               aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
               className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
                 isDark
@@ -402,7 +428,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <button
               type="button"
-              onClick={() => onOpenDashboard()}
+              onClick={() => handleOpenApp()}
               className="wp-btn-primary px-5 py-2 text-xs font-mono-tabular inline-flex items-center gap-2 cursor-pointer"
             >
               <span>{returningUser ? 'Welcome back · Open dashboard' : 'Open dashboard'}</span>
@@ -414,7 +440,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex sm:hidden items-center gap-2">
             <button
               type="button"
-              onClick={() => onOpenDashboard()}
+              onClick={() => handleOpenApp()}
               className="wp-btn-primary px-3.5 py-2 text-xs font-mono-tabular cursor-pointer"
             >
               Dashboard
@@ -483,12 +509,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() =>
-                  onUpdateSettings({
-                    ...settings,
-                    theme: settings.theme === 'dark' ? 'light' : 'dark',
-                  })
-                }
+                onClick={handleToggleTheme}
                 aria-label="Toggle theme"
                 className="min-h-[44px] min-w-[44px] rounded-full border border-[#8B5CF6]/35 flex items-center justify-center"
               >
@@ -522,7 +543,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="flex justify-center">
                 <button
                   type="button"
-                  onClick={() => onOpenDashboard()}
+                  onClick={() => handleOpenApp()}
                   className="min-h-[44px] px-4 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#A78BFA]/50 text-xs font-mono-tabular text-[#F6F4FF] inline-flex items-center gap-2 hover:bg-[#8B5CF6]/30 cursor-pointer"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
@@ -550,7 +571,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex flex-wrap items-center justify-center gap-3 pt-1">
               <button
                 type="button"
-                onClick={() => onOpenDashboard()}
+                onClick={() => handleOpenApp()}
                 className="wp-btn-primary px-7 py-3 text-sm font-mono-tabular inline-flex items-center gap-2 cursor-pointer"
               >
                 <span>{labels.openDashboard}</span>
@@ -628,7 +649,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => onOpenDashboard()}
+                onClick={() => handleOpenApp()}
                 className="min-h-[44px] px-3 py-1 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] hover:bg-[#8B5CF6]/30 cursor-pointer"
               >
                 Enter Interactive View →
@@ -692,7 +713,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     <button
                       key={st.id}
                       type="button"
-                      onClick={() => onOpenDashboard(undefined, st)}
+                      onClick={() => handleOpenApp(undefined, st)}
                       className="w-full text-left p-2.5 rounded-xl border border-[#8B5CF6]/20 hover:border-[#A78BFA] transition-colors block cursor-pointer"
                     >
                       <div className="flex items-center justify-between text-[10px] font-mono-tabular text-[#A78BFA]">
@@ -800,7 +821,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <button
               type="button"
-              onClick={() => onOpenDashboard()}
+              onClick={() => handleOpenApp()}
               className="wp-btn-secondary px-4 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>View all stories in /app</span>
@@ -852,7 +873,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() => onOpenDashboard(undefined, story)}
+                      onClick={() => handleOpenApp(undefined, story)}
                       className="min-h-[44px] px-3 text-[#A78BFA] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       <span>Open</span>
@@ -1052,7 +1073,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   type="button"
                   onClick={() => {
                     handleLanguageChange(item.code);
-                    onOpenDashboard();
+                    handleOpenApp();
                   }}
                   className="wp-btn-secondary w-full py-2 text-xs font-mono-tabular cursor-pointer"
                 >
@@ -1195,7 +1216,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="pt-2">
             <button
               type="button"
-              onClick={() => onOpenDashboard()}
+              onClick={() => handleOpenApp()}
               className="wp-btn-primary px-8 py-3.5 text-sm font-mono-tabular inline-flex items-center gap-2 cursor-pointer"
             >
               <span>Open dashboard (/app)</span>
@@ -1253,7 +1274,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <li>
                 <button
                   type="button"
-                  onClick={() => onOpenDashboard()}
+                  onClick={() => handleOpenApp()}
                   className="min-h-[44px] flex items-center hover:text-[#A78BFA] cursor-pointer"
                 >
                   Live Dashboard (/app)

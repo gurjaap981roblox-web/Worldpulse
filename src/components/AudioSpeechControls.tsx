@@ -24,9 +24,32 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
   const [status, setStatus] = useState<'idle' | 'playing' | 'paused'>('idle');
   const [showControls, setShowControls] = useState<boolean>(!compact);
   const [fallbackNote, setFallbackNote] = useState<string | null>(null);
+  const [activeSentenceIdx, setActiveSentenceIdx] = useState<number>(0);
 
   const isDark = settings.theme === 'dark';
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
+
+  // Split text into sentences with character ranges for read-along highlighting
+  const sentencesWithRanges = useMemo(() => {
+    const raw = (text || '').trim();
+    if (!raw) return [] as Array<{ text: string; start: number; end: number }>;
+    const regex = /[^.!?।]+[.!?।]*\s*/g;
+    const matches = raw.match(regex) || [raw];
+    const result: Array<{ text: string; start: number; end: number }> = [];
+    let cursor = 0;
+    for (const part of matches) {
+      const trimmed = part.trim();
+      if (trimmed) {
+        result.push({
+          text: trimmed,
+          start: cursor,
+          end: cursor + part.length,
+        });
+      }
+      cursor += part.length;
+    }
+    return result;
+  }, [text]);
 
   useEffect(() => {
     if (!('speechSynthesis' in window)) return;
@@ -118,13 +141,44 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
     }
 
     utterance.rate = newRate;
-    utterance.onend = () => setStatus('idle');
-    utterance.onerror = () => setStatus('idle');
+    setActiveSentenceIdx(0);
+    utterance.onboundary = (event) => {
+      if (typeof event.charIndex === 'number' && sentencesWithRanges.length > 0) {
+        const idx = sentencesWithRanges.findIndex(
+          (s) => event.charIndex >= s.start && event.charIndex <= s.end
+        );
+        if (idx !== -1) {
+          setActiveSentenceIdx(idx);
+        }
+      }
+    };
+    utterance.onend = () => {
+      setStatus('idle');
+      setActiveSentenceIdx(0);
+    };
+    utterance.onerror = () => {
+      setStatus('idle');
+      setActiveSentenceIdx(0);
+    };
 
     setStatus('playing');
     if (compact) setShowControls(true);
     window.speechSynthesis.speak(utterance);
   };
+
+  // Fallback sentence progression for browsers/voices that do not fire onboundary events
+  useEffect(() => {
+    if (status !== 'playing' || sentencesWithRanges.length <= 1) return;
+    const currentSentence = sentencesWithRanges[activeSentenceIdx];
+    const wordCount = Math.max(4, (currentSentence?.text || '').split(/\s+/).length);
+    const msPerSentence = Math.max(1800, Math.round((wordCount / (2.6 * rate)) * 1000));
+    const timer = window.setTimeout(() => {
+      setActiveSentenceIdx((prev) =>
+        prev + 1 < sentencesWithRanges.length ? prev + 1 : prev
+      );
+    }, msPerSentence);
+    return () => window.clearTimeout(timer);
+  }, [status, activeSentenceIdx, sentencesWithRanges, rate]);
 
   const handlePlayOrResume = () => {
     if (!('speechSynthesis' in window)) return;
@@ -287,6 +341,45 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
         <span className="w-full text-[11px] font-mono-tabular text-amber-400 px-1">
           {fallbackNote}
         </span>
+      )}
+
+      {/* Read-Along Highlighting Strip while playing or paused */}
+      {status !== 'idle' && sentencesWithRanges.length > 0 && (
+        <div
+          aria-live="polite"
+          className={`w-full mt-1 p-2.5 rounded-xl border text-xs leading-relaxed transition-colors ${
+            isDark
+              ? 'bg-[#050309]/95 border-[#8B5CF6]/35 text-[#C4BDD9]'
+              : 'bg-white border-[#7C3AED]/30 text-[#3F3559]'
+          }`}
+        >
+          <div className="flex items-center justify-between text-[10px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] mb-1">
+            <span>Read-Along Highlighting</span>
+            <span>
+              Sentence {Math.min(activeSentenceIdx + 1, sentencesWithRanges.length)} /{' '}
+              {sentencesWithRanges.length}
+            </span>
+          </div>
+          <p className="space-x-1">
+            {sentencesWithRanges.map((s, idx) => {
+              const isCurrent = idx === activeSentenceIdx;
+              return (
+                <span
+                  key={idx}
+                  className={
+                    isCurrent
+                      ? isDark
+                        ? 'bg-[#8B5CF6]/35 text-white font-semibold px-1 py-0.5 rounded'
+                        : 'bg-[#7C3AED]/20 text-[#140E24] font-semibold px-1 py-0.5 rounded'
+                      : 'opacity-55'
+                  }
+                >
+                  {s.text}
+                </span>
+              );
+            })}
+          </p>
+        </div>
       )}
     </div>
   );

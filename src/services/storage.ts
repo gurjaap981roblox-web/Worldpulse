@@ -405,3 +405,8 @@ export function markVisitorReturned(): void {
   safeSetItem(STORAGE_KEYS.RETURNING_USER, true);
 }
 
+export const hasCompletedOnboardingTour = hasCompletedOnboarding;
+export const setOnboardingTourCompleted = setOnboardingCompleted;
+export const hasEnteredAppBefore = isReturningVisitor;
+export const markEnteredApp = markVisitorReturned;
+

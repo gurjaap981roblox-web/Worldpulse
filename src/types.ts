@@ -56,7 +56,7 @@ export type SourceTypeBadge =
   | 'Government/Sensor'
   | 'Social/Other';
 
-export type DateRangeFilter = '24h' | '7d' | 'custom';
+export type DateRangeFilter = '24h' | '7d' | '30d' | 'custom';
 
 export type StoryStatusFilter = 'all' | 'confirmed' | 'developing';
 
@@ -143,6 +143,7 @@ export interface Story {
   lng: number;
   confidence: number; // 0 to 1
   time: number;
+  publishedAt?: number;
   sources: StorySourceLink[];
   eventClusterKey: string;
   isDeveloping: boolean;

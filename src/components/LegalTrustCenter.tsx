@@ -109,15 +109,18 @@ export const AiDisclaimerLine: React.FC<AiDisclaimerLineProps> = ({
 // ============================================================================
 // 2. LEGAL & TRUST CENTER MODAL (All 10 Pages + Hash Routing Support)
 // ============================================================================
-interface LegalTrustModalProps {
+export interface LegalTrustModalProps {
   activePage: LegalPageId | null;
   onSelectPage: (page: LegalPageId) => void;
   onClose: () => void;
-  onPurgeLocalCache: () => void;
+  onPurgeLocalCache?: () => void;
+  onPurgeCache?: () => void;
+  onExportJsonBackup?: () => void;
   settings: AppSettings;
+  stories?: any[];
 }
 
-const LEGAL_NAV_ITEMS: Array<{ id: LegalPageId; labelKey: string; defaultLabel: string }> = [
+export const LEGAL_NAV_ITEMS: Array<{ id: LegalPageId; labelKey: string; defaultLabel: string }> = [
   { id: 'privacy', labelKey: 'privacyPolicy', defaultLabel: 'Privacy Policy' },
   { id: 'terms', labelKey: 'termsOfUse', defaultLabel: 'Terms of Use' },
   { id: 'ai-disclaimer', labelKey: 'aiDisclaimer', defaultLabel: 'AI Disclaimer' },
@@ -135,6 +138,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
   onSelectPage,
   onClose,
   onPurgeLocalCache,
+  onPurgeCache,
+  onExportJsonBackup,
   settings,
 }) => {
   const modalRef = useRef<HTMLDivElement | null>(null);
@@ -174,7 +179,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
 
   const handlePurgeClick = () => {
-    onPurgeLocalCache();
+    if (onPurgeLocalCache) onPurgeLocalCache();
+    else if (onPurgeCache) onPurgeCache();
     setCachePurgedNotice(true);
     setTimeout(() => setCachePurgedNotice(false), 3000);
   };
@@ -886,14 +892,16 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
 // ============================================================================
 // 3. FIRST-VISIT COOKIE & STORAGE CONSENT BANNER
 // ============================================================================
-interface CookieConsentBannerProps {
+export interface CookieConsentBannerProps {
   settings: AppSettings;
   onOpenCookiePolicy: () => void;
+  onSaveConsent?: (choice: CookieConsentChoice) => void;
 }
 
 export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
   settings,
   onOpenCookiePolicy,
+  onSaveConsent,
 }) => {
   const [consent, setConsent] = useState<CookieConsentChoice | null>(() =>
     loadCookieConsent()
@@ -914,6 +922,9 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
     };
     saveCookieConsent(choice);
     setConsent(choice);
+    if (onSaveConsent) {
+      onSaveConsent(choice);
+    }
   };
 
   return (
@@ -1005,9 +1016,10 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
 // ============================================================================
 // 4. FIRST-VISIT 4-STEP ONBOARDING TOUR MODAL (Skippable & Replayable)
 // ============================================================================
-interface OnboardingTourModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+export interface OnboardingTourModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onComplete?: () => void;
   settings: AppSettings;
 }
 
@@ -1043,8 +1055,9 @@ const TOUR_STEPS = [
 ];
 
 export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
-  isOpen,
+  isOpen = true,
   onClose,
+  onComplete,
   settings,
 }) => {
   const [stepIndex, setStepIndex] = useState(0);
@@ -1060,7 +1073,8 @@ export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
 
   const handleFinish = () => {
     setOnboardingCompleted(true);
-    onClose();
+    if (onComplete) onComplete();
+    else if (onClose) onClose();
   };
 
   return (
@@ -1142,5 +1156,48 @@ export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
         </div>
       </div>
     </div>
+  );
+};
+
+export const FirstVisitOnboardingTour = OnboardingTourModal;
+export const LEGAL_HASH_TO_ID = LEGAL_PAGE_HASHES;
+
+export interface LegalFooterLinksProps {
+  settings: AppSettings;
+  onOpenLegalPage: (page: LegalPageId) => void;
+  className?: string;
+}
+
+export const LegalFooterLinks: React.FC<LegalFooterLinksProps> = ({
+  settings,
+  onOpenLegalPage,
+  className = '',
+}) => {
+  const isDark = settings.theme === 'dark';
+  return (
+    <footer
+      className={`py-6 px-4 border-t no-print ${
+        isDark ? 'border-[#8B5CF6]/20 bg-[#06030A] text-[#9389B0]' : 'border-[#7C3AED]/20 bg-[#F4F1FA] text-[#625680]'
+      } text-xs ${className}`}
+    >
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-sm tracking-wide text-[#8B5CF6]">WORLDPULSE</span>
+          <span>© 2026 WorldPulse Intel · Open Public Telemetry</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+          {LEGAL_NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => onOpenLegalPage(item.id)}
+              className="hover:text-[#A78BFA] transition-colors cursor-pointer text-[11px]"
+            >
+              {item.defaultLabel}
+            </button>
+          ))}
+        </div>
+      </div>
+    </footer>
   );
 };

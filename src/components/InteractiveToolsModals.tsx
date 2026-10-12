@@ -1061,6 +1061,9 @@ export const DeveloperApiEmbedModal: React.FC<DeveloperApiEmbedModalProps> = ({
   onClose,
 }) => {
   const [copiedIframe, setCopiedIframe] = useState(false);
+  const [copiedFeedUrl, setCopiedFeedUrl] = useState(false);
+  const [feedCountry, setFeedCountry] = useState<string>('ALL');
+  const [feedTopic, setFeedTopic] = useState<string>('ALL');
   const [liveApiPreview, setLiveApiPreview] = useState<string>('');
   const [testingEndpoint, setTestingEndpoint] = useState(false);
 
@@ -1069,13 +1072,61 @@ export const DeveloperApiEmbedModal: React.FC<DeveloperApiEmbedModalProps> = ({
   const origin = window.location.origin;
 
   const iframeSnippet = `<iframe
-  src="${origin}/?embed=top5&theme=${settings.theme}"
+  src="${origin}/?embed=1&theme=${settings.theme}"
   width="100%"
   height="420"
-  style="border: 1px solid #222631; border-radius: 0px;"
+  style="border: 1px solid #222631; border-radius: 12px;"
   title="WorldPulse Live Top 5 Dispatches"
   loading="lazy"
 ></iframe>`;
+
+  const feedQueryParams = new URLSearchParams();
+  if (feedCountry !== 'ALL') feedQueryParams.set('country', feedCountry);
+  if (feedTopic !== 'ALL') feedQueryParams.set('topic', feedTopic);
+  const querySuffix = feedQueryParams.toString() ? `?${feedQueryParams.toString()}` : '';
+  const customJsonFeedUrl = `${origin}/api/feed.json${querySuffix}`;
+  const customRssFeedUrl = `${origin}/api/feed.xml${querySuffix}`;
+
+  const handleCopyFeedUrl = (urlToCopy: string) => {
+    navigator.clipboard?.writeText(urlToCopy);
+    setCopiedFeedUrl(true);
+    setTimeout(() => setCopiedFeedUrl(false), 2000);
+  };
+
+  const handleDownloadCustomJsonFeed = () => {
+    const filtered = stories.filter((s) => {
+      if (feedCountry !== 'ALL' && s.country !== feedCountry) return false;
+      if (feedTopic !== 'ALL' && s.topic !== feedTopic) return false;
+      return true;
+    });
+    const payload = {
+      version: 'https://jsonfeed.org/version/1.1',
+      title: `WorldPulse Feed (${feedCountry === 'ALL' ? 'Global' : feedCountry} · ${
+        feedTopic === 'ALL' ? 'All Topics' : feedTopic
+      })`,
+      home_page_url: origin,
+      feed_url: customJsonFeedUrl,
+      items: filtered.map((s) => ({
+        id: s.id,
+        title: s.headline,
+        content_text: s.summary,
+        url: s.sources[0]?.url || origin,
+        date_published: new Date(s.time || Date.now()).toISOString(),
+        tags: [s.country, s.countryName, s.topic],
+      })),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worldpulse-feed-${feedCountry.toLowerCase()}-${feedTopic.toLowerCase()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const handleCopyIframe = () => {
     navigator.clipboard?.writeText(iframeSnippet);
@@ -1232,8 +1283,8 @@ export const DeveloperApiEmbedModal: React.FC<DeveloperApiEmbedModalProps> = ({
                 <span className="text-xs font-mono-tabular font-bold text-[#E05A2B]">
                   WORLDPULSE · LIVE TOP 5 WIDGET PREVIEW
                 </span>
-                <span className="text-[11px] font-mono-tabular text-[#8C93A1]">
-                  ?embed=top5
+                  <span className="text-[11px] font-mono-tabular text-[#8C93A1]">
+                  ?embed=1
                 </span>
               </div>
               {stories.slice(0, 5).map((s, i) => (
@@ -1258,6 +1309,84 @@ export const DeveloperApiEmbedModal: React.FC<DeveloperApiEmbedModalProps> = ({
                   )}
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Part 3: Custom RSS / JSON Feed Generator by Country or Topic */}
+          <div className="space-y-3 pt-4 border-t border-[#222631]">
+            <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#E05A2B]">
+              3. Custom RSS 2.0 &amp; JSON Feed Builder (By Country or Topic)
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono-tabular">
+              <div>
+                <label className="block text-[10px] uppercase text-[#8C93A1] mb-1">
+                  Filter Country
+                </label>
+                <select
+                  value={feedCountry}
+                  onChange={(e) => setFeedCountry(e.target.value)}
+                  className="w-full min-h-[44px] px-3 py-2 border border-[#222631] bg-[#090A0D] text-[#F3F2EE]"
+                >
+                  <option value="ALL">All Countries (Global)</option>
+                  {Object.values(COUNTRY_GAZETTEER)
+                    .filter((c) => c.code !== 'GL')
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map((c) => (
+                      <option key={c.code} value={c.code}>
+                        {getCountryFlag(c.code)} {c.name} ({c.code})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase text-[#8C93A1] mb-1">
+                  Filter Topic
+                </label>
+                <select
+                  value={feedTopic}
+                  onChange={(e) => setFeedTopic(e.target.value)}
+                  className="w-full min-h-[44px] px-3 py-2 border border-[#222631] bg-[#090A0D] text-[#F3F2EE]"
+                >
+                  <option value="ALL">All Topics</option>
+                  {Object.keys(TOPIC_COLORS).map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-3.5 border border-[#222631] bg-[#090A0D] space-y-2 text-xs font-mono-tabular">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="truncate text-[#10B981]">JSON Feed: {customJsonFeedUrl}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleCopyFeedUrl(customJsonFeedUrl)}
+                    className="min-h-[44px] px-3 py-1.5 bg-[#E05A2B] text-white text-xs inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>{copiedFeedUrl ? 'Copied!' : 'Copy JSON URL'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyFeedUrl(customRssFeedUrl)}
+                    className="min-h-[44px] px-3 py-1.5 border border-[#E05A2B] text-[#E05A2B] text-xs inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy RSS XML URL</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCustomJsonFeed}
+                    className="min-h-[44px] px-3 py-1.5 border border-[#222631] text-[#F3F2EE] hover:border-[#E05A2B] text-xs inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Download .json</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

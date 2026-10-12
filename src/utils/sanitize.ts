@@ -733,4 +733,59 @@ export const UI_TRANSLATIONS: Record<
   },
 };
 
+// Full Boolean Search Query Evaluator: AND, OR, "exact phrase", and -exclusion / NOT term
+export function evaluateSearchQuery(story: Story, rawQuery: string): boolean {
+  const q = (rawQuery || '').trim();
+  if (!q) return true;
+
+  const haystack = `${story.headline} ${story.summary} ${story.countryName} ${story.country} ${story.topic} ${(story.sources || [])
+    .map((s) => s.name)
+    .join(' ')}`.toLowerCase();
+
+  // Support top-level OR groups
+  const orGroups = q.split(/\s+OR\s+/i);
+
+  return orGroups.some((orPart) => {
+    // Check for negative exclusions (e.g. -cricket or NOT cricket)
+    const negativeTerms: string[] = [];
+    let cleanPart = orPart.replace(/\s+NOT\s+([^\s]+)/gi, (_, term) => {
+      negativeTerms.push(term.toLowerCase());
+      return ' ';
+    });
+
+    cleanPart = cleanPart.replace(/(?:^|\s)-([^\s]+)/g, (_, term) => {
+      negativeTerms.push(term.toLowerCase());
+      return ' ';
+    });
+
+    // Check if any negative term is present in haystack
+    for (const neg of negativeTerms) {
+      if (neg && haystack.includes(neg)) {
+        return false;
+      }
+    }
+
+    // Extract exact phrases
+    const exactPhrases: string[] = [];
+    const withoutQuotes = cleanPart
+      .replace(/\s+AND\s+/gi, ' ')
+      .replace(/"([^"]+)"/g, (_, phrase) => {
+        if (phrase && phrase.trim()) {
+          exactPhrases.push(phrase.trim().toLowerCase());
+        }
+        return ' ';
+      });
+
+    const terms = withoutQuotes
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => Boolean(t) && !t.startsWith('-'));
+
+    const phrasesMatch = exactPhrases.every((ph) => haystack.includes(ph));
+    const termsMatch = terms.every((term) => haystack.includes(term));
+
+    return phrasesMatch && termsMatch;
+  });
+}
+
 

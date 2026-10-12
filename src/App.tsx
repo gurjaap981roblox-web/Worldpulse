@@ -783,7 +783,8 @@ export default function App() {
 
     return stories.filter((story) => {
       if (story.importance < minImp) return false;
-      if (story.publishedAt && now - story.publishedAt > maxAgeMs) {
+      const storyTime = (story as any).publishedAt || story.time;
+      if (storyTime && now - storyTime > maxAgeMs) {
         return false;
       }
       if (!settings.followedTopics.includes(story.topic)) return false;
@@ -974,7 +975,7 @@ export default function App() {
         s.importance.toFixed(1),
         Math.round(s.confidence * 100) + '%',
         s.sentiment.toFixed(2),
-        new Date(s.publishedAt).toISOString(),
+        new Date((s as any).publishedAt || s.time).toISOString(),
         s.headline,
         s.summary,
         s.sources[0]?.name || '',
@@ -1132,7 +1133,7 @@ export default function App() {
           settings={settings}
           onEnterApp={handleEnterAppFromLanding}
           onOpenLegalPage={handleOpenLegalPage}
-          onChangeLanguage={(lang) => handleUpdateSettings({ ...settings, language: lang })}
+          onChangeLanguage={(lang: AppLanguage) => handleUpdateSettings({ ...settings, language: lang })}
           onToggleTheme={handleToggleTheme}
         />
 
@@ -1151,7 +1152,7 @@ export default function App() {
         {!cookieConsent && (
           <CookieConsentBanner
             settings={settings}
-            onSaveConsent={(choice) => {
+            onSaveConsent={(choice: CookieConsentChoice) => {
               saveCookieConsent(choice);
               setCookieConsent(choice);
             }}
@@ -1953,7 +1954,7 @@ export default function App() {
       {!cookieConsent && (
         <CookieConsentBanner
           settings={settings}
-          onSaveConsent={(choice) => {
+          onSaveConsent={(choice: CookieConsentChoice) => {
             saveCookieConsent(choice);
             setCookieConsent(choice);
           }}
