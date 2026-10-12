@@ -37,24 +37,27 @@ body {
   z-index: 9999;
   min-height: 44px;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #8b5cf6 0%, #5b21b6 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, #22D3EE 0%, #0891B2 100%);
+  color: #050B16;
   font-weight: 700;
   border-radius: 9999px;
-  box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 24px rgba(34, 211, 238, 0.6);
   transition: top 0.2s ease;
 }
 .wp-skip-link:focus {
   top: 14px;
 }
 
-/* Subtle Atmospheric Grain */
+/* Cyber Circuit-Line / Grid Pattern & Soft Top Cyan Glow */
 .wp-grain-bg {
-  background-image: radial-gradient(rgba(167, 139, 250, 0.07) 1px, transparent 0);
-  background-size: 24px 24px;
+  background-image:
+    radial-gradient(ellipse 80% 320px at 50% 0%, rgba(34, 211, 238, 0.16) 0%, transparent 70%),
+    linear-gradient(rgba(34, 211, 238, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 211, 238, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 36px 36px, 36px 36px;
 }
 
-/* Black & Purple Glow Glass Cards */
+/* Cyber Infographic Glass Cards */
 .wp-glass-card {
   background: var(--wp-bg-glass);
   backdrop-filter: blur(var(--wp-blur-glass));
@@ -78,7 +81,7 @@ body {
   box-shadow: var(--wp-shadow-glow);
 }
 
-/* Floating Pill Navbar with Curved Purple Glow Arc */
+/* Floating Pill Navbar with Curved Cyan Glow Arc */
 .wp-pill-navbar {
   position: relative;
   background: var(--wp-bg-glass-strong);
@@ -87,7 +90,7 @@ body {
   border: 1px solid var(--wp-border-strong);
   border-radius: var(--wp-radius-pill);
   box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.7),
-    0 -2px 24px -2px rgba(139, 92, 246, 0.35);
+    0 -2px 24px -2px rgba(34, 211, 238, 0.35);
 }
 
 .wp-pill-navbar::before {
@@ -97,34 +100,34 @@ body {
   left: 12%;
   right: 12%;
   height: 14px;
-  background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.65) 0%, rgba(139, 92, 246, 0.2) 55%, transparent 80%);
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.75) 0%, rgba(56, 189, 248, 0.25) 55%, transparent 80%);
   filter: blur(6px);
   pointer-events: none;
   border-radius: 9999px;
 }
 
-/* Buttons: Primary Purple Gradient Pill & Secondary Outlined Pill */
+/* Buttons: Primary Cyan Gradient Pill & Secondary Outlined Pill */
 .wp-btn-primary {
   min-height: 44px;
   border-radius: var(--wp-radius-pill);
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 55%, #5b21b6 100%);
-  color: #ffffff;
-  font-weight: 600;
-  border: 1px solid rgba(196, 181, 253, 0.45);
-  box-shadow: 0 0 22px -2px rgba(139, 92, 246, 0.55);
+  background: linear-gradient(135deg, #22D3EE 0%, #0284C7 60%, #0369A1 100%);
+  color: #050B16;
+  font-weight: 700;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 22px -2px rgba(34, 211, 238, 0.55);
   transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
 }
 
 .wp-btn-primary:hover:not(:disabled) {
-  filter: brightness(1.08);
-  box-shadow: 0 0 30px 0 rgba(167, 139, 250, 0.75);
+  filter: brightness(1.12);
+  box-shadow: 0 0 30px 0 rgba(34, 211, 238, 0.75);
   transform: translateY(-1px);
 }
 
 .wp-btn-secondary {
   min-height: 44px;
   border-radius: var(--wp-radius-pill);
-  background: rgba(139, 92, 246, 0.08);
+  background: rgba(34, 211, 238, 0.08);
   color: var(--wp-text-primary);
   font-weight: 600;
   border: 1px solid var(--wp-border-strong);
@@ -132,7 +135,7 @@ body {
 }
 
 .wp-btn-secondary:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.18);
+  background: rgba(34, 211, 238, 0.18);
   border-color: var(--wp-accent-light);
   transform: translateY(-1px);
 }
@@ -195,21 +198,21 @@ body {
 /* Custom Leaflet dark/light styling overrides */
 .leaflet-container {
   font-family: var(--font-sans) !important;
-  background: #06030d !important;
+  background: #050B16 !important;
 }
 
 .leaflet-popup-content-wrapper {
-  background: #0d0818 !important;
-  color: #f6f4ff !important;
-  border: 1px solid rgba(167, 139, 250, 0.35) !important;
+  background: #0A1830 !important;
+  color: #E6F1FF !important;
+  border: 1px solid rgba(34, 211, 238, 0.35) !important;
   border-radius: 14px !important;
-  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.85), 0 0 24px -4px rgba(139, 92, 246, 0.35) !important;
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.85), 0 0 24px -4px rgba(34, 211, 238, 0.35) !important;
   padding: 0 !important;
 }
 
 .leaflet-popup-tip {
-  background: #0d0818 !important;
-  border: 1px solid rgba(167, 139, 250, 0.35) !important;
+  background: #0A1830 !important;
+  border: 1px solid rgba(34, 211, 238, 0.35) !important;
 }
 
 .leaflet-popup-content {

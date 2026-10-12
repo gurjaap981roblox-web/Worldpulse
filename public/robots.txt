@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://worldpulse-rw7q.onrender.com/sitemap.xml

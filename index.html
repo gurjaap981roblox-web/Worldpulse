@@ -3,13 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-    <title>WorldPulse — Live World Monitoring Dashboard</title>
-    <meta name="description" content="Live world-monitoring dashboard aggregating global news, seismic activity, natural events, markets, and climate alerts with Gemini AI synthesis." />
-    <meta property="og:title" content="WorldPulse — Live World Monitoring Dashboard" />
-    <meta property="og:description" content="Live world-monitoring dashboard aggregating global news, seismic activity, natural events, markets, and climate alerts with Gemini AI synthesis." />
+    <title>WorldPulse – Live World News, Map & Daily Briefing</title>
+    <meta name="description" content="Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time." />
+    <link rel="canonical" href="https://worldpulse-rw7q.onrender.com/" />
+    <meta name="google-site-verification" content="PASTE_TOKEN_HERE" />
+
+    <!-- Open Graph Metadata -->
     <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://worldpulse-rw7q.onrender.com/" />
+    <meta property="og:site_name" content="WorldPulse" />
+    <meta property="og:title" content="WorldPulse – Live World News, Map & Daily Briefing" />
+    <meta property="og:description" content="Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time." />
+    <meta property="og:image" content="https://worldpulse-rw7q.onrender.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="WorldPulse Live Global Situation Room" />
+
+    <!-- Twitter Card Metadata -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="theme-color" content="#050309" />
+    <meta name="twitter:title" content="WorldPulse – Live World News, Map & Daily Briefing" />
+    <meta name="twitter:description" content="Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time." />
+    <meta name="twitter:image" content="https://worldpulse-rw7q.onrender.com/og-image.png" />
+    <meta name="twitter:image:alt" content="WorldPulse Live Global Situation Room" />
+
+    <!-- Mobile & PWA App Metadata -->
+    <meta name="theme-color" content="#050B16" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -20,9 +38,126 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+
+    <!-- Schema.org JSON-LD Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://worldpulse-rw7q.onrender.com/#website",
+            "url": "https://worldpulse-rw7q.onrender.com/",
+            "name": "WorldPulse",
+            "alternateName": "World Pulse",
+            "description": "Live world-monitoring dashboard aggregating global news, seismic activity, natural events, markets, and climate alerts with Gemini AI synthesis.",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://worldpulse-rw7q.onrender.com/#organization",
+            "name": "WorldPulse",
+            "url": "https://worldpulse-rw7q.onrender.com/",
+            "logo": "https://worldpulse-rw7q.onrender.com/icon.svg"
+          },
+          {
+            "@type": "WebApplication",
+            "@id": "https://worldpulse-rw7q.onrender.com/#webapplication",
+            "name": "WorldPulse",
+            "url": "https://worldpulse-rw7q.onrender.com/",
+            "applicationCategory": "NewsAndWeatherApplication",
+            "operatingSystem": "All",
+            "browserRequirements": "Requires JavaScript. Requires HTML5.",
+            "description": "Live global situation room aggregating verified feeds, sensor telemetry, and AI synthesis."
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "https://worldpulse-rw7q.onrender.com/#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "Where does WorldPulse collect its stories?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "WorldPulse ingests primary reports from BBC World, Al Jazeera, Reuters, The Guardian, USGS seismic sensors, NASA EONET satellites, GDELT, and Frankfurter/ECB central banking telemetry."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "How does Gemini AI score importance?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Gemini AI evaluates geopolitical significance, cross-border economic impact, population affected, and corroboration across independent wire services on an objective 1 to 10 scale."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Is WorldPulse free to use?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes, WorldPulse is 100% free with no paywalls, no tracking scripts, and client-side privacy controls."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
-  <body class="bg-[#050309] text-[#F6F4FF] antialiased selection:bg-[#8B5CF6]/35 selection:text-white">
-    <div id="root"></div>
+  <body class="bg-[#050B16] text-[#E6F1FF] antialiased selection:bg-[#22D3EE]/35 selection:text-white">
+    <div id="root">
+      <!-- Semantic crawlable HTML rendered before client JavaScript mount -->
+      <header class="p-4 border-b border-[#22D3EE]/20 bg-[#050B16]">
+        <nav aria-label="Main Navigation" class="max-w-6xl mx-auto flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <img src="/icon.svg" alt="WorldPulse radar logo" width="36" height="36" class="rounded-full" />
+            <span class="font-bold text-xl tracking-wider text-[#22D3EE]">WORLDPULSE</span>
+          </div>
+          <ul class="flex items-center gap-4 text-sm text-[#8FA5C2]">
+            <li><a href="/" class="hover:text-[#22D3EE]">Overview</a></li>
+            <li><a href="/app" class="hover:text-[#22D3EE]">Situation Room</a></li>
+            <li><a href="#sources" class="hover:text-[#22D3EE]">Sources</a></li>
+            <li><a href="#privacy" class="hover:text-[#22D3EE]">Privacy</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main class="max-w-6xl mx-auto px-4 py-12">
+        <section class="text-center py-10">
+          <h1 class="text-4xl md:text-5xl font-black text-[#E6F1FF] tracking-tight mb-4">
+            WorldPulse Live Global Intelligence
+          </h1>
+          <h2 class="text-xl md:text-2xl text-[#38BDF8] font-medium mb-6">
+            Real-Time World Monitoring, Seismic Telemetry & Daily AI Briefings
+          </h2>
+          <p class="text-base md:text-lg text-[#8FA5C2] max-w-3xl mx-auto mb-8">
+            WorldPulse aggregates verified news dispatches, earthquake telemetry from the USGS, wildfire and natural disaster tracking from NASA EONET, and economic signals into a cohesive command-center dashboard.
+          </p>
+          <div class="flex justify-center mb-12">
+            <img src="/og-image.png" alt="WorldPulse Global Situation Room Map and Incident Telemetry" width="1200" height="630" class="max-w-full rounded-2xl border border-[#22D3EE]/30 shadow-2xl" />
+          </div>
+        </section>
+        <section class="py-8">
+          <h2 class="text-2xl font-bold text-[#E6F1FF] mb-6">Core Capabilities</h2>
+          <ul class="grid md:grid-cols-3 gap-6">
+            <li class="p-6 rounded-xl border border-[#22D3EE]/20 bg-[#0A1830]">
+              <h3 class="text-lg font-bold text-[#22D3EE] mb-2">Live Situation Map</h3>
+              <p class="text-sm text-[#8FA5C2]">Interactive geospatial projection with categorized incident pins, conflict zones, and seismic tremors.</p>
+            </li>
+            <li class="p-6 rounded-xl border border-[#22D3EE]/20 bg-[#0A1830]">
+              <h3 class="text-lg font-bold text-[#22D3EE] mb-2">Top 10 Right Now</h3>
+              <p class="text-sm text-[#8FA5C2]">Objectively scored global developments ranked 1-10 with source corroboration and confidence signals.</p>
+            </li>
+            <li class="p-6 rounded-xl border border-[#22D3EE]/20 bg-[#0A1830]">
+              <h3 class="text-lg font-bold text-[#22D3EE] mb-2">Daily AI Briefing</h3>
+              <p class="text-sm text-[#8FA5C2]">Crisp 200-word daily synthesis and 24-hour shift delta powered by Gemini AI with complete grounding citations.</p>
+            </li>
+          </ul>
+        </section>
+      </main>
+      <footer class="p-6 border-t border-[#22D3EE]/20 text-center text-sm text-[#8FA5C2]">
+        <p>&copy; 2026 WorldPulse. Public interest global news monitor. No personal tracking.</p>
+      </footer>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

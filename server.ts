@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
@@ -284,11 +285,26 @@ function checkAiProtection(clientIp: string): {
 }
 
 function getClientIp(req: express.Request): string {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (typeof forwarded === 'string' && forwarded.trim().length > 0) {
-    return forwarded.split(',')[0].trim();
+  return req.ip || String(req.socket.remoteAddress || '127.0.0.1');
+}
+
+// Per-IP rate limiter for non-AI routes: 60 requests per minute
+const nonAiRateLimitMap = new Map<string, { count: number; windowStart: number }>();
+const NON_AI_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const MAX_NON_AI_CALLS_PER_MINUTE = 60;
+
+function checkNonAiRateLimit(clientIp: string): boolean {
+  const now = Date.now();
+  const entry = nonAiRateLimitMap.get(clientIp);
+  if (!entry || now - entry.windowStart > NON_AI_RATE_LIMIT_WINDOW_MS) {
+    nonAiRateLimitMap.set(clientIp, { count: 1, windowStart: now });
+    return true;
   }
-  return String(req.socket.remoteAddress || 'default');
+  if (entry.count >= MAX_NON_AI_CALLS_PER_MINUTE) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
 }
 
 function validateAiRequestInputLength(body: unknown): { valid: boolean; totalChars: number } {
@@ -385,9 +401,12 @@ function parseRssXml(xml: string, sourceLabel: string): Array<{
   return items;
 }
 
-async function fetchWithTimeout(url: string, timeoutMs = 8500, headers: Record<string, string> = {}): Promise<Response> {
+const MAX_OUTSIDE_RESPONSE_BYTES = 512 * 1024; // 512 KB max outside fetch response
+
+async function fetchWithTimeout(url: string, timeoutMs = 8000, headers: Record<string, string> = {}): Promise<Response> {
+  const safeTimeout = Math.min(8000, Math.max(1000, timeoutMs));
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const timer = setTimeout(() => controller.abort(), safeTimeout);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -403,13 +422,135 @@ async function fetchWithTimeout(url: string, timeoutMs = 8500, headers: Record<s
   }
 }
 
+async function getSafeResponseText(res: Response, maxBytes = MAX_OUTSIDE_RESPONSE_BYTES): Promise<string> {
+  const text = await res.text();
+  return text.length > maxBytes ? text.slice(0, maxBytes) : text;
+}
+
+const ALLOWED_RSS_SOURCES = ['bbc', 'aljazeera', 'reuters', 'who', 'cyber', 'india'] as const;
+type AllowedRssSource = (typeof ALLOWED_RSS_SOURCES)[number];
+
 async function startServer() {
   const app = express();
-  app.use(express.json({ limit: '1mb' }));
+  app.set('trust proxy', 1);
+
+  // Helmet Security Headers with strict Content-Security-Policy
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
+          fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+          imgSrc: [
+            "'self'",
+            'data:',
+            'blob:',
+            'https://*.supabase.co',
+            'https://server.arcgisonline.com',
+            'https://services.arcgisonline.com',
+            'https://*.tile.openstreetmap.org',
+            'https://tile.openstreetmap.org',
+            'https://unpkg.com',
+          ],
+          connectSrc: [
+            "'self'",
+            'ws:',
+            'wss:',
+            'https://*.supabase.co',
+            'https://server.arcgisonline.com',
+            'https://services.arcgisonline.com',
+            'https://*.tile.openstreetmap.org',
+            'https://tile.openstreetmap.org',
+            'https://api.frankfurter.app',
+            'https://query1.finance.yahoo.com',
+            'https://api.gdeltproject.org',
+            'https://earthquake.usgs.gov',
+            'https://eonet.gsfc.nasa.gov',
+            'https://api.open-meteo.com',
+            'https://api.coingecko.com',
+            'https://en.wikipedia.org',
+            'https://*.wikipedia.org',
+          ],
+          frameAncestors: [
+            "'self'",
+            'https://*.google.com',
+            'https://*.google.dev',
+            'https://*.googleusercontent.com',
+            'https://aistudio.google.com',
+            '*',
+          ],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      xFrameOptions: false,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      hsts: { maxAge: 31536000, includeSubDomains: true },
+      noSniff: true,
+    })
+  );
+
+  // 50kb JSON limit to protect against oversized payloads
+  app.use(express.json({ limit: '50kb' }));
+
+  // Non-AI per-IP rate limiter middleware applied to all /api/* routes except /api/ai
+  app.use('/api', (req, res, next) => {
+    if (!req.path.startsWith('/ai')) {
+      const clientIp = getClientIp(req);
+      if (!checkNonAiRateLimit(clientIp)) {
+        return res.status(429).json({ error: 'Too many requests. Please try again in a minute.' });
+      }
+    }
+    next();
+  });
+
+  // Health check endpoint (plain text 200 "ok")
+  app.get('/healthz', (_req, res) => {
+    res.status(200).type('text/plain').send('ok');
+  });
+
+  // Security text endpoint
+  app.get('/.well-known/security.txt', (_req, res) => {
+    const secFilePath = path.join(__dirname, 'public', '.well-known', 'security.txt');
+    if (fs.existsSync(secFilePath)) {
+      res.type('text/plain').sendFile(secFilePath);
+    } else {
+      res.type('text/plain').send(
+        `Contact: mailto:security@worldpulse.app\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: en, hi, pa\nCanonical: https://worldpulse-rw7q.onrender.com/.well-known/security.txt\nPolicy: https://worldpulse-rw7q.onrender.com/#privacy\nAcknowledgments: https://worldpulse-rw7q.onrender.com/#about\n`
+      );
+    }
+  });
+
+  // Real static SEO files served BEFORE the SPA fallback
+  app.get('/robots.txt', (_req, res) => {
+    const robotsPath = path.join(__dirname, 'public', 'robots.txt');
+    if (fs.existsSync(robotsPath)) {
+      res.type('text/plain').sendFile(robotsPath);
+    } else {
+      res.type('text/plain').send('User-agent: *\nAllow: /\nDisallow: /api/\nSitemap: https://worldpulse-rw7q.onrender.com/sitemap.xml\n');
+    }
+  });
+
+  app.get('/sitemap.xml', (_req, res) => {
+    const sitemapPath = path.join(__dirname, 'public', 'sitemap.xml');
+    if (fs.existsSync(sitemapPath)) {
+      res.type('application/xml').sendFile(sitemapPath);
+    } else {
+      res.status(404).send('Not found');
+    }
+  });
 
   // 1. RSS Feed Proxy for BBC, Al Jazeera, and Reuters
   app.get('/api/proxy/rss', async (req, res) => {
-    const sourceKey = String(req.query.source || 'bbc').toLowerCase();
+    const rawSource = req.query.source;
+    if (rawSource !== undefined) {
+      if (typeof rawSource !== 'string' || !ALLOWED_RSS_SOURCES.includes(rawSource.toLowerCase() as AllowedRssSource)) {
+        return res.status(400).json({ error: 'Invalid source parameter' });
+      }
+    }
+    const sourceKey = (typeof rawSource === 'string' ? rawSource.toLowerCase() : 'bbc') as AllowedRssSource;
 
     const feedConfigs: Record<string, { label: string; urls: string[] }> = {
       bbc: {
@@ -490,16 +631,16 @@ async function startServer() {
     try {
       const gdeltUrl =
         'https://api.gdeltproject.org/api/v2/doc/doc?query=sourcelang:eng&mode=artlist&maxrecords=25&format=json&sort=HybridRel';
-      const response = await fetchWithTimeout(gdeltUrl, 8500);
+      const response = await fetchWithTimeout(gdeltUrl, 8000);
       if (!response.ok) {
-        return res.status(502).json({ status: 'error', error: `GDELT HTTP ${response.status}`, articles: [] });
+        return res.status(502).json({ status: 'error', error: 'Upstream data error', articles: [] });
       }
       const data = await response.json();
       return res.json({ status: 'ok', articles: data.articles || [] });
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       return res.status(502).json({
         status: 'error',
-        error: err instanceof Error ? err.message : 'GDELT request failed',
+        error: 'Data service temporarily unavailable',
         articles: [],
       });
     }
@@ -1430,10 +1571,10 @@ Preserve all numbers, dates, and proper nouns accurately. Do not add or omit fac
         updatedAt: new Date().toISOString(),
         data: filtered,
       });
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       return res.status(500).json({
         api: 'WorldPulse Public Read-Only API v1',
-        error: err instanceof Error ? err.message : 'API error',
+        error: 'Data service temporarily unavailable',
         data: [],
       });
     }
@@ -1459,10 +1600,10 @@ Preserve all numbers, dates, and proper nouns accurately. Do not add or omit fac
         updatedAt: new Date().toISOString(),
         data: rows,
       });
-    } catch (err: unknown) {
+    } catch (_err: unknown) {
       return res.status(500).json({
         api: 'WorldPulse Top 5 Widget API v1',
-        error: err instanceof Error ? err.message : 'API error',
+        error: 'Data service temporarily unavailable',
         data: [],
       });
     }
@@ -1576,6 +1717,11 @@ ${itemsXml}
     } catch {
       return res.status(500).send('<?xml version="1.0"?><error>RSS generation failed</error>');
     }
+  });
+
+  // Generic API error handler preventing leakage of stack traces or sensitive keys
+  app.use('/api', (_err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    return res.status(500).json({ error: 'Internal server error' });
   });
 
   // Mount Vite middleware in development or static dist in production

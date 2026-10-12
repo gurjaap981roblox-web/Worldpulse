@@ -1,0 +1,6 @@
+Contact: mailto:security@worldpulse.app
+Expires: 2027-12-31T23:59:59.000Z
+Preferred-Languages: en, hi, pa
+Canonical: https://worldpulse-rw7q.onrender.com/.well-known/security.txt
+Policy: https://worldpulse-rw7q.onrender.com/#privacy
+Acknowledgments: https://worldpulse-rw7q.onrender.com/#about
