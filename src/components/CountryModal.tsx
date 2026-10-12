@@ -8,6 +8,7 @@ import {
   TOPIC_COLORS,
 } from '../utils/sanitize';
 import { generateCountryBrief } from '../services/llm';
+import { AiDisclaimerLine } from './LegalTrustCenter';
 
 interface CountryModalProps {
   countryCode: string | null;
@@ -181,6 +182,11 @@ export const CountryModal: React.FC<CountryModalProps> = ({
                     ))}
                   </ul>
                 )}
+                <AiDisclaimerLine
+                  settings={settings}
+                  contextLabel={`Country Brief: ${meta.name} (${countryCode})`}
+                  contextExcerpt={`${brief.headline} — ${brief.overview}`}
+                />
               </div>
             ) : (
               <p className="text-xs font-mono-tabular">No data available.</p>

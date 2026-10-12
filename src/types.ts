@@ -24,7 +24,63 @@ export type DashboardTab =
   | 'myfeed'
   | 'saved';
 
-export type MobileNavTab = 'home' | 'map' | 'changes' | 'search' | 'saved';
+export type MobileNavTab =
+  | 'home'
+  | 'map'
+  | 'changes'
+  | 'search'
+  | 'saved'
+  | 'briefing'
+  | 'top10'
+  | 'ask'
+  | 'more';
+
+export type FontSizeScale = 'small' | 'normal' | 'large' | 'xlarge';
+
+export type LegalPageId =
+  | 'privacy'
+  | 'terms'
+  | 'ai-disclaimer'
+  | 'cookies'
+  | 'methodology'
+  | 'accessibility'
+  | 'responsible-ai'
+  | 'contact'
+  | 'about'
+  | 'changelog';
+
+export type SourceTypeBadge =
+  | 'Wire'
+  | 'Broadcaster'
+  | 'Newspaper'
+  | 'Government/Sensor'
+  | 'Social/Other';
+
+export type DateRangeFilter = '24h' | '7d' | 'custom';
+
+export type StoryStatusFilter = 'all' | 'confirmed' | 'developing';
+
+export interface SavedFilterPreset {
+  id: string;
+  name: string;
+  query: string;
+  dateRange: DateRangeFilter;
+  customStartDate?: string;
+  customEndDate?: string;
+  country: string;
+  topic: 'All' | Topic;
+  source: string;
+  status: StoryStatusFilter;
+  minImportance: number;
+  createdAt: number;
+}
+
+export interface CookieConsentChoice {
+  decided: boolean;
+  necessary: boolean;
+  preferences: boolean;
+  updatedAt: number;
+}
 
 export type MapStyleMode = 'dark' | 'satellite' | 'heatmap';
 
@@ -283,6 +339,12 @@ export interface AppSettings {
   language: AppLanguage;
   minImportance: number; // 1 to 10 ("show 7+ only")
   strictSupabaseOnly: boolean;
+  fontSize?: FontSizeScale;
+  highContrast?: boolean;
+  dyslexiaFont?: boolean;
+  reduceMotion?: boolean;
+  simpleLanguage?: boolean;
+  liteMode?: boolean;
 }
 
 export interface ExtraMarketAsset {

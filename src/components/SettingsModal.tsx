@@ -2,13 +2,18 @@ import React from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
+  Eye,
+  FileCode,
+  FileSpreadsheet,
   FileText,
+  PlayCircle,
   Printer,
   Trash2,
   X,
 } from 'lucide-react';
 import {
   AppSettings,
+  FontSizeScale,
   SourceId,
   SourceStatus,
   Topic,
@@ -25,7 +30,10 @@ interface SettingsModalProps {
   sourceStatuses: Record<SourceId, SourceStatus>;
   onClearCache: () => void;
   onExportText: () => void;
+  onExportMarkdown?: () => void;
+  onExportCsv?: () => void;
   onPrintPdf: () => void;
+  onReplayOnboardingTour?: () => void;
 }
 
 const REGIONS: WorldRegion[] = [
@@ -66,7 +74,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   sourceStatuses,
   onClearCache,
   onExportText,
+  onExportMarkdown,
+  onExportCsv,
   onPrintPdf,
+  onReplayOnboardingTour,
 }) => {
   if (!isOpen) return null;
 
@@ -342,6 +353,170 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </section>
 
+          {/* 2B. Accessibility & Low-Bandwidth Lite Mode */}
+          <section className="space-y-3">
+            <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-bold text-[#A78BFA] flex items-center gap-1.5">
+              <Eye className="w-3.5 h-3.5" />
+              <span>02B. Accessibility, Simple Language &amp; Low-Bandwidth Lite Mode</span>
+            </h3>
+            <div
+              className={`p-4 border rounded-2xl space-y-4 ${
+                isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0]/50 border-[#DCD5C7]'
+              }`}
+            >
+              {/* Font Size Control: Small / Normal / Large / Extra large */}
+              <div>
+                <span className="block text-xs font-mono-tabular font-semibold mb-1.5">
+                  Font Size Scale
+                </span>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(
+                    [
+                      { id: 'small', label: 'Small (14px)' },
+                      { id: 'normal', label: 'Normal (16px)' },
+                      { id: 'large', label: 'Large (18px)' },
+                      { id: 'xlarge', label: 'Extra Large (20px)' },
+                    ] as Array<{ id: FontSizeScale; label: string }>
+                  ).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onUpdateSettings({ ...settings, fontSize: item.id })}
+                      className={`min-h-[44px] px-3 py-2 text-xs font-mono-tabular font-semibold border rounded-xl transition-colors cursor-pointer ${
+                        (settings.fontSize || 'normal') === item.id
+                          ? 'bg-[#8B5CF6] border-[#A78BFA] text-white'
+                          : isDark
+                          ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                          : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Accessibility Toggles Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settings.highContrast)}
+                  onClick={() =>
+                    onUpdateSettings({ ...settings, highContrast: !settings.highContrast })
+                  }
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
+                    settings.highContrast
+                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      : isDark
+                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                  }`}
+                >
+                  <span>High-Contrast Mode</span>
+                  <span>{settings.highContrast ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settings.dyslexiaFont)}
+                  onClick={() =>
+                    onUpdateSettings({ ...settings, dyslexiaFont: !settings.dyslexiaFont })
+                  }
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
+                    settings.dyslexiaFont
+                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      : isDark
+                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                  }`}
+                >
+                  <span>Dyslexia-Friendly Font</span>
+                  <span>{settings.dyslexiaFont ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settings.reduceMotion)}
+                  onClick={() =>
+                    onUpdateSettings({ ...settings, reduceMotion: !settings.reduceMotion })
+                  }
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
+                    settings.reduceMotion
+                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      : isDark
+                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                  }`}
+                >
+                  <span>Reduce Motion &amp; Ticker</span>
+                  <span>{settings.reduceMotion ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settings.simpleLanguage)}
+                  onClick={() =>
+                    onUpdateSettings({ ...settings, simpleLanguage: !settings.simpleLanguage })
+                  }
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
+                    settings.simpleLanguage
+                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      : isDark
+                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                  }`}
+                >
+                  <span>Simple-Language AI Mode</span>
+                  <span>{settings.simpleLanguage ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={Boolean(settings.liteMode)}
+                  onClick={() => {
+                    const nextLite = !settings.liteMode;
+                    onUpdateSettings({
+                      ...settings,
+                      liteMode: nextLite,
+                      refreshIntervalMinutes: nextLite
+                        ? Math.max(30, settings.refreshIntervalMinutes)
+                        : settings.refreshIntervalMinutes,
+                    });
+                  }}
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
+                    settings.liteMode
+                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      : isDark
+                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                  }`}
+                >
+                  <span>Low-Bandwidth Lite Mode</span>
+                  <span>{settings.liteMode ? 'ON' : 'OFF'}</span>
+                </button>
+
+                {onReplayOnboardingTour && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onReplayOnboardingTour();
+                    }}
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#8B5CF6]/40 bg-[#8B5CF6]/10 text-[#A78BFA] text-xs font-mono-tabular font-semibold flex items-center justify-between cursor-pointer hover:bg-[#8B5CF6]/20"
+                  >
+                    <span>Replay Welcome Tour</span>
+                    <PlayCircle className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+
           {/* 3. Topics & Regions to Follow */}
           <section className="space-y-3">
             <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-bold text-[#E05A2B]">
@@ -480,6 +655,36 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               05. Export Briefing, Cache Control &amp; Privacy Note
             </h3>
             <div className="flex flex-wrap items-center gap-2.5 font-mono-tabular">
+              {onExportMarkdown && (
+                <button
+                  type="button"
+                  onClick={onExportMarkdown}
+                  className={`min-h-[44px] px-4 py-2 text-xs font-semibold border flex items-center gap-2 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE] hover:border-[#F3F2EE]'
+                      : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#181615] hover:border-[#181615]'
+                  }`}
+                >
+                  <FileCode className="w-4 h-4 text-[#A78BFA]" />
+                  <span>Export as Markdown (.MD)</span>
+                </button>
+              )}
+
+              {onExportCsv && (
+                <button
+                  type="button"
+                  onClick={onExportCsv}
+                  className={`min-h-[44px] px-4 py-2 text-xs font-semibold border flex items-center gap-2 cursor-pointer ${
+                    isDark
+                      ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE] hover:border-[#F3F2EE]'
+                      : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#181615] hover:border-[#181615]'
+                  }`}
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-[#A78BFA]" />
+                  <span>Export Stories (.CSV)</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={onExportText}

@@ -1,7 +1,17 @@
-import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, FileText, Printer, Square, Volume2 } from 'lucide-react';
-import { AppSettings, DailyBriefing } from '../types';
+import React, { useState } from 'react';
+import {
+  ChevronDown,
+  ChevronUp,
+  Download,
+  FileCode,
+  FileSpreadsheet,
+  FileText,
+  Printer,
+} from 'lucide-react';
+import { AppSettings, DailyBriefing, LegalPageId } from '../types';
 import { formatTimeInTz, UI_TRANSLATIONS } from '../utils/sanitize';
+import { AudioSpeechControls } from './AudioSpeechControls';
+import { AiDisclaimerLine } from './LegalTrustCenter';
 
 interface HeroBriefingProps {
   briefing: DailyBriefing | null;
@@ -10,7 +20,10 @@ interface HeroBriefingProps {
   totalStories: number;
   countriesCount: number;
   onExportText: () => void;
+  onExportMarkdown?: () => void;
+  onExportCsv?: () => void;
   onPrintPdf: () => void;
+  onOpenLegalPage?: (page: LegalPageId) => void;
 }
 
 export const HeroBriefing: React.FC<HeroBriefingProps> = ({
@@ -20,68 +33,27 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
   totalStories,
   countriesCount,
   onExportText,
+  onExportMarkdown,
+  onExportCsv,
   onPrintPdf,
+  onOpenLegalPage,
 }) => {
   const [expanded, setExpanded] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
   const isDark = settings.theme === 'dark';
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
-
-  useEffect(() => {
-    return () => {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const handleToggleVoiceBriefing = () => {
-    if (!('speechSynthesis' in window) || !briefing) return;
-
-    if (isSpeaking) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
-      return;
-    }
-
-    window.speechSynthesis.cancel();
-    const spokenText = [
-      `WorldPulse Daily Briefing. ${briefing.headline}.`,
-      'Key Highlights:',
-      ...briefing.highlights.map((h, i) => `Number ${i + 1}: ${h}.`),
-      ...briefing.paragraphs,
-    ].join(' ');
-
-    const utterance = new SpeechSynthesisUtterance(spokenText);
-    utterance.lang =
-      settings.language === 'hi'
-        ? 'hi-IN'
-        : settings.language === 'pa'
-        ? 'pa-IN'
-        : 'en-US';
-    utterance.rate = 1.0;
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    setIsSpeaking(true);
-    window.speechSynthesis.speak(utterance);
-  };
 
   if (isLoading && !briefing) {
     return (
       <section
         id="briefing"
         aria-label="Daily Briefing loading"
-        className={`border border-t-2 p-5 sm:p-6 ${
-          isDark
-            ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE]'
-            : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615]'
-        }`}
+        className="wp-glass-card p-5 sm:p-6"
       >
-        <div className="h-4 w-48 bg-stone-500/15 animate-pulse mb-3" />
-        <div className="h-8 w-3/4 bg-stone-500/20 animate-pulse mb-5" />
+        <div className="h-4 w-48 skeleton-shimmer rounded mb-3" />
+        <div className="h-8 w-3/4 skeleton-shimmer rounded mb-5" />
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           {[1, 2, 3, 4, 5].map((n) => (
-            <div key={n} className="h-16 bg-stone-500/10 animate-pulse" />
+            <div key={n} className="h-16 skeleton-shimmer rounded-xl" />
           ))}
         </div>
       </section>
@@ -90,43 +62,39 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
 
   if (!briefing) {
     return (
-      <section
-        id="briefing"
-        className={`border border-t-2 p-6 ${
-          isDark
-            ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#8C93A1]'
-            : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#666159]'
-        }`}
-      >
-        <p className="text-sm font-mono-tabular">
+      <section id="briefing" className="wp-glass-card p-6">
+        <p className="text-sm font-mono-tabular text-[#9389B0]">
           {labels.collectingData}
         </p>
       </section>
     );
   }
 
+  const fullSpokenText = [
+    `WorldPulse Daily Briefing. ${briefing.headline}.`,
+    'Key Highlights:',
+    ...briefing.highlights.map((h, i) => `Highlight ${i + 1}: ${h}.`),
+    ...briefing.paragraphs,
+  ].join(' ');
+
   return (
     <section
       id="briefing"
       aria-labelledby="briefing-heading"
-      className={`border border-t-2 transition-colors duration-200 ${
-        isDark
-          ? 'bg-[#101217] border-[#222631] border-t-[#F3F2EE] text-[#F3F2EE]'
-          : 'bg-[#FCFAF5] border-[#DCD5C7] border-t-[#181615] text-[#181615]'
-      }`}
+      className="wp-glass-card transition-colors duration-200 overflow-hidden"
     >
       {/* Top Institutional Kicker Bar */}
       <div
-        className={`px-5 py-3 border-b flex flex-wrap items-center justify-between gap-3 ${
-          isDark ? 'border-[#222631]' : 'border-[#DCD5C7]'
+        className={`px-5 py-3.5 border-b flex flex-col xl:flex-row xl:items-center justify-between gap-3 ${
+          isDark ? 'border-[#8B5CF6]/25' : 'border-[#7C3AED]/20'
         }`}
       >
         <div
           className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular ${
-            isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
+            isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
           }`}
         >
-          <span className="uppercase tracking-wider font-semibold text-[#E05A2B]">
+          <span className="uppercase tracking-wider font-bold text-[#A78BFA]">
             Section 01 / Executive Daily Briefing
           </span>
           <span aria-hidden="true">·</span>
@@ -147,77 +115,85 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           </span>
         </div>
 
-        {/* Voice Briefing & Export actions */}
-        <div className="flex items-center gap-2 no-print">
-          <button
-            type="button"
-            onClick={handleToggleVoiceBriefing}
-            className={`min-h-[38px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              isSpeaking
-                ? 'bg-[#E05A2B] border-[#E05A2B] text-white font-semibold'
-                : isDark
-                ? 'bg-[#090A0D] border-[#222631] text-[#F3F2EE] hover:border-[#E05A2B]'
-                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#181615] hover:border-[#E05A2B]'
-            }`}
-            title="Listen to Voice Briefing using browser speech synthesis"
-          >
-            {isSpeaking ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-[#E05A2B]" />}
-            <span>{isSpeaking ? 'Stop Audio' : labels.voiceBriefing}</span>
-          </button>
+        {/* Export Actions: Markdown (.md), CSV, TXT, Print / PDF */}
+        <div className="flex flex-wrap items-center gap-2 no-print">
+          {onExportMarkdown && (
+            <button
+              type="button"
+              onClick={onExportMarkdown}
+              className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              title="Download briefing and top stories as Markdown (.md)"
+            >
+              <FileCode className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>.MD</span>
+            </button>
+          )}
+          {onExportCsv && (
+            <button
+              type="button"
+              onClick={onExportCsv}
+              className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              title="Download visible stories as CSV spreadsheet"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <span>CSV</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={onExportText}
-            className={`min-h-[38px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              isDark
-                ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE] hover:border-[#F3F2EE]'
-                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#666159] hover:text-[#181615] hover:border-[#181615]'
-            }`}
-            title="Download briefing as plain text"
+            className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+            title="Download briefing as plain text (.txt)"
           >
-            <FileText className="w-3.5 h-3.5" />
+            <FileText className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>TXT</span>
           </button>
           <button
             type="button"
             onClick={onPrintPdf}
-            className={`min-h-[38px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-              isDark
-                ? 'bg-[#090A0D] border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE] hover:border-[#F3F2EE]'
-                : 'bg-[#EFEAE0]/60 border-[#DCD5C7] text-[#666159] hover:text-[#181615] hover:border-[#181615]'
-            }`}
+            className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             title="Print or save briefing as PDF"
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="w-3.5 h-3.5 text-[#A78BFA]" />
             <span>Print / PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Main Lead Editorial Headline */}
-      <div className="p-5 sm:p-6">
-        <h1
-          id="briefing-heading"
-          className="font-editorial text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight leading-snug mb-5 text-balance"
-        >
-          {briefing.headline}
-        </h1>
+      {/* Main Lead Editorial Headline & Audio Briefing Toolbar */}
+      <div className="p-5 sm:p-6 space-y-5">
+        <div className="space-y-3">
+          <h1
+            id="briefing-heading"
+            className="font-editorial text-xl sm:text-2xl md:text-3xl font-bold tracking-tight leading-snug text-balance"
+          >
+            {briefing.headline}
+          </h1>
+
+          {/* Full Browser Audio Briefing Player (Play, Pause, Stop, Speed 0.75x-1.5x, Voice Picker) */}
+          <AudioSpeechControls
+            text={fullSpokenText}
+            settings={settings}
+            label="Executive Daily Audio Briefing"
+          />
+        </div>
 
         {/* 5 Architectural Ledger Columns for Highlights */}
         <ol
-          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 border-t border-b divide-y md:divide-y-0 md:divide-x ${
+          className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 rounded-2xl border divide-y md:divide-y-0 md:divide-x overflow-hidden ${
             isDark
-              ? 'border-[#222631] divide-[#222631]'
-              : 'border-[#DCD5C7] divide-[#DCD5C7]'
+              ? 'border-[#8B5CF6]/25 divide-[#8B5CF6]/20 bg-[#050309]/50'
+              : 'border-[#7C3AED]/20 divide-[#7C3AED]/15 bg-white/70'
           }`}
         >
           {briefing.highlights.slice(0, 5).map((item, idx) => (
             <li key={idx} className="p-3.5 sm:p-4 flex flex-col justify-between gap-2">
-              <span className="font-mono-tabular text-[11px] font-semibold text-[#E05A2B]">
+              <span className="font-mono-tabular text-[11px] font-bold text-[#A78BFA]">
                 0{idx + 1} / HIGHLIGHT
               </span>
               <p
                 className={`text-xs sm:text-[13px] leading-relaxed ${
-                  isDark ? 'text-[#F3F2EE]/90' : 'text-[#181615]/90'
+                  isDark ? 'text-[#F6F4FF]/90' : 'text-[#140E24]/90'
                 }`}
               >
                 {item}
@@ -229,8 +205,10 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
         {/* Expandable 200-word full editorial briefing */}
         {expanded && (
           <div
-            className={`mt-5 pt-5 border-t grid grid-cols-1 md:grid-cols-3 gap-6 text-sm leading-relaxed ${
-              isDark ? 'border-[#222631] text-[#F3F2EE]/90' : 'border-[#DCD5C7] text-[#181615]/90'
+            className={`pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-6 text-sm leading-relaxed ${
+              isDark
+                ? 'border-[#8B5CF6]/25 text-[#F6F4FF]/90'
+                : 'border-[#7C3AED]/20 text-[#140E24]/90'
             }`}
           >
             {briefing.paragraphs.map((p, i) => (
@@ -238,7 +216,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
                 key={i}
                 className={
                   i === 0
-                    ? 'first-letter:font-editorial first-letter:text-3xl first-letter:font-bold first-letter:float-left first-letter:mr-2.5 first-letter:leading-none first-letter:text-[#E05A2B]'
+                    ? 'first-letter:font-editorial first-letter:text-3xl first-letter:font-bold first-letter:float-left first-letter:mr-2.5 first-letter:leading-none first-letter:text-[#A78BFA]'
                     : ''
                 }
               >
@@ -248,12 +226,12 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           </div>
         )}
 
-        <div className="mt-4 flex items-center justify-between no-print">
+        <div className="flex items-center justify-between no-print">
           <button
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
-            className="min-h-[40px] px-3 -ml-3 text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#E05A2B] hover:underline flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-[44px] px-3 -ml-3 text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#A78BFA] hover:underline flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
           >
             <span>
               {expanded ? 'Collapse Full Synthesis' : 'Read Full 200-Word Synthesis'}
@@ -261,6 +239,14 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
             {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
         </div>
+
+        {/* Required One-Line AI Disclaimer + Report Wrong Answer Link */}
+        <AiDisclaimerLine
+          settings={settings}
+          contextLabel="Daily Executive Briefing"
+          contextExcerpt={briefing.headline}
+          onOpenLegalPage={onOpenLegalPage}
+        />
       </div>
     </section>
   );

@@ -30,6 +30,16 @@ import {
   TOPIC_COLORS,
 } from '../utils/sanitize';
 import { askTheWorldQuery } from '../services/llm';
+import { AiDisclaimerLine } from './LegalTrustCenter';
+
+const ASK_WORLD_EXAMPLE_QUESTIONS = [
+  'What are the top 3 highest-importance stories right now?',
+  'What is happening in India and Punjab today?',
+  'Which earthquakes or natural disasters were detected in the last 24h?',
+  'Are there any active cyberattacks or data breaches reported?',
+  'What are the latest conflict or diplomatic developments?',
+  'How are global markets, sovereign FX, and economies shifting today?',
+];
 
 // ============================================================================
 // 1. STORY TIMELINE MODAL (Follows one story across days)
@@ -807,6 +817,7 @@ interface AskTheWorldModalProps {
   settings: AppSettings;
   onClose: () => void;
   onSelectStory: (story: Story) => void;
+  initialQuestion?: string;
 }
 
 export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
@@ -815,6 +826,7 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
   settings,
   onClose,
   onSelectStory,
+  initialQuestion,
 }) => {
   const [question, setQuestion] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -828,12 +840,8 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
     },
   ]);
 
-  if (!isOpen) return null;
-  const isDark = settings.theme === 'dark';
-
-  const handleAsk = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const q = question.trim();
+  const runQuestion = async (rawQ: string) => {
+    const q = rawQ.trim();
     if (!q || isLoading) return;
 
     const userMsg: AskWorldMessage = {
@@ -853,6 +861,20 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (isOpen && initialQuestion && initialQuestion.trim()) {
+      runQuestion(initialQuestion);
+    }
+  }, [isOpen, initialQuestion]);
+
+  if (!isOpen) return null;
+  const isDark = settings.theme === 'dark';
+
+  const handleAsk = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await runQuestion(question);
   };
 
   return (
@@ -951,8 +973,36 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
                   ))}
                 </div>
               )}
+
+              {msg.role === 'assistant' && (
+                <AiDisclaimerLine
+                  settings={settings}
+                  contextLabel="Ask the World Answer"
+                  contextExcerpt={msg.text}
+                />
+              )}
             </div>
           ))}
+
+          {/* 6 Example Questions as Clickable Chips */}
+          <div className="pt-2 space-y-2">
+            <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+              Example Questions (Tap to Ask):
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ASK_WORLD_EXAMPLE_QUESTIONS.map((exQ) => (
+                <button
+                  key={exQ}
+                  type="button"
+                  disabled={isLoading}
+                  onClick={() => runQuestion(exQ)}
+                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#8B5CF6]/35 bg-[#8B5CF6]/10 hover:bg-[#8B5CF6]/20 text-xs font-mono-tabular text-left transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  {exQ}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {isLoading && (
             <div className="p-4 border border-[#222631] flex items-center gap-2 text-xs font-mono-tabular text-[#E05A2B]">

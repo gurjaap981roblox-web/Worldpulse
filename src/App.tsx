@@ -13,12 +13,12 @@ import {
   Database,
   ExternalLink,
   Globe,
-  Languages,
+  Home,
   MessageSquare,
   Scale,
-  Search,
+  Shield,
   ShieldAlert,
-  SlidersHorizontal,
+  Sparkles,
   Stethoscope,
   Swords,
   UserCheck,
@@ -31,15 +31,19 @@ import {
   AppSettings,
   CityWeather,
   CoinMarket,
+  CookieConsentChoice,
   CustomAlertRule,
   DailyBriefing,
   DashboardTab,
+  DateRangeFilter,
   ExtraMarketAsset,
   FxRateShift,
+  LegalPageId,
   MacroCountryIndicator,
   MapFocusTarget,
   MapStyleMode,
   MobileNavTab,
+  SavedFilterPreset,
   Snapshot,
   SourceId,
   SourceStatus,
@@ -51,16 +55,24 @@ import {
 } from './types';
 import {
   clearAllWorldPulseCache,
+  hasCompletedOnboardingTour,
+  hasEnteredAppBefore,
   loadBookmarks,
+  loadCookieConsent,
   loadCustomAlerts,
+  loadFilterPresets,
   loadPersistedDashboardState,
   loadSettings,
   loadSnapshots,
+  markEnteredApp,
   saveBookmarks,
+  saveCookieConsent,
   saveCustomAlerts,
+  saveFilterPresets,
   savePersistedDashboardState,
   saveSettings,
   saveSnapshot,
+  setOnboardingTourCompleted,
 } from './services/storage';
 import {
   fetchAllWorldSources,
@@ -84,7 +96,11 @@ import {
   syncBookmarkToSupabase,
   syncUserFollowsToSupabase,
 } from './services/supabase';
-import { getCountryFlag, UI_TRANSLATIONS } from './utils/sanitize';
+import {
+  evaluateSearchQuery,
+  getCountryFlag,
+  UI_TRANSLATIONS,
+} from './utils/sanitize';
 import { useOnlineStatus } from './hooks/usePWAInstall';
 import { TopBar } from './components/TopBar';
 import { HeroBriefing } from './components/HeroBriefing';
@@ -109,12 +125,55 @@ import {
 } from './components/InteractiveToolsModals';
 import { AccountAlertsModal } from './components/AccountAlertsModal';
 import { PhoneBottomNav } from './components/PhoneBottomNav';
+import {
+  CookieConsentBanner,
+  FirstVisitOnboardingTour,
+  LEGAL_HASH_TO_ID,
+  LegalFooterLinks,
+  LegalTrustModal,
+} from './components/LegalTrustCenter';
+import { SearchAndFilterBar } from './components/SearchAndFilterBar';
+import { LandingPage } from './components/LandingPage';
 
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
   const [snapshots, setSnapshots] = useState<Snapshot[]>(() => loadSnapshots());
   const [bookmarks, setBookmarks] = useState<Story[]>(() => loadBookmarks());
   const [alertRules, setAlertRules] = useState<CustomAlertRule[]>(() => loadCustomAlerts());
+  const [filterPresets, setFilterPresets] = useState<SavedFilterPreset[]>(() =>
+    loadFilterPresets()
+  );
+  const [cookieConsent, setCookieConsent] = useState<CookieConsentChoice | null>(() =>
+    loadCookieConsent()
+  );
+  const [showOnboardingTour, setShowOnboardingTour] = useState<boolean>(
+    () => !hasCompletedOnboardingTour()
+  );
+
+  // Determine whether to show the Landing Page (/) or Main App (/app)
+  const [showLandingPage, setShowLandingPage] = useState<boolean>(() => {
+    try {
+      const path = window.location.pathname;
+      const params = new URLSearchParams(window.location.search);
+      if (
+        path.startsWith('/app') ||
+        params.has('embed') ||
+        params.has('country') ||
+        params.has('topic') ||
+        params.has('tab') ||
+        params.has('punjab') ||
+        params.has('q')
+      ) {
+        return false;
+      }
+      if (hasEnteredAppBefore()) {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  });
 
   const initialCached = useMemo(() => loadPersistedDashboardState(), []);
 
@@ -182,10 +241,12 @@ export default function App() {
 
   // Navigation, Tabs, and Filters
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
-  const [activeMobileTab, setActiveMobileTab] = useState<MobileNavTab>('home');
+  const [activeMobileTab, setActiveMobileTab] = useState<MobileNavTab>('briefing');
+  const [showMobileMoreDrawer, setShowMobileMoreDrawer] = useState<boolean>(false);
   const [punjabOnly, setPunjabOnly] = useState<boolean>(false);
   const [searchInput, setSearchInput] = useState<string>('');
   const [debouncedQuery, setDebouncedQuery] = useState<string>('');
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeFilter>('24h');
   const [selectedTopicFilter, setSelectedTopicFilter] = useState<'All' | Topic>('All');
   const [selectedCountryFilter, setSelectedCountryFilter] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyleMode>('dark');
@@ -196,12 +257,18 @@ export default function App() {
   const [verifyingStoryId, setVerifyingStoryId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'all' | 'core'>('all');
 
+  // Legal & Trust Modal State (supports #privacy, #terms, etc.)
+  const [activeLegalPage, setActiveLegalPage] = useState<LegalPageId | null>(null);
+
   // Interactive Tool Modals State
   const [timelineStory, setTimelineStory] = useState<Story | null>(null);
   const [shareCardStory, setShareCardStory] = useState<Story | null>(null);
   const [isCompareOpen, setIsCompareOpen] = useState<boolean>(false);
   const [compareInitialCountry, setCompareInitialCountry] = useState<string>('IN');
   const [isAskWorldOpen, setIsAskWorldOpen] = useState<boolean>(false);
+  const [askWorldInitialQuestion, setAskWorldInitialQuestion] = useState<string | undefined>(
+    undefined
+  );
   const [isAccountAlertsOpen, setIsAccountAlertsOpen] = useState<boolean>(false);
   const [isDevApiOpen, setIsDevApiOpen] = useState<boolean>(false);
   const [copiedDeepLink, setCopiedDeepLink] = useState<boolean>(false);
@@ -220,6 +287,78 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     return params.get('embed') === 'top5';
   }, []);
+
+  // Listen to URL hash changes for Legal & Trust pages (#privacy, #terms, etc.) and popstate for / vs /app
+  useEffect(() => {
+    const checkHashAndPath = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash && LEGAL_HASH_TO_ID[hash]) {
+        setActiveLegalPage(LEGAL_HASH_TO_ID[hash]);
+      }
+      if (window.location.pathname.startsWith('/app')) {
+        setShowLandingPage(false);
+      }
+    };
+    checkHashAndPath();
+    window.addEventListener('hashchange', checkHashAndPath);
+    window.addEventListener('popstate', checkHashAndPath);
+    return () => {
+      window.removeEventListener('hashchange', checkHashAndPath);
+      window.removeEventListener('popstate', checkHashAndPath);
+    };
+  }, []);
+
+  const handleOpenLegalPage = (page: LegalPageId) => {
+    setActiveLegalPage(page);
+    try {
+      window.history.replaceState(null, '', `#${page}`);
+    } catch {
+      // ignore history errors in sandboxed iframes
+    }
+  };
+
+  const handleCloseLegalPage = () => {
+    setActiveLegalPage(null);
+    try {
+      if (window.location.hash && LEGAL_HASH_TO_ID[window.location.hash.toLowerCase()]) {
+        window.history.replaceState(
+          null,
+          '',
+          window.location.pathname + window.location.search
+        );
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleEnterAppFromLanding = (initialQuestion?: string) => {
+    markEnteredApp();
+    setShowLandingPage(false);
+    try {
+      if (!window.location.pathname.startsWith('/app')) {
+        window.history.pushState(null, '', '/app' + window.location.search);
+      }
+    } catch {
+      // ignore history errors in iframe
+    }
+    if (initialQuestion && initialQuestion.trim()) {
+      setAskWorldInitialQuestion(initialQuestion.trim());
+      setIsAskWorldOpen(true);
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleGoToLanding = () => {
+    setShowLandingPage(true);
+    try {
+      window.history.pushState(null, '', '/');
+    } catch {
+      // ignore
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Parse Deep Links on initial load (?country=IN&topic=Cyber&min_importance=7&tab=india&punjab=1)
   useEffect(() => {
@@ -311,6 +450,7 @@ export default function App() {
     };
   }, []);
 
+  // Apply Theme, Font Size, High Contrast, Dyslexia Font, Reduce Motion, and Lite Mode classes on <html>
   useEffect(() => {
     const html = document.documentElement;
     if (settings.theme === 'dark') {
@@ -320,12 +460,32 @@ export default function App() {
       html.classList.add('light');
       html.classList.remove('dark');
     }
-  }, [settings.theme]);
+
+    html.classList.remove(
+      'wp-font-small',
+      'wp-font-normal',
+      'wp-font-large',
+      'wp-font-xlarge'
+    );
+    html.classList.add(`wp-font-${settings.fontSize || 'normal'}`);
+
+    html.classList.toggle('wp-high-contrast', Boolean(settings.highContrast));
+    html.classList.toggle('wp-dyslexia-font', Boolean(settings.dyslexiaFont));
+    html.classList.toggle('wp-reduce-motion', Boolean(settings.reduceMotion));
+    html.classList.toggle('wp-lite-mode', Boolean(settings.liteMode));
+  }, [
+    settings.theme,
+    settings.fontSize,
+    settings.highContrast,
+    settings.dyslexiaFont,
+    settings.reduceMotion,
+    settings.liteMode,
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedQuery(searchInput.trim().toLowerCase());
-    }, 180);
+      setDebouncedQuery(searchInput.trim());
+    }, 160);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
@@ -440,12 +600,10 @@ export default function App() {
         setLastUpdated(now);
         evaluateAlertRules(sbResult.stories, fetched.coins);
       } else if (settingsRef.current.strictSupabaseOnly) {
-        // Strict Supabase mode when tables are empty: show "Collecting data, check back soon" without fallback
         setStories([]);
         setBriefing(sbResult.briefing);
         setLastUpdated(Date.now());
       } else if (fetched.rawItems.length > 0) {
-        // Fallback to live feeds when Supabase stories table is empty
         const fastStories = buildBaselineStories(fetched.rawItems);
         const fastFallback = buildFallbackBriefingAndChanges(
           fastStories,
@@ -579,10 +737,55 @@ export default function App() {
     }
   };
 
+  const handleSaveFilterPreset = (preset: SavedFilterPreset) => {
+    const updated = [preset, ...filterPresets].slice(0, 12);
+    setFilterPresets(updated);
+    saveFilterPresets(updated);
+  };
+
+  const handleDeleteFilterPreset = (id: string) => {
+    const updated = filterPresets.filter((p) => p.id !== id);
+    setFilterPresets(updated);
+    saveFilterPresets(updated);
+  };
+
+  const handleApplyFilterPreset = (preset: SavedFilterPreset) => {
+    setSearchInput(preset.query || '');
+    setSelectedTopicFilter(preset.topic || 'All');
+    setSelectedCountryFilter(preset.country || null);
+    setDateRangeFilter(preset.dateRange || '24h');
+    if (preset.minImportance) {
+      handleUpdateSettings({ ...settings, minImportance: preset.minImportance });
+    }
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchInput('');
+    setDebouncedQuery('');
+    setSelectedTopicFilter('All');
+    setSelectedCountryFilter(null);
+    setDateRangeFilter('24h');
+    setPunjabOnly(false);
+    if (settings.minImportance > 1) {
+      handleUpdateSettings({ ...settings, minImportance: 1 });
+    }
+  };
+
   const filteredStories = useMemo(() => {
     const minImp = settings.minImportance || 1;
+    const now = Date.now();
+    const maxAgeMs =
+      dateRangeFilter === '24h'
+        ? 24 * 3600 * 1000
+        : dateRangeFilter === '7d'
+        ? 7 * 24 * 3600 * 1000
+        : 30 * 24 * 3600 * 1000;
+
     return stories.filter((story) => {
       if (story.importance < minImp) return false;
+      if (story.publishedAt && now - story.publishedAt > maxAgeMs) {
+        return false;
+      }
       if (!settings.followedTopics.includes(story.topic)) return false;
       if (
         !settings.followedRegions.includes('All') &&
@@ -597,8 +800,7 @@ export default function App() {
         return false;
       }
       if (debouncedQuery) {
-        const hay = `${story.headline} ${story.summary} ${story.countryName} ${story.country} ${story.topic} ${story.sources.map((s) => s.name).join(' ')}`.toLowerCase();
-        if (!hay.includes(debouncedQuery)) return false;
+        if (!evaluateSearchQuery(story, debouncedQuery)) return false;
       }
       return true;
     });
@@ -610,6 +812,7 @@ export default function App() {
     selectedTopicFilter,
     selectedCountryFilter,
     debouncedQuery,
+    dateRangeFilter,
   ]);
 
   const risingTopics = useMemo(
@@ -704,6 +907,94 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportMarkdown = () => {
+    if (!briefing) return;
+    const lines = [
+      `# WorldPulse — AI Daily Briefing & Global Situation Report`,
+      `**Generated:** ${new Date(briefing.generatedAt).toUTCString()} (${settings.timezone})`,
+      '',
+      `## ${briefing.headline}`,
+      '',
+      `### Key Highlights`,
+      ...briefing.highlights.map((h) => `- ${h}`),
+      '',
+      `### Full Executive Synthesis`,
+      ...briefing.paragraphs.map((p) => `${p}\n`),
+      `### Top 10 Active Dispatches`,
+      ...filteredStories.slice(0, 10).map(
+        (s, i) =>
+          `${i + 1}. **[${s.country} · ${s.topic} · Sev ${s.importance.toFixed(1)}] ${
+            s.headline
+          }**\n   - ${s.summary}\n   - Source: [${s.sources[0]?.name || 'Link'}](${
+            s.sources[0]?.url || '#'
+          })`
+      ),
+      '',
+      `---`,
+      `*AI-generated summary from verified public sources. Verify original reporting before making decisions.*`,
+    ];
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worldpulse-briefing-${new Date().toISOString().slice(0, 10)}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportCsv = () => {
+    const headers = [
+      'rank',
+      'id',
+      'country',
+      'country_name',
+      'topic',
+      'importance',
+      'confidence',
+      'sentiment',
+      'published_at',
+      'headline',
+      'summary',
+      'primary_source',
+      'primary_url',
+    ];
+    const escapeCsv = (val: unknown) => {
+      const str = String(val ?? '').replace(/"/g, '""');
+      return `"${str}"`;
+    };
+    const rows = filteredStories.map((s, idx) =>
+      [
+        idx + 1,
+        s.id,
+        s.country,
+        s.countryName,
+        s.topic,
+        s.importance.toFixed(1),
+        Math.round(s.confidence * 100) + '%',
+        s.sentiment.toFixed(2),
+        new Date(s.publishedAt).toISOString(),
+        s.headline,
+        s.summary,
+        s.sources[0]?.name || '',
+        s.sources[0]?.url || '',
+      ]
+        .map(escapeCsv)
+        .join(',')
+    );
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `worldpulse-stories-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handlePrintPdf = () => {
     window.print();
   };
@@ -721,7 +1012,7 @@ export default function App() {
     if (settings.minImportance > 1) params.set('min_importance', String(settings.minImportance));
     if (punjabOnly) params.set('punjab', '1');
     if (searchInput.trim()) params.set('q', searchInput.trim());
-    const link = `${window.location.origin}/${params.toString() ? `?${params.toString()}` : ''}`;
+    const link = `${window.location.origin}/app${params.toString() ? `?${params.toString()}` : ''}`;
     navigator.clipboard?.writeText(link);
     setCopiedDeepLink(true);
     setTimeout(() => setCopiedDeepLink(false), 2000);
@@ -729,19 +1020,33 @@ export default function App() {
 
   const handleSelectMobileTab = (mTab: MobileNavTab) => {
     setActiveMobileTab(mTab);
-    if (mTab === 'home') {
+    if (mTab === 'briefing' || mTab === 'home') {
+      setShowMobileMoreDrawer(false);
       setActiveTab('overview');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.getElementById('briefing')?.scrollIntoView({ behavior: 'smooth' });
     } else if (mTab === 'map') {
+      setShowMobileMoreDrawer(false);
       setActiveTab('overview');
       document.getElementById('map-monitor')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (mTab === 'top10') {
+      setShowMobileMoreDrawer(false);
+      setActiveTab('overview');
+      document.getElementById('top-stories')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (mTab === 'ask') {
+      setShowMobileMoreDrawer(false);
+      setIsAskWorldOpen(true);
+    } else if (mTab === 'more') {
+      setShowMobileMoreDrawer((prev) => !prev);
     } else if (mTab === 'changes') {
+      setShowMobileMoreDrawer(false);
       setActiveTab('overview');
       document.getElementById('economic-change')?.scrollIntoView({ behavior: 'smooth' });
     } else if (mTab === 'search') {
+      setShowMobileMoreDrawer(false);
       searchInputRef.current?.focus();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else if (mTab === 'saved') {
+      setShowMobileMoreDrawer(false);
       setActiveTab('saved');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -756,37 +1061,39 @@ export default function App() {
     return (
       <div
         className={`min-h-screen p-4 font-sans ${
-          isDark ? 'bg-[#090A0D] text-[#F3F2EE]' : 'bg-[#FCFAF5] text-[#181615]'
+          isDark ? 'bg-[#050309] text-[#F6F4FF]' : 'bg-[#F8F6FF] text-[#140E24]'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-[#222631] pb-2.5 mb-3">
+        <div className="flex items-center justify-between border-b border-[#8B5CF6]/25 pb-2.5 mb-3">
           <div>
-            <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
+            <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
               LIVE SYNDICATION WIDGET · {labels.updatedAgo} {minutesAgo} {labels.minAgo}
             </span>
             <h1 className="font-editorial text-lg font-bold">WorldPulse Top 5 Global Dispatches</h1>
           </div>
           <a
-            href={window.location.origin}
+            href={`${window.location.origin}/app`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-mono-tabular text-[#E05A2B] hover:underline"
+            className="text-xs font-mono-tabular text-[#A78BFA] hover:underline"
           >
             Open Full Desk ↗
           </a>
         </div>
         {topFive.length === 0 ? (
-          <p className="text-xs font-mono-tabular py-8 text-center text-[#8C93A1]">
+          <p className="text-xs font-mono-tabular py-8 text-center text-[#9389B0]">
             {labels.collectingData}
           </p>
         ) : (
-          <ol className="divide-y divide-[#222631]">
+          <ol className="divide-y divide-[#8B5CF6]/20">
             {topFive.map((s, idx) => (
               <li key={s.id} className="py-2.5 flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-[#8C93A1]">
-                    <span className="text-[#E05A2B] font-bold">0{idx + 1}</span>
-                    <span>{getCountryFlag(s.country)} {s.country}</span>
+                  <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-[#9389B0]">
+                    <span className="text-[#A78BFA] font-bold">0{idx + 1}</span>
+                    <span>
+                      {getCountryFlag(s.country)} {s.country}
+                    </span>
                     <span>·</span>
                     <span>{s.topic}</span>
                     <span>·</span>
@@ -801,7 +1108,7 @@ export default function App() {
                     href={s.sources[0].url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono-tabular text-[#E05A2B] hover:underline shrink-0 inline-flex items-center gap-1"
+                    className="text-[11px] font-mono-tabular text-[#A78BFA] hover:underline shrink-0 inline-flex items-center gap-1"
                   >
                     <span>{s.sources[0].name}</span>
                     <ExternalLink className="w-3 h-3" />
@@ -815,11 +1122,51 @@ export default function App() {
     );
   }
 
+  // Render Landing Page at `/` when `showLandingPage` is active
+  if (showLandingPage) {
+    return (
+      <>
+        <LandingPage
+          stories={stories}
+          briefing={briefing}
+          settings={settings}
+          onEnterApp={handleEnterAppFromLanding}
+          onOpenLegalPage={handleOpenLegalPage}
+          onChangeLanguage={(lang) => handleUpdateSettings({ ...settings, language: lang })}
+          onToggleTheme={handleToggleTheme}
+        />
+
+        {/* Legal & Trust Center Modal accessible from Landing Page footer */}
+        <LegalTrustModal
+          activePage={activeLegalPage}
+          onSelectPage={handleOpenLegalPage}
+          onClose={handleCloseLegalPage}
+          settings={settings}
+          stories={stories}
+          onPurgeCache={handleClearCache}
+          onExportJsonBackup={handleExportMarkdown}
+        />
+
+        {/* Cookie Consent Banner */}
+        {!cookieConsent && (
+          <CookieConsentBanner
+            settings={settings}
+            onSaveConsent={(choice) => {
+              saveCookieConsent(choice);
+              setCookieConsent(choice);
+            }}
+            onOpenCookiePolicy={() => handleOpenLegalPage('cookies')}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <div
       id="top"
-      className={`min-h-screen pb-16 md:pb-0 flex flex-col transition-colors duration-200 ${
-        isDark ? 'bg-[#090A0D] text-[#F3F2EE]' : 'bg-[#F6F3EC] text-[#181615]'
+      className={`min-h-screen pb-20 md:pb-0 flex flex-col transition-colors duration-200 ${
+        isDark ? 'bg-[#050309] text-[#F6F4FF]' : 'bg-[#F8F6FF] text-[#140E24]'
       }`}
     >
       {/* Top Bar */}
@@ -833,25 +1180,33 @@ export default function App() {
         onManualRefresh={performRefresh}
         onToggleTheme={handleToggleTheme}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        onChangeLanguage={(lang) => handleUpdateSettings({ ...settings, language: lang })}
+        onFocusSearch={() => {
+          searchInputRef.current?.focus();
+          searchInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }}
+        onGoToLanding={handleGoToLanding}
       />
 
       {/* Supabase Primary Database Status & "Data updated X min ago" Strip */}
       <div
         className={`border-b px-4 sm:px-6 py-2 text-xs font-mono-tabular transition-colors no-print ${
           isDark
-            ? 'bg-[#101217] border-[#222631] text-[#8C93A1]'
-            : 'bg-[#EFEAE0]/70 border-[#DCD5C7] text-[#666159]'
+            ? 'bg-[#0B0713] border-[#8B5CF6]/20 text-[#9389B0]'
+            : 'bg-[#F0ECFA] border-[#7C3AED]/20 text-[#625680]'
         }`}
       >
         <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Database className="w-3.5 h-3.5 text-[#E05A2B] shrink-0" />
-            <span className="font-semibold text-[#E05A2B]">
+            <Database className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+            <span className="font-semibold text-[#A78BFA]">
               {labels.updatedAgo} {minutesAgo} {labels.minAgo}
             </span>
             <span aria-hidden="true">·</span>
             <span>
-              Supabase (<code>stories</code>: {supabaseState.storiesCount}, <code>snapshots</code>: {supabaseState.snapshotsCount}, <code>briefings</code>: {supabaseState.briefingsCount})
+              Supabase (<code>stories</code>: {supabaseState.storiesCount},{' '}
+              <code>snapshots</code>: {supabaseState.snapshotsCount},{' '}
+              <code>briefings</code>: {supabaseState.briefingsCount})
             </span>
             {supabaseState.error && (
               <>
@@ -866,7 +1221,7 @@ export default function App() {
               supabaseState.briefingsEmpty) && (
               <>
                 <span aria-hidden="true">·</span>
-                <span className="text-amber-500 font-semibold">
+                <span className="text-amber-400 font-semibold">
                   {labels.collectingData}
                 </span>
                 <span className="opacity-75">
@@ -884,12 +1239,12 @@ export default function App() {
                 const nextStrict = !settings.strictSupabaseOnly;
                 handleUpdateSettings({ ...settings, strictSupabaseOnly: nextStrict });
               }}
-              className={`px-2 py-0.5 border text-[11px] cursor-pointer transition-colors ${
+              className={`min-h-[36px] px-2.5 py-1 rounded-full border text-[11px] cursor-pointer transition-colors ${
                 settings.strictSupabaseOnly
-                  ? 'border-[#E05A2B] bg-[#E05A2B]/15 text-[#E05A2B] font-semibold'
+                  ? 'border-[#8B5CF6] bg-[#8B5CF6]/20 text-[#A78BFA] font-semibold'
                   : isDark
-                  ? 'border-[#222631] hover:border-[#F3F2EE]'
-                  : 'border-[#DCD5C7] hover:border-[#181615]'
+                  ? 'border-[#8B5CF6]/25 hover:border-[#A78BFA]'
+                  : 'border-[#7C3AED]/25 hover:border-[#7C3AED]'
               }`}
               title="Toggle between strict Supabase-only view and Live Browser Fallback"
             >
@@ -897,16 +1252,16 @@ export default function App() {
             </button>
 
             {/* Language Switcher: English, Hindi, Punjabi */}
-            <div className="flex items-center border border-[#222631]">
+            <div className="flex items-center rounded-full border border-[#8B5CF6]/30 p-0.5">
               {(['en', 'hi', 'pa'] as AppLanguage[]).map((lang) => (
                 <button
                   key={lang}
                   type="button"
                   onClick={() => handleUpdateSettings({ ...settings, language: lang })}
-                  className={`px-2 py-0.5 text-[11px] cursor-pointer transition-colors ${
+                  className={`min-h-[32px] px-2.5 py-0.5 rounded-full text-[11px] cursor-pointer transition-colors ${
                     settings.language === lang
-                      ? 'bg-[#E05A2B] text-white font-semibold'
-                      : 'hover:text-[#E05A2B]'
+                      ? 'bg-[#8B5CF6] text-white font-semibold'
+                      : 'hover:text-[#A78BFA]'
                   }`}
                 >
                   {lang === 'en' ? 'EN' : lang === 'hi' ? 'हिन्दी' : 'ਪੰਜਾਬੀ'}
@@ -932,21 +1287,23 @@ export default function App() {
 
       {/* Main Content Container */}
       <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-5 space-y-5">
-        {/* Section 2: Domain Navigation Tabs + Section 3/4/5/6 Interactive Tool Triggers */}
+        {/* Section 2: Domain Navigation Tabs + Interactive Tool Triggers */}
         <div
-          className={`p-2 border flex flex-wrap items-center justify-between gap-2 no-print ${
-            isDark ? 'bg-[#101217] border-[#222631]' : 'bg-[#FCFAF5] border-[#DCD5C7]'
+          className={`p-2.5 rounded-2xl border flex flex-wrap items-center justify-between gap-2 no-print ${
+            isDark
+              ? 'bg-[#0B0713]/85 border-[#8B5CF6]/25'
+              : 'bg-white/90 border-[#7C3AED]/20'
           }`}
         >
           {/* Left: Domain Tabs (Overview, All Countries, India + Punjab, Cyber, WHO Health, Conflict ACLED, My Feed, Saved) */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               {labels.overview}
@@ -955,10 +1312,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('countries')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'countries'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
@@ -968,10 +1325,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('india')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'india'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <span>🇮🇳</span>
@@ -985,12 +1342,12 @@ export default function App() {
                 setActiveTab('india');
                 setPunjabOnly((prev) => (activeTab === 'india' ? !prev : true));
               }}
-              className={`min-h-[38px] px-2.5 py-1.5 text-xs font-mono-tabular border whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3 py-1.5 rounded-full text-xs font-mono-tabular border whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'india' && punjabOnly
-                  ? 'border-[#E05A2B] bg-[#E05A2B]/20 text-[#E05A2B] font-semibold'
+                  ? 'border-[#A78BFA] bg-[#8B5CF6]/25 text-white font-semibold'
                   : isDark
-                  ? 'border-[#222631] text-[#8C93A1] hover:border-[#E05A2B]'
-                  : 'border-[#DCD5C7] text-[#666159] hover:border-[#E05A2B]'
+                  ? 'border-[#8B5CF6]/25 text-[#C4BDD9] hover:border-[#A78BFA]'
+                  : 'border-[#7C3AED]/25 text-[#3F3559] hover:border-[#7C3AED]'
               }`}
               title="Filter India dispatches specifically for Punjab (Chandigarh, Amritsar, Ludhiana, Jalandhar, Patiala)"
             >
@@ -1000,10 +1357,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('cyber')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'cyber'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <ShieldAlert className="w-3.5 h-3.5 text-cyan-400" />
@@ -1013,10 +1370,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('health')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'health'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <Stethoscope className="w-3.5 h-3.5 text-pink-500" />
@@ -1026,10 +1383,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('conflict')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'conflict'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <Swords className="w-3.5 h-3.5 text-rose-500" />
@@ -1039,10 +1396,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('myfeed')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'myfeed'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               {labels.myfeed}
@@ -1051,10 +1408,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setActiveTab('saved')}
-              className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 whitespace-nowrap cursor-pointer transition-colors ${
+              className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'saved'
-                  ? 'bg-[#E05A2B] text-white font-semibold'
-                  : 'hover:text-[#E05A2B]'
+                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
+                  : 'hover:text-[#A78BFA]'
               }`}
             >
               <Bookmark className="w-3.5 h-3.5" />
@@ -1068,8 +1425,11 @@ export default function App() {
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             <button
               type="button"
-              onClick={() => setIsAskWorldOpen(true)}
-              className="min-h-[38px] px-3 py-1.5 bg-[#E05A2B] hover:bg-[#c94b20] text-white text-xs font-mono-tabular font-semibold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
+              onClick={() => {
+                setAskWorldInitialQuestion(undefined);
+                setIsAskWorldOpen(true);
+              }}
+              className="wp-btn-primary min-h-[44px] px-4 py-1.5 text-xs font-mono-tabular font-semibold inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>{labels.askWorld}</span>
@@ -1078,29 +1438,21 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsCompareOpen(true)}
-              className={`min-h-[38px] px-2.5 py-1.5 border text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                isDark
-                  ? 'border-[#222631] bg-[#090A0D] hover:border-[#E05A2B]'
-                  : 'border-[#DCD5C7] bg-[#EFEAE0]/60 hover:border-[#E05A2B]'
-              }`}
+              className="wp-btn-secondary min-h-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
-              <Scale className="w-3.5 h-3.5 text-[#E05A2B]" />
+              <Scale className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>{labels.compareCountries}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsAccountAlertsOpen(true)}
-              className={`min-h-[38px] px-2.5 py-1.5 border text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                isDark
-                  ? 'border-[#222631] bg-[#090A0D] hover:border-[#E05A2B]'
-                  : 'border-[#DCD5C7] bg-[#EFEAE0]/60 hover:border-[#E05A2B]'
-              }`}
+              className="wp-btn-secondary min-h-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
               {currentUser ? (
-                <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Bell className="w-3.5 h-3.5 text-[#E05A2B]" />
+                <Bell className="w-3.5 h-3.5 text-[#A78BFA]" />
               )}
               <span>{labels.alertsAndAccount}</span>
             </button>
@@ -1108,174 +1460,92 @@ export default function App() {
             <button
               type="button"
               onClick={() => setIsDevApiOpen(true)}
-              className={`min-h-[38px] px-2.5 py-1.5 border text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-                isDark
-                  ? 'border-[#222631] bg-[#090A0D] hover:border-[#E05A2B]'
-                  : 'border-[#DCD5C7] bg-[#EFEAE0]/60 hover:border-[#E05A2B]'
-              }`}
+              className="wp-btn-secondary min-h-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
-              <Code2 className="w-3.5 h-3.5 text-[#E05A2B]" />
+              <Code2 className="w-3.5 h-3.5 text-[#A78BFA]" />
               <span>{labels.devApi}</span>
             </button>
           </div>
         </div>
 
-        {/* Search Bar, Importance Slider ("Show 7+ only"), Active Country Dossiers & Deep Link Copy */}
-        <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3 no-print">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
-            {/* Search Box */}
-            <div className="relative flex-1 max-w-md">
-              <Search
-                className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none ${
-                  isDark ? 'text-[#8C93A1]' : 'text-[#666159]'
-                }`}
-              />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Filter by keyword, country (e.g. India, Punjab, Ukraine) or topic..."
-                aria-label="Filter stories by keyword, country or topic"
-                className={`w-full min-h-[44px] pl-10 pr-9 py-2 border text-xs sm:text-sm font-mono-tabular transition-colors focus:outline-none focus:border-[#E05A2B] ${
-                  isDark
-                    ? 'bg-[#101217] border-[#222631] text-[#F3F2EE] placeholder:text-[#8C93A1]/70'
-                    : 'bg-[#FCFAF5] border-[#DCD5C7] text-[#181615] placeholder:text-[#666159]/70'
-                }`}
-              />
-              {searchInput && (
-                <button
-                  type="button"
-                  onClick={() => setSearchInput('')}
-                  aria-label="Clear search query"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#8C93A1] hover:text-[#E05A2B] cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
+        {/* Search & Filter Bar (Boolean AND/OR, Quotes, Date Range 24h/7d/30d, Presets, Did You Mean, Clear All) */}
+        <SearchAndFilterBar
+          stories={stories}
+          filteredCount={filteredStories.length}
+          searchInput={searchInput}
+          onChangeSearchInput={setSearchInput}
+          dateRange={dateRangeFilter}
+          onChangeDateRange={setDateRangeFilter}
+          selectedTopic={selectedTopicFilter}
+          onSelectTopic={setSelectedTopicFilter}
+          selectedCountry={selectedCountryFilter}
+          onSelectCountry={setSelectedCountryFilter}
+          settings={settings}
+          onUpdateSettings={handleUpdateSettings}
+          presets={filterPresets}
+          onSavePreset={handleSaveFilterPreset}
+          onDeletePreset={handleDeleteFilterPreset}
+          onApplyPreset={handleApplyFilterPreset}
+          onClearAllFilters={handleClearAllFilters}
+          onCopyDeepLink={handleCopyShareableFilterLink}
+          copiedDeepLink={copiedDeepLink}
+          searchInputRef={searchInputRef}
+        />
 
-            {/* Importance Slider ("Show 7+ only") */}
-            <div
-              className={`min-h-[44px] px-3 py-1.5 border flex items-center gap-3 text-xs font-mono-tabular shrink-0 ${
-                isDark ? 'bg-[#101217] border-[#222631]' : 'bg-[#FCFAF5] border-[#DCD5C7]'
-              }`}
-            >
-              <SlidersHorizontal className="w-3.5 h-3.5 text-[#E05A2B] shrink-0" />
-              <label htmlFor="importance-slider" className="whitespace-nowrap">
-                {labels.minImportance}: <strong className="text-[#E05A2B]">{settings.minImportance}+</strong>
-              </label>
-              <input
-                id="importance-slider"
-                type="range"
-                min={1}
-                max={9}
-                step={1}
-                value={settings.minImportance}
-                onChange={(e) =>
-                  handleUpdateSettings({ ...settings, minImportance: Number(e.target.value) })
-                }
-                className="w-20 accent-[#E05A2B] cursor-pointer"
-              />
+        {/* Active Country Dossier Strip & View Density Switcher */}
+        <div className="flex flex-wrap items-center justify-between gap-2 no-print">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#9389B0] mr-1">
+              Active Country Dossiers:
+            </span>
+            {topCountries.slice(0, 6).map((c) => (
               <button
+                key={c.code}
                 type="button"
-                onClick={() =>
-                  handleUpdateSettings({
-                    ...settings,
-                    minImportance: settings.minImportance === 7 ? 1 : 7,
-                  })
-                }
-                className={`px-2 py-1 border text-[11px] cursor-pointer transition-colors ${
-                  settings.minImportance >= 7
-                    ? 'bg-[#E05A2B] border-[#E05A2B] text-white font-semibold'
-                    : isDark
-                    ? 'border-[#222631] text-[#8C93A1] hover:text-[#F3F2EE]'
-                    : 'border-[#DCD5C7] text-[#666159] hover:text-[#181615]'
+                onClick={() => setSelectedCountryCode(c.code)}
+                className={`min-h-[44px] px-3 py-1.5 rounded-full border text-xs font-mono-tabular font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  isDark
+                    ? 'bg-[#0B0713] border-[#8B5CF6]/25 hover:border-[#A78BFA] text-[#F6F4FF]'
+                    : 'bg-white border-[#7C3AED]/25 hover:border-[#7C3AED] text-[#140E24]'
                 }`}
+                title={`Open ${c.name} Country Dossier (${c.count} active dispatches)`}
               >
-                {labels.show7Plus}
+                <span>{getCountryFlag(c.code)}</span>
+                <span>{c.code}</span>
+                <span className="text-[#A78BFA] font-semibold">{c.count}</span>
               </button>
-            </div>
+            ))}
           </div>
 
-          {/* Active Country Dossier Strip, Shareable Deep Link & View Switcher */}
-          <div className="flex items-center justify-between xl:justify-end gap-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1">
-              {topCountries.slice(0, 5).map((c) => (
-                <button
-                  key={c.code}
-                  type="button"
-                  onClick={() => setSelectedCountryCode(c.code)}
-                  className={`min-h-[40px] px-2.5 py-1.5 border text-xs font-mono-tabular font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                    isDark
-                      ? 'bg-[#101217] border-[#222631] hover:border-[#F3F2EE] text-[#F3F2EE]'
-                      : 'bg-[#FCFAF5] border-[#DCD5C7] hover:border-[#181615] text-[#181615]'
-                  }`}
-                  title={`Open ${c.name} Country Dossier (${c.count} active dispatches)`}
-                >
-                  <span>{getCountryFlag(c.code)}</span>
-                  <span>{c.code}</span>
-                  <span className="text-[#E05A2B] font-semibold">{c.count}</span>
-                </button>
-              ))}
-            </div>
-
+          <div
+            role="group"
+            aria-label="Dashboard panel density"
+            className={`flex items-center rounded-full border p-0.5 shrink-0 ${
+              isDark ? 'bg-[#0B0713] border-[#8B5CF6]/25' : 'bg-white border-[#7C3AED]/25'
+            }`}
+          >
             <button
               type="button"
-              onClick={handleCopyShareableFilterLink}
-              className={`min-h-[40px] px-2.5 py-1.5 border text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
-                isDark
-                  ? 'bg-[#101217] border-[#222631] hover:border-[#E05A2B]'
-                  : 'bg-[#FCFAF5] border-[#DCD5C7] hover:border-[#E05A2B]'
+              onClick={() => setViewMode('all')}
+              className={`min-h-[38px] px-3.5 py-1 rounded-full text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
+                viewMode === 'all'
+                  ? 'bg-[#8B5CF6] text-white font-semibold'
+                  : 'text-[#9389B0] hover:text-white'
               }`}
-              title="Copy shareable deep link for current tab and filters"
             >
-              {copiedDeepLink ? (
-                <Check className="w-3.5 h-3.5 text-emerald-500" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-[#E05A2B]" />
-              )}
-              <span>{copiedDeepLink ? 'Copied Link' : 'Deep Link'}</span>
+              Full Desk
             </button>
-
-            <div
-              role="group"
-              aria-label="Dashboard panel density"
-              className={`flex items-center border shrink-0 ${
-                isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0] border-[#DCD5C7]'
+            <button
+              type="button"
+              onClick={() => setViewMode('core')}
+              className={`min-h-[38px] px-3.5 py-1 rounded-full text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
+                viewMode === 'core'
+                  ? 'bg-[#8B5CF6] text-white font-semibold'
+                  : 'text-[#9389B0] hover:text-white'
               }`}
             >
-              <button
-                type="button"
-                onClick={() => setViewMode('all')}
-                className={`min-h-[40px] px-3 py-1.5 text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
-                  viewMode === 'all'
-                    ? isDark
-                      ? 'bg-[#F3F2EE] text-[#090A0D] font-semibold'
-                      : 'bg-[#181615] text-[#FCFAF5] font-semibold'
-                    : isDark
-                    ? 'text-[#8C93A1] hover:text-[#F3F2EE]'
-                    : 'text-[#666159] hover:text-[#181615]'
-                }`}
-              >
-                Full Desk
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('core')}
-                className={`min-h-[40px] px-3 py-1.5 text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
-                  viewMode === 'core'
-                    ? isDark
-                      ? 'bg-[#F3F2EE] text-[#090A0D] font-semibold'
-                      : 'bg-[#181615] text-[#FCFAF5] font-semibold'
-                    : isDark
-                    ? 'text-[#8C93A1] hover:text-[#F3F2EE]'
-                    : 'text-[#666159] hover:text-[#181615]'
-                }`}
-              >
-                Core View
-              </button>
-            </div>
+              Core View
+            </button>
           </div>
         </div>
 
@@ -1303,7 +1573,7 @@ export default function App() {
         />
 
         {/* Live Sovereign FX, Stock Indices, Gold, Oil, Crypto Markets & Wikipedia Tape */}
-        {viewMode === 'all' && (
+        {viewMode === 'all' && !settings.liteMode && (
           <div className="space-y-3 no-print">
             <MarketsTicker
               coins={coins}
@@ -1322,7 +1592,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Section 01: Hero AI Daily Briefing (with Voice Briefing) */}
+        {/* Section 01: Hero AI Daily Briefing (with Voice Briefing, Speed Control, Voice Picker, MD/CSV Export, AI Disclaimer) */}
         <HeroBriefing
           briefing={briefing}
           isLoading={isRefreshing && stories.length === 0}
@@ -1330,35 +1600,37 @@ export default function App() {
           totalStories={filteredStories.length}
           countriesCount={new Set(filteredStories.map((s) => s.country)).size}
           onExportText={handleExportText}
+          onExportMarkdown={handleExportMarkdown}
+          onExportCsv={handleExportCsv}
           onPrintPdf={handlePrintPdf}
+          onOpenLegalPage={handleOpenLegalPage}
         />
 
         {/* Diplomatic & Public Address Speech Summarizer (Ask When & Where) */}
-        <SpeechArchivePanel
-          stories={stories}
-          settings={settings}
-        />
+        <SpeechArchivePanel stories={stories} settings={settings} />
 
         {/* Tablet-First 12-Column Architectural Grid (All Existing Panels Preserved) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Left Column (7/12): Map Monitor + Live Pulse + Economic & FX Change + Disasters */}
           <div className="lg:col-span-7 space-y-5">
-            <WorldMapPanel
-              stories={filteredStories}
-              selectedTopicFilter={selectedTopicFilter}
-              onSelectTopicFilter={setSelectedTopicFilter}
-              selectedStory={selectedStory}
-              onSelectStory={setSelectedStory}
-              onSelectCountry={(code) => setSelectedCountryCode(code)}
-              onVerifyStory={handleVerifyStory}
-              verifyingStoryId={verifyingStoryId}
-              settings={settings}
-              mapStyle={mapStyle}
-              onChangeMapStyle={setMapStyle}
-              mapFocusTarget={mapFocusTarget}
-              selectedCountryFilter={selectedCountryFilter}
-              onClearCountryFilter={() => setSelectedCountryFilter(null)}
-            />
+            {!settings.liteMode && (
+              <WorldMapPanel
+                stories={filteredStories}
+                selectedTopicFilter={selectedTopicFilter}
+                onSelectTopicFilter={setSelectedTopicFilter}
+                selectedStory={selectedStory}
+                onSelectStory={setSelectedStory}
+                onSelectCountry={(code) => setSelectedCountryCode(code)}
+                onVerifyStory={handleVerifyStory}
+                verifyingStoryId={verifyingStoryId}
+                settings={settings}
+                mapStyle={mapStyle}
+                onChangeMapStyle={setMapStyle}
+                mapFocusTarget={mapFocusTarget}
+                selectedCountryFilter={selectedCountryFilter}
+                onClearCountryFilter={() => setSelectedCountryFilter(null)}
+              />
+            )}
 
             <LivePulseSection
               supabaseStories={supabaseStories}
@@ -1425,52 +1697,139 @@ export default function App() {
         </div>
       </main>
 
-      {/* "How this is made" Institutional Colophon Footer */}
+      {/* Institutional Colophon & Legal / Trust Center Footer */}
       <footer
-        className={`mt-10 border-t py-6 px-4 sm:px-6 text-xs transition-colors duration-200 no-print ${
+        className={`mt-10 border-t py-8 px-4 sm:px-6 text-xs transition-colors duration-200 no-print ${
           isDark
-            ? 'border-[#222631] bg-[#090A0D] text-[#8C93A1]'
-            : 'border-[#DCD5C7] bg-[#EFEAE0]/50 text-[#666159]'
+            ? 'border-[#8B5CF6]/25 bg-[#050309] text-[#9389B0]'
+            : 'border-[#7C3AED]/20 bg-[#F0ECFA] text-[#625680]'
         }`}
       >
-        <div className="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="space-y-1 max-w-3xl">
-            <p className="font-mono-tabular uppercase tracking-wider font-semibold text-[#E05A2B]">
-              Colophon &amp; Methodology — How WorldPulse is Made
-            </p>
-            <p className="leading-relaxed">
-              WorldPulse reads primary global intelligence from Supabase (<code>stories</code>, <code>snapshots</code>, <code>briefings</code>) with automatic fallback to live public feeds (USGS Earthquakes, NASA EONET, WHO Disease Outbreaks, Cyber Threat Advisories, ECB FX, World Bank, CoinGecko, Open-Meteo, Wikimedia, and BBC / Al Jazeera / Reuters / India &amp; Punjab RSS wires). All AI synthesis, "Ask the World" grounding, and Hindi/Punjabi translations run through our server-side Gemini proxy.
-            </p>
+        <div className="max-w-[1440px] mx-auto space-y-5">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1 max-w-3xl">
+              <p className="font-mono-tabular uppercase tracking-wider font-semibold text-[#A78BFA]">
+                Colophon &amp; Methodology — How WorldPulse is Made
+              </p>
+              <p className="leading-relaxed">
+                WorldPulse reads primary global intelligence from Supabase (<code>stories</code>,{' '}
+                <code>snapshots</code>, <code>briefings</code>) with automatic fallback to live
+                public feeds (USGS Earthquakes, NASA EONET, WHO Disease Outbreaks, Cyber Threat
+                Advisories, ECB FX, World Bank, CoinGecko, Open-Meteo, Wikimedia, and BBC / Al
+                Jazeera / Reuters / India &amp; Punjab RSS wires). All AI synthesis, &ldquo;Ask
+                the World&rdquo; grounding, and Hindi/Punjabi translations run through our
+                server-side Gemini proxy.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 shrink-0 font-mono-tabular">
+              <button
+                type="button"
+                onClick={handleGoToLanding}
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] text-[#A78BFA] cursor-pointer"
+              >
+                Landing Page (/)
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAccountAlertsOpen(true)}
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+              >
+                Supabase Auth &amp; RLS SQL
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDevApiOpen(true)}
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+              >
+                Developer API &amp; Widget
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+              >
+                Source Health &amp; Settings
+              </button>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-4 shrink-0 font-mono-tabular">
-            <button
-              type="button"
-              onClick={() => setIsAccountAlertsOpen(true)}
-              className="hover:text-[#E05A2B] underline underline-offset-4 cursor-pointer"
-            >
-              Supabase Auth &amp; RLS SQL
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => setIsDevApiOpen(true)}
-              className="hover:text-[#E05A2B] underline underline-offset-4 cursor-pointer"
-            >
-              Developer API &amp; Widget
-            </button>
-            <span>·</span>
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="hover:text-[#E05A2B] underline underline-offset-4 cursor-pointer"
-            >
-              Source Health &amp; Settings
-            </button>
+
+          {/* All 10 Legal & Trust Page Links */}
+          <div className="pt-4 border-t border-[#8B5CF6]/20">
+            <LegalFooterLinks settings={settings} onOpenLegalPage={handleOpenLegalPage} />
           </div>
         </div>
       </footer>
 
-      {/* Phone Bottom Navigation Bar (Home, Map, Changes, Search, Saved) */}
+      {/* Mobile "More" Quick Sheet when user taps "More" in PhoneBottomNav */}
+      {showMobileMoreDrawer && (
+        <div className="md:hidden fixed inset-x-0 bottom-14 z-40 p-4 border-t border-[#8B5CF6]/35 bg-[#0B0713]/98 backdrop-blur-xl space-y-3 no-print">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+              More Sections &amp; Tools
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowMobileMoreDrawer(false)}
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#C4BDD9]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs font-mono-tabular">
+            <button
+              type="button"
+              onClick={() => handleSelectMobileTab('saved')}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+            >
+              <Bookmark className="w-4 h-4 text-[#A78BFA]" />
+              <span>Saved ({bookmarks.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSelectMobileTab('changes')}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+            >
+              <Sparkles className="w-4 h-4 text-[#A78BFA]" />
+              <span>Economy &amp; 24h</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileMoreDrawer(false);
+                setIsSettingsOpen(true);
+              }}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+            >
+              <Shield className="w-4 h-4 text-[#A78BFA]" />
+              <span>Settings &amp; A11y</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileMoreDrawer(false);
+                handleOpenLegalPage('privacy');
+              }}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+            >
+              <Shield className="w-4 h-4 text-[#A78BFA]" />
+              <span>Legal &amp; Trust</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setShowMobileMoreDrawer(false);
+                handleGoToLanding();
+              }}
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2 col-span-2"
+            >
+              <Home className="w-4 h-4 text-[#A78BFA]" />
+              <span>Open WorldPulse Landing Page (/)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Phone Bottom Navigation Bar (Briefing, Map, Top 10, Ask, More) */}
       <PhoneBottomNav
         activeMobileTab={activeMobileTab}
         savedCount={bookmarks.length}
@@ -1524,8 +1883,12 @@ export default function App() {
         isOpen={isAskWorldOpen}
         stories={stories}
         settings={settings}
-        onClose={() => setIsAskWorldOpen(false)}
+        onClose={() => {
+          setIsAskWorldOpen(false);
+          setAskWorldInitialQuestion(undefined);
+        }}
         onSelectStory={(story) => setSelectedStory(story)}
+        initialQuestion={askWorldInitialQuestion}
       />
 
       {/* Accounts, Custom Alerts, Web Push & RLS SQL Modal */}
@@ -1555,8 +1918,48 @@ export default function App() {
         sourceStatuses={sourceStatuses}
         onClearCache={handleClearCache}
         onExportText={handleExportText}
+        onExportMarkdown={handleExportMarkdown}
+        onExportCsv={handleExportCsv}
         onPrintPdf={handlePrintPdf}
+        onReplayOnboardingTour={() => {
+          setOnboardingTourCompleted(false);
+          setShowOnboardingTour(true);
+        }}
       />
+
+      {/* Legal & Trust Center Modal (Privacy, Terms, AI Disclaimer, Cookies, Sources, A11y, Responsible AI, Contact, About, Changelog) */}
+      <LegalTrustModal
+        activePage={activeLegalPage}
+        onSelectPage={handleOpenLegalPage}
+        onClose={handleCloseLegalPage}
+        settings={settings}
+        stories={stories}
+        onPurgeCache={handleClearCache}
+        onExportJsonBackup={handleExportMarkdown}
+      />
+
+      {/* First-Visit 3-Step Onboarding Tour (Map, Daily Briefing, Ask the World) */}
+      {showOnboardingTour && (
+        <FirstVisitOnboardingTour
+          settings={settings}
+          onComplete={() => {
+            setOnboardingTourCompleted(true);
+            setShowOnboardingTour(false);
+          }}
+        />
+      )}
+
+      {/* First-Visit Cookie Consent Banner */}
+      {!cookieConsent && (
+        <CookieConsentBanner
+          settings={settings}
+          onSaveConsent={(choice) => {
+            saveCookieConsent(choice);
+            setCookieConsent(choice);
+          }}
+          onOpenCookiePolicy={() => handleOpenLegalPage('cookies')}
+        />
+      )}
     </div>
   );
 }

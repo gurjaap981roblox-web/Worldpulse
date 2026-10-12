@@ -17,10 +17,10 @@ export default defineConfig(() => {
           name: 'WorldPulse — Live World Monitoring Dashboard',
           short_name: 'WorldPulse',
           description: 'Live world-monitoring dashboard aggregating global news, earthquakes, natural events, markets, and weather with Gemini AI synthesis.',
-          theme_color: '#070B14',
-          background_color: '#070B14',
+          theme_color: '#050309',
+          background_color: '#050309',
           display: 'standalone',
-          start_url: '/',
+          start_url: '/app',
           scope: '/',
           orientation: 'any',
           icons: [

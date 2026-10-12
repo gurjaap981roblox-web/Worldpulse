@@ -479,6 +479,7 @@ export async function runGeminiPipeline(
         body: JSON.stringify({
           items: batch,
           modelChoice: settings.modelChoice,
+          simpleLanguage: Boolean(settings.simpleLanguage),
         }),
       });
 
@@ -542,6 +543,7 @@ export async function runGeminiPipeline(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           stories: topForBriefing,
+          simpleLanguage: Boolean(settings.simpleLanguage),
           comparisonContext: {
             previousTopicCounts: prevSnap?.topicCounts || {},
             previousCountryCounts: prevSnap?.countryCounts || {},
@@ -680,6 +682,7 @@ export async function generateCountryBrief(
       body: JSON.stringify({
         countryCode,
         countryName,
+        simpleLanguage: Boolean(settings.simpleLanguage),
         stories: countryStories.slice(0, 10).map((s) => ({
           headline: s.headline,
           summary: s.summary,
@@ -978,6 +981,7 @@ export async function askTheWorldQuery(
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         question: cleanQuestion,
+        simpleLanguage: Boolean(settings.simpleLanguage),
         stories: payloadStories,
       }),
     });

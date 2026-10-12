@@ -1,50 +1,252 @@
-/* WorldPulse Institutional Broadsheet & Data Desk Design System */
-
 :root {
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-serif: 'Fraunces', Georgia, Cambria, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-
-  /* Dark Mode: Obsidian Institutional Terminal */
-  --wp-bg: #090a0d;
-  --wp-surface: #101217;
-  --wp-surface-elevated: #151820;
-  --wp-border: #222631;
-  --wp-border-strong: #323846;
-  --wp-text: #f3f2ee;
-  --wp-text-muted: #8c93a1;
-  --wp-accent: #e05a2b;
-}
-
-html.light {
-  /* Light Mode: Archival Newsprint Broadsheet */
-  --wp-bg: #f6f3ec;
-  --wp-surface: #fcfaf5;
-  --wp-surface-elevated: #efeae0;
-  --wp-border: #dcd5c7;
-  --wp-border-strong: #1c1917;
-  --wp-text: #181615;
-  --wp-text-muted: #666159;
-  --wp-accent: #b93815;
+  --font-sans: var(--wp-font-sans);
+  --font-display: var(--wp-font-display);
+  --font-mono: var(--wp-font-mono);
 }
 
 body {
-  font-family: var(--font-sans);
-  background-color: var(--wp-bg);
-  color: var(--wp-text);
+  font-family: var(--wp-font-sans);
+  background-color: var(--wp-bg-primary);
+  color: var(--wp-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
 }
 
 .font-editorial {
-  font-family: var(--font-serif);
+  font-family: var(--wp-font-display);
+  letter-spacing: -0.025em;
 }
 
 .font-mono-tabular {
-  font-family: var(--font-mono);
+  font-family: var(--wp-font-mono);
   font-variant-numeric: tabular-nums;
 }
 
-/* Hide scrollbars cleanly on horizontal ticker strips */
+/* Visible Keyboard Focus Outlines (WCAG AA/AAA) */
+*:focus-visible {
+  outline: 2px solid var(--wp-accent-light) !important;
+  outline-offset: 2px !important;
+}
+
+/* Skip to main content link */
+.wp-skip-link {
+  position: fixed;
+  top: -120px;
+  left: 16px;
+  z-index: 9999;
+  min-height: 44px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #5b21b6 100%);
+  color: #ffffff;
+  font-weight: 700;
+  border-radius: 9999px;
+  box-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+  transition: top 0.2s ease;
+}
+.wp-skip-link:focus {
+  top: 14px;
+}
+
+/* Subtle Atmospheric Grain */
+.wp-grain-bg {
+  background-image: radial-gradient(rgba(167, 139, 250, 0.07) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Black & Purple Glow Glass Cards */
+.wp-glass-card {
+  background: var(--wp-bg-glass);
+  backdrop-filter: blur(var(--wp-blur-glass));
+  -webkit-backdrop-filter: blur(var(--wp-blur-glass));
+  border: 1px solid var(--wp-border);
+  border-radius: var(--wp-radius-card);
+  box-shadow: var(--wp-shadow-card);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+.wp-glass-card:hover {
+  border-color: var(--wp-border-strong);
+  box-shadow: var(--wp-shadow-glow);
+}
+
+.wp-glass-card-lift:hover {
+  transform: translateY(-3px);
+  border-color: var(--wp-border-strong);
+  box-shadow: var(--wp-shadow-glow);
+}
+
+/* Floating Pill Navbar with Curved Purple Glow Arc */
+.wp-pill-navbar {
+  position: relative;
+  background: var(--wp-bg-glass-strong);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--wp-border-strong);
+  border-radius: var(--wp-radius-pill);
+  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.7),
+    0 -2px 24px -2px rgba(139, 92, 246, 0.35);
+}
+
+.wp-pill-navbar::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 12%;
+  right: 12%;
+  height: 14px;
+  background: radial-gradient(ellipse at center, rgba(167, 139, 250, 0.65) 0%, rgba(139, 92, 246, 0.2) 55%, transparent 80%);
+  filter: blur(6px);
+  pointer-events: none;
+  border-radius: 9999px;
+}
+
+/* Buttons: Primary Purple Gradient Pill & Secondary Outlined Pill */
+.wp-btn-primary {
+  min-height: 44px;
+  border-radius: var(--wp-radius-pill);
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 55%, #5b21b6 100%);
+  color: #ffffff;
+  font-weight: 600;
+  border: 1px solid rgba(196, 181, 253, 0.45);
+  box-shadow: 0 0 22px -2px rgba(139, 92, 246, 0.55);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+
+.wp-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow: 0 0 30px 0 rgba(167, 139, 250, 0.75);
+  transform: translateY(-1px);
+}
+
+.wp-btn-secondary {
+  min-height: 44px;
+  border-radius: var(--wp-radius-pill);
+  background: rgba(139, 92, 246, 0.08);
+  color: var(--wp-text-primary);
+  font-weight: 600;
+  border: 1px solid var(--wp-border-strong);
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.wp-btn-secondary:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.18);
+  border-color: var(--wp-accent-light);
+  transform: translateY(-1px);
+}
+
+/* Harmonize Dashboard Panels with Black & Purple Glow Tokens */
+.wp-purple-theme .text-\[\#E05A2B\] {
+  color: var(--wp-accent-light) !important;
+}
+.wp-purple-theme .bg-\[\#E05A2B\] {
+  background-color: var(--wp-accent) !important;
+}
+.wp-purple-theme .hover\:bg-\[\#c94b20\]:hover {
+  background-color: var(--wp-accent-deep) !important;
+}
+.wp-purple-theme .border-\[\#E05A2B\] {
+  border-color: var(--wp-accent) !important;
+}
+.wp-purple-theme .border-t-\[\#E05A2B\],
+.wp-purple-theme .border-t-\[\#F3F2EE\],
+.wp-purple-theme .border-t-\[\#181615\] {
+  border-top-color: var(--wp-accent) !important;
+}
+.wp-purple-theme .hover\:border-\[\#E05A2B\]:hover {
+  border-color: var(--wp-accent-light) !important;
+}
+.wp-purple-theme .hover\:text-\[\#E05A2B\]:hover {
+  color: var(--wp-accent-light) !important;
+}
+.wp-purple-theme .bg-\[\#090A0D\] {
+  background-color: var(--wp-bg-primary) !important;
+}
+.wp-purple-theme .bg-\[\#101217\] {
+  background-color: var(--wp-bg-glass) !important;
+  backdrop-filter: blur(var(--wp-blur-glass));
+}
+.wp-purple-theme .border-\[\#222631\] {
+  border-color: var(--wp-border) !important;
+}
+.wp-purple-theme section.border {
+  border-radius: var(--wp-radius-card);
+  overflow: hidden;
+  box-shadow: var(--wp-shadow-card);
+}
+
+/* Gentle Float Animation for Product Preview */
+@keyframes wp-float-slow {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.wp-float-preview {
+  animation: wp-float-slow 7s ease-in-out infinite;
+}
+
+/* Custom Leaflet dark/light styling overrides */
+.leaflet-container {
+  font-family: var(--font-sans) !important;
+  background: #06030d !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #0d0818 !important;
+  color: #f6f4ff !important;
+  border: 1px solid rgba(167, 139, 250, 0.35) !important;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.85), 0 0 24px -4px rgba(139, 92, 246, 0.35) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-tip {
+  background: #0d0818 !important;
+  border: 1px solid rgba(167, 139, 250, 0.35) !important;
+}
+
+.leaflet-popup-content {
+  margin: 12px 14px !important;
+  line-height: 1.45 !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(8, 5, 16, 0.82) !important;
+  color: #9389b0 !important;
+  font-size: 10px !important;
+  font-family: var(--font-mono) !important;
+}
+
+.leaflet-control-attribution a {
+  color: #a78bfa !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.55);
+}
+
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -53,18 +255,39 @@ body {
   scrollbar-width: none;
 }
 
-/* Custom Map Marker Pulse Animation for stories under 1 hour old */
+/* Shimmer loading animation */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(139, 92, 246, 0.06) 25%,
+    rgba(167, 139, 250, 0.16) 50%,
+    rgba(139, 92, 246, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite linear;
+}
+
+/* Breaking story marker pulse */
 @keyframes wp-marker-pulse {
   0% {
-    transform: scale(0.95);
+    transform: scale(0.9);
     opacity: 0.85;
   }
   70% {
-    transform: scale(2.15);
+    transform: scale(2.1);
     opacity: 0;
   }
   100% {
-    transform: scale(2.15);
+    transform: scale(2.1);
     opacity: 0;
   }
 }
@@ -86,71 +309,52 @@ body {
 .wp-live-ticker-track {
   display: flex;
   width: max-content;
-  animation: wp-live-ticker 52s linear infinite;
+  animation: wp-live-ticker 68s linear infinite;
 }
 
-.wp-live-ticker-track.is-paused,
 .wp-live-ticker-track:hover,
-.wp-live-ticker-track:focus-within {
-  animation-play-state: paused !important;
+.wp-live-ticker-track:active,
+.wp-live-ticker-track.paused {
+  animation-play-state: paused;
 }
 
 /* Respect prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   .wp-pulse-ring,
-  .wp-live-ticker-track,
   .animate-pulse,
-  .animate-spin {
+  .animate-spin,
+  .wp-float-preview {
+    animation: none !important;
+  }
+  .wp-live-ticker-track {
     animation: none !important;
     transform: none !important;
-  }
-  * {
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+    flex-wrap: wrap !important;
+    width: 100% !important;
   }
 }
 
-/* Leaflet container overrides */
-.leaflet-container {
-  font-family: var(--font-sans) !important;
-  background-color: #090a0d !important;
-}
-
-html.light .leaflet-container {
-  background-color: #e6e1d6 !important;
-}
-
-.wp-custom-marker {
-  background: transparent !important;
-  border: none !important;
-}
-
-.wp-marker-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  cursor: pointer;
-  outline: none;
-  transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.wp-marker-btn:hover,
-.wp-marker-btn:focus-visible {
-  transform: scale(1.25);
-}
-
-.wp-marker-btn:focus-visible {
-  box-shadow: 0 0 0 2px #e05a2b, 0 0 0 4px #090a0d;
-}
-
-/* Print stylesheet for PDF Briefing Export */
+/* Clean Print / PDF export rules (white background, black text) */
 @media print {
+  body,
+  html,
+  .wp-purple-theme {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
   .no-print {
     display: none !important;
   }
-  body {
+  .print-only {
+    display: block !important;
+  }
+  section,
+  div,
+  article {
     background: #ffffff !important;
-    color: #0f172a !important;
+    color: #000000 !important;
+    border-color: #cccccc !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
   }
 }

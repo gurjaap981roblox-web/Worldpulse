@@ -14,6 +14,7 @@ import { AppSettings, SpeechSummaryResult, Story } from '../types';
 import { summarizeSpeechByWhenWhere } from '../services/llm';
 import { loadSpeechHistory, saveSpeechToHistory } from '../services/storage';
 import { formatTimeInTz } from '../utils/sanitize';
+import { AiDisclaimerLine } from './LegalTrustCenter';
 
 interface SpeechArchivePanelProps {
   stories: Story[];
@@ -609,6 +610,12 @@ export const SpeechArchivePanel: React.FC<SpeechArchivePanelProps> = ({
               </div>
             </div>
           </div>
+
+          <AiDisclaimerLine
+            settings={settings}
+            contextLabel={`Speech Summary: ${activeSpeech.speaker} (${activeSpeech.where})`}
+            contextExcerpt={activeSpeech.executiveSummary}
+          />
         </div>
       )}
 

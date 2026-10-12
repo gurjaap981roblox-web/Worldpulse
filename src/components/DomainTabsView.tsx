@@ -37,6 +37,7 @@ import {
 } from '../utils/sanitize';
 import { getCachedTranslation } from '../services/storage';
 import { translateStoryOnDemand } from '../services/llm';
+import { StoryTrustSignals } from './StoryTrustSignals';
 
 interface DomainTabsViewProps {
   activeTab: DashboardTab;
@@ -828,25 +829,16 @@ export const DomainTabsView: React.FC<DomainTabsViewProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectStory(story)}
-                      className="inline-flex items-center gap-1 text-[#8C93A1] hover:text-[#E05A2B] cursor-pointer"
+                      className="min-h-[44px] px-2.5 inline-flex items-center gap-1 text-[#8C93A1] hover:text-[#E05A2B] cursor-pointer"
                     >
                       <MapPin className="w-3 h-3" />
                       <span>Map</span>
                     </button>
-                    {story.sources.slice(0, 2).map((src, idx) => (
-                      <a
-                        key={idx}
-                        href={src.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-[#E05A2B] hover:underline font-medium"
-                      >
-                        <span>{src.name}</span>
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    ))}
                   </div>
                 </div>
+
+                {/* Trust Signals & Audio Player */}
+                <StoryTrustSignals story={story} settings={settings} showAudio />
               </article>
             );
           })}

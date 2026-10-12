@@ -1,0 +1,135 @@
+:root {
+  /* Black & Purple Glow Core Palette (Dark Default) */
+  --wp-bg-primary: #050309;
+  --wp-bg-secondary: #0b0713;
+  --wp-bg-elevated: rgba(17, 12, 29, 0.76);
+  --wp-bg-glass: rgba(15, 10, 28, 0.72);
+  --wp-bg-glass-strong: rgba(11, 7, 19, 0.88);
+  --wp-text-primary: #f6f4ff;
+  --wp-text-secondary: #c4bdd9;
+  --wp-text-muted: #9389b0;
+
+  /* Purple Accents */
+  --wp-accent: #8b5cf6;
+  --wp-accent-light: #a78bfa;
+  --wp-accent-deep: #5b21b6;
+  --wp-accent-glow: rgba(139, 92, 246, 0.35);
+  --wp-accent-glow-soft: rgba(139, 92, 246, 0.16);
+
+  /* Borders & Dividers */
+  --wp-border: rgba(167, 139, 250, 0.18);
+  --wp-border-strong: rgba(167, 139, 250, 0.38);
+  --wp-border-subtle: rgba(255, 255, 255, 0.08);
+
+  /* Semantic Severity Colors (Preserved for clarity) */
+  --wp-severity-critical: #f43f5e;
+  --wp-severity-warning: #f59e0b;
+  --wp-severity-positive: #10b981;
+
+  /* Geometry, Blur & Glow Strength */
+  --wp-radius-card: 18px;
+  --wp-radius-lg: 20px;
+  --wp-radius-pill: 9999px;
+  --wp-blur-glass: 16px;
+  --wp-shadow-glow: 0 0 28px -4px rgba(139, 92, 246, 0.32);
+  --wp-shadow-card: 0 12px 32px -8px rgba(0, 0, 0, 0.65), 0 0 20px -6px rgba(139, 92, 246, 0.15);
+
+  /* Typography Scale */
+  --wp-font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --wp-font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --wp-font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --wp-base-font-size: 16px;
+}
+
+/* Soft Lavender-White Light Theme */
+html.light,
+[data-theme='light'] {
+  --wp-bg-primary: #f8f6ff;
+  --wp-bg-secondary: #f0ebff;
+  --wp-bg-elevated: rgba(255, 255, 255, 0.88);
+  --wp-bg-glass: rgba(255, 255, 255, 0.82);
+  --wp-bg-glass-strong: rgba(250, 248, 255, 0.94);
+  --wp-text-primary: #140e24;
+  --wp-text-secondary: #3f3559;
+  --wp-text-muted: #625680;
+  --wp-accent: #7c3aed;
+  --wp-accent-light: #8b5cf6;
+  --wp-accent-deep: #4c1d95;
+  --wp-accent-glow: rgba(124, 58, 237, 0.22);
+  --wp-accent-glow-soft: rgba(124, 58, 237, 0.1);
+  --wp-border: rgba(124, 58, 237, 0.2);
+  --wp-border-strong: rgba(124, 58, 237, 0.42);
+  --wp-border-subtle: rgba(20, 14, 36, 0.09);
+  --wp-shadow-glow: 0 4px 24px -4px rgba(124, 58, 237, 0.22);
+  --wp-shadow-card: 0 10px 28px -8px rgba(76, 29, 149, 0.12);
+}
+
+/* High-Contrast Accessibility Override (WCAG AAA) */
+html.wp-high-contrast {
+  --wp-bg-primary: #000000;
+  --wp-bg-secondary: #05020a;
+  --wp-bg-elevated: #090414;
+  --wp-bg-glass: #090414;
+  --wp-bg-glass-strong: #000000;
+  --wp-text-primary: #ffffff;
+  --wp-text-secondary: #f3e8ff;
+  --wp-text-muted: #d8b4fe;
+  --wp-border: #c084fc;
+  --wp-border-strong: #ffffff;
+  --wp-accent: #a855f7;
+  --wp-accent-light: #d8b4fe;
+}
+
+html.light.wp-high-contrast {
+  --wp-bg-primary: #ffffff;
+  --wp-bg-secondary: #f5f3ff;
+  --wp-bg-elevated: #ffffff;
+  --wp-bg-glass: #ffffff;
+  --wp-bg-glass-strong: #ffffff;
+  --wp-text-primary: #000000;
+  --wp-text-secondary: #1e1b4b;
+  --wp-text-muted: #3b0764;
+  --wp-border: #4c1d95;
+  --wp-border-strong: #000000;
+}
+
+/* Font Size Scaling */
+html[data-font-size='small'] {
+  font-size: 14px;
+}
+html[data-font-size='normal'] {
+  font-size: 16px;
+}
+html[data-font-size='large'] {
+  font-size: 18px;
+}
+html[data-font-size='xlarge'] {
+  font-size: 20px;
+}
+
+/* Dyslexia-Friendly Font Toggle (Atkinson Hyperlegible) */
+html.wp-dyslexia-font,
+html.wp-dyslexia-font body,
+html.wp-dyslexia-font .font-editorial,
+html.wp-dyslexia-font .font-mono-tabular {
+  font-family: 'Atkinson Hyperlegible', sans-serif !important;
+  letter-spacing: 0.015em;
+  line-height: 1.65;
+}
+
+/* Explicit Reduce Motion Toggle */
+html.wp-reduce-motion *,
+html.wp-reduce-motion *::before,
+html.wp-reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+html.wp-reduce-motion .wp-live-ticker-track {
+  animation: none !important;
+  transform: none !important;
+  flex-wrap: wrap !important;
+  width: 100% !important;
+}

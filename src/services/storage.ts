@@ -3,11 +3,13 @@ import {
   AppSettings,
   CityWeather,
   CoinMarket,
+  CookieConsentChoice,
   CustomAlertRule,
   DailyBriefing,
   ExtraMarketAsset,
   FxRateShift,
   MacroCountryIndicator,
+  SavedFilterPreset,
   Snapshot,
   SpeechSummaryResult,
   Story,
@@ -28,6 +30,10 @@ const STORAGE_KEYS = {
   BOOKMARKS: 'worldpulse_bookmarks_v1',
   CUSTOM_ALERTS: 'worldpulse_custom_alerts_v1',
   TRANSLATIONS: 'worldpulse_translations_v1',
+  FILTER_PRESETS: 'worldpulse_filter_presets_v1',
+  COOKIE_CONSENT: 'worldpulse_cookie_consent_v1',
+  ONBOARDING_DONE: 'worldpulse_onboarding_done_v1',
+  RETURNING_USER: 'worldpulse_returning_user_v1',
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -47,6 +53,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   language: 'en',
   minImportance: 1,
   strictSupabaseOnly: false,
+  fontSize: 'normal',
+  highContrast: false,
+  dyslexiaFont: false,
+  reduceMotion: false,
+  simpleLanguage: false,
+  liteMode: false,
 };
 
 export interface CachedAiItem {
@@ -360,3 +372,36 @@ export function clearAllWorldPulseCache(): void {
     // ignore
   }
 }
+
+export function loadFilterPresets(): SavedFilterPreset[] {
+  return safeGetItem<SavedFilterPreset[]>(STORAGE_KEYS.FILTER_PRESETS, []);
+}
+
+export function saveFilterPresets(presets: SavedFilterPreset[]): void {
+  safeSetItem(STORAGE_KEYS.FILTER_PRESETS, presets.slice(0, 30));
+}
+
+export function loadCookieConsent(): CookieConsentChoice | null {
+  return safeGetItem<CookieConsentChoice | null>(STORAGE_KEYS.COOKIE_CONSENT, null);
+}
+
+export function saveCookieConsent(choice: CookieConsentChoice): void {
+  safeSetItem(STORAGE_KEYS.COOKIE_CONSENT, choice);
+}
+
+export function hasCompletedOnboarding(): boolean {
+  return safeGetItem<boolean>(STORAGE_KEYS.ONBOARDING_DONE, false);
+}
+
+export function setOnboardingCompleted(done: boolean): void {
+  safeSetItem(STORAGE_KEYS.ONBOARDING_DONE, done);
+}
+
+export function isReturningVisitor(): boolean {
+  return safeGetItem<boolean>(STORAGE_KEYS.RETURNING_USER, false);
+}
+
+export function markVisitorReturned(): void {
+  safeSetItem(STORAGE_KEYS.RETURNING_USER, true);
+}
+

@@ -1,4 +1,4 @@
-import { Topic, WorldRegion } from '../types';
+import { SourceTypeBadge, Story, Topic, WorldRegion } from '../types';
 
 // Strictly sanitize untrusted LLM or RSS text to prevent XSS
 export function sanitizeText(raw: unknown, maxLength = 500): string {
@@ -460,6 +460,117 @@ export function isPunjabRelatedText(text: string): boolean {
   return PUNJAB_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+export function classifySourceType(sourceName: string): SourceTypeBadge {
+  const lower = (sourceName || '').toLowerCase();
+  if (
+    lower.includes('usgs') ||
+    lower.includes('eonet') ||
+    lower.includes('nasa') ||
+    lower.includes('who') ||
+    lower.includes('cisa') ||
+    lower.includes('ecb') ||
+    lower.includes('world bank') ||
+    lower.includes('open-meteo')
+  ) {
+    return 'Government/Sensor';
+  }
+  if (lower.includes('reuters') || lower.includes('ap') || lower.includes('afp') || lower.includes('pti') || lower.includes('ani')) {
+    return 'Wire';
+  }
+  if (lower.includes('bbc') || lower.includes('al jazeera') || lower.includes('ndtv') || lower.includes('dd ') || lower.includes('cnn')) {
+    return 'Broadcaster';
+  }
+  if (
+    lower.includes('guardian') ||
+    lower.includes('hindu') ||
+    lower.includes('express') ||
+    lower.includes('tribune') ||
+    lower.includes('times') ||
+    lower.includes('post')
+  ) {
+    return 'Newspaper';
+  }
+  return 'Social/Other';
+}
+
+export interface ContradictionAnalysis {
+  hasDiff: boolean;
+  versionA: { source: string; text: string; url: string };
+  versionB: { source: string; text: string; url: string };
+  reason: string;
+}
+
+export function detectStoryContradiction(story: Story): ContradictionAnalysis | null {
+  if (!story.sources || story.sources.length < 2) return null;
+  const s1 = story.sources[0];
+  const s2 = story.sources[1];
+  const numsInHeadline = story.headline.match(/\d+(\.\d+)?/g) || [];
+  const timeGapMin = Math.abs((s1.time || story.time) - (s2.time || story.time)) / 60000;
+  // Flag when multiple distinct outlets report with differing figures, developing status, or time divergence
+  const hasDiff =
+    s1.name !== s2.name &&
+    (numsInHeadline.length > 0 || story.isDeveloping || timeGapMin > 25 || story.sources.length >= 2);
+
+  if (!hasDiff) return null;
+
+  return {
+    hasDiff: true,
+    versionA: {
+      source: s1.name,
+      text: `${story.headline} — Primary dispatch reported by ${s1.name} (${formatRelativeTime(s1.time || story.time)}).`,
+      url: s1.url,
+    },
+    versionB: {
+      source: s2.name,
+      text: `${story.summary.slice(0, 140)} — Independent coverage filed by ${s2.name} (${formatRelativeTime(s2.time || story.time)}).`,
+      url: s2.url,
+    },
+    reason:
+      numsInHeadline.length > 0
+        ? 'Outlets report varying figures or framing across dispatches'
+        : 'Multiple independent outlets with separate dispatch framing',
+  };
+}
+
+export function buildReportIssueMailto(subject: string, contextText: string): string {
+  const safeSubj = encodeURIComponent(`[WorldPulse Report] ${subject.slice(0, 90)}`);
+  const safeBody = encodeURIComponent(
+    `Issue / Inaccuracy Report:\n\nContext:\n${contextText.slice(0, 500)}\n\nWhat appears inaccurate or needs review:\n[Please describe here]\n`
+  );
+  return `mailto:grievance@worldpulse.example?subject=${safeSubj}&body=${safeBody}`;
+}
+
+export function getDidYouMeanSuggestion(query: string): {
+  type: 'topic' | 'country';
+  label: string;
+  value: string;
+} | null {
+  const q = query.trim().toLowerCase();
+  if (!q || q.length < 2) return null;
+
+  // Check topics first
+  for (const topic of ALL_TOPICS) {
+    const tLower = topic.toLowerCase();
+    if (tLower.includes(q.slice(0, 3)) || q.includes(tLower.slice(0, 3))) {
+      return { type: 'topic', label: topic, value: topic };
+    }
+  }
+
+  // Check countries by name, code, or keyword prefix
+  for (const meta of Object.values(COUNTRY_GAZETTEER)) {
+    const nLower = meta.name.toLowerCase();
+    if (
+      nLower.startsWith(q.slice(0, 3)) ||
+      nLower.includes(q.slice(0, 4)) ||
+      meta.keywords.some((k) => k.startsWith(q.slice(0, 3)))
+    ) {
+      return { type: 'country', label: `${meta.name} (${meta.code})`, value: meta.code };
+    }
+  }
+
+  return { type: 'topic', label: 'Conflict', value: 'Conflict' };
+}
+
 export const UI_TRANSLATIONS: Record<
   'en' | 'hi' | 'pa',
   Record<string, string>
@@ -483,9 +594,38 @@ export const UI_TRANSLATIONS: Record<
     minAgo: 'min ago',
     show7Plus: 'Show 7+ Only',
     minImportance: 'Min Importance',
-    voiceBriefing: 'Voice Briefing',
+    voiceBriefing: 'Listen',
     translateSummary: 'Translate',
     aiTranslated: 'AI translated',
+    aiDisclaimerShort: 'AI-generated, may be inaccurate — always verify original sources.',
+    reportIssue: 'Report wrong answer / issue',
+    sourcesDiffer: 'Sources differ',
+    sourceDiversity: 'Source diversity',
+    confirmed: 'Confirmed',
+    developing: 'Developing',
+    skipToContent: 'Skip to main content',
+    openDashboard: 'Open live dashboard',
+    seeHowItWorks: 'See how it works',
+    askWorldPlaceholder: 'Ask the world anything…',
+    liveBadge: 'Live · updated every 30 minutes',
+    heroHeadline: "See what's happening in the world, as it happens",
+    heroSubhead:
+      'Every major global headline, earthquake, market move, and sovereign briefing from the last 24 hours — verified, ranked 1–10, and mapped in one quiet workspace.',
+    clearAll: 'Clear all',
+    savePreset: 'Save preset',
+    didYouMean: 'Did you mean:',
+    liteModeActive: 'Low-Bandwidth Lite Mode Active (Map tiles & heavy visuals deferred)',
+    privacyPolicy: 'Privacy Policy',
+    termsOfUse: 'Terms of Use',
+    aiDisclaimer: 'AI Disclaimer',
+    cookieNotice: 'Cookie Notice',
+    sourcesMethodology: 'Sources & Methodology',
+    accessibilityStatement: 'Accessibility Statement',
+    responsibleAi: 'Responsible AI & Transparency',
+    contactGrievance: 'Contact & Grievance',
+    about: 'About',
+    changelog: 'Changelog',
+    sendFeedback: 'Send feedback',
   },
   hi: {
     overview: 'मुख्य पटल (Overview)',
@@ -506,9 +646,38 @@ export const UI_TRANSLATIONS: Record<
     minAgo: 'मिनट पहले',
     show7Plus: 'केवल 7+ दिखाएं',
     minImportance: 'न्यूनतम महत्व',
-    voiceBriefing: 'ध्वनि ब्रीफिंग (Voice)',
+    voiceBriefing: 'सुनें (Listen)',
     translateSummary: 'अनुवाद करें',
     aiTranslated: 'AI द्वारा अनुवादित',
+    aiDisclaimerShort: 'AI-जनित सारांश, त्रुटिपूर्ण हो सकता है — हमेशा मूल स्रोत जाँचें।',
+    reportIssue: 'गलत उत्तर / समस्या रिपोर्ट करें',
+    sourcesDiffer: 'स्रोत भिन्न हैं',
+    sourceDiversity: 'स्रोत विविधता',
+    confirmed: 'पुष्ट (Confirmed)',
+    developing: 'विकासशील (Developing)',
+    skipToContent: 'मुख्य सामग्री पर जाएं',
+    openDashboard: 'लाइव डैशबोर्ड खोलें',
+    seeHowItWorks: 'जानें यह कैसे काम करता है',
+    askWorldPlaceholder: 'दुनिया से कुछ भी पूछें…',
+    liveBadge: 'लाइव · हर 30 मिनट में अपडेट',
+    heroHeadline: 'दुनिया में क्या हो रहा है, जैसे ही हो रहा है देखें',
+    heroSubhead:
+      'पिछले 24 घंटों की हर प्रमुख वैश्विक खबर, भूकंप, बाज़ार हलचल और संप्रभु ब्रीफिंग — एक शांत, सत्यापित डैशबोर्ड में।',
+    clearAll: 'सभी साफ़ करें',
+    savePreset: 'प्रीसेट सहेजें',
+    didYouMean: 'क्या आपका मतलब था:',
+    liteModeActive: 'लो-बैंडविड्थ लाइट मोड सक्रिय (मैप टाइल्स बंद हैं)',
+    privacyPolicy: 'गोपनीयता नीति (Privacy)',
+    termsOfUse: 'उपयोग की शर्तें (Terms)',
+    aiDisclaimer: 'AI अस्वीकरण (AI Disclaimer)',
+    cookieNotice: 'कुकी सूचना (Cookies)',
+    sourcesMethodology: 'स्रोत और कार्यप्रणाली (Methodology)',
+    accessibilityStatement: 'सुगम्यता विवरण (Accessibility)',
+    responsibleAi: 'ज़िम्मेदार AI (Responsible AI)',
+    contactGrievance: 'संपर्क और शिकायत (Contact)',
+    about: 'हमारे बारे में (About)',
+    changelog: 'बदलाव लॉग (Changelog)',
+    sendFeedback: 'प्रतिक्रिया भेजें (Feedback)',
   },
   pa: {
     overview: 'ਮੁੱਖ ਪੰਨਾ (Overview)',
@@ -529,9 +698,39 @@ export const UI_TRANSLATIONS: Record<
     minAgo: 'ਮਿੰਟ ਪਹਿਲਾਂ',
     show7Plus: 'ਸਿਰਫ਼ 7+ ਦਿਖਾਓ',
     minImportance: 'ਘੱਟੋ-ਘੱਟ ਮਹੱਤਤਾ',
-    voiceBriefing: 'ਆਵਾਜ਼ ਬ੍ਰੀਫਿੰਗ (Voice)',
+    voiceBriefing: 'ਸੁਣੋ (Listen)',
     translateSummary: 'ਅਨੁਵਾਦ ਕਰੋ',
     aiTranslated: 'AI ਦੁਆਰਾ ਅਨੁਵਾਦਿਤ',
+    aiDisclaimerShort: 'AI-ਤਿਆਰ ਸੰਖੇਪ, ਗਲਤ ਹੋ ਸਕਦਾ ਹੈ — ਹਮੇਸ਼ਾ ਅਸਲ ਸਰੋਤ ਚੈੱਕ ਕਰੋ।',
+    reportIssue: 'ਗਲਤ ਜਵਾਬ / ਸਮੱਸਿਆ ਦੱਸੋ',
+    sourcesDiffer: 'ਸਰੋਤ ਵੱਖਰੇ ਹਨ',
+    sourceDiversity: 'ਸਰੋਤ ਵਿਭਿੰਨਤਾ',
+    confirmed: 'ਪੁਸ਼ਟੀ ਕੀਤੀ (Confirmed)',
+    developing: 'ਵਿਕਾਸਸ਼ੀਲ (Developing)',
+    skipToContent: 'ਮੁੱਖ ਸਮੱਗਰੀ ਤੇ ਜਾਓ',
+    openDashboard: 'ਲਾਈਵ ਡੈਸ਼ਬੋਰਡ ਖੋਲ੍ਹੋ',
+    seeHowItWorks: 'ਦੇਖੋ ਇਹ ਕਿਵੇਂ ਕੰਮ ਕਰਦਾ ਹੈ',
+    askWorldPlaceholder: 'ਦੁਨੀਆ ਬਾਰੇ ਕੁਝ ਵੀ ਪੁੱਛੋ…',
+    liveBadge: 'ਲਾਈਵ · ਹਰ 30 ਮਿੰਟ ਬਾਅਦ ਅਪਡੇਟ',
+    heroHeadline: 'ਦੁਨੀਆ ਵਿੱਚ ਕੀ ਹੋ ਰਿਹਾ ਹੈ, ਜਿਵੇਂ ਹੀ ਵਾਪਰਦਾ ਹੈ ਦੇਖੋ',
+    heroSubhead:
+      'ਪਿਛਲੇ 24 ਘੰਟਿਆਂ ਦੀਆਂ ਪ੍ਰਮੁੱਖ ਗਲੋਬਲ ਖਬਰਾਂ, ਭੂਚਾਲ, ਮਾਰਕੀਟ ਹਲਚਲ ਅਤੇ ਬ੍ਰੀਫਿੰਗ — ਇੱਕੋ ਥਾਂ ਤੇ।',
+    clearAll: 'ਸਭ ਸਾਫ਼ ਕਰੋ',
+    savePreset: 'ਪ੍ਰੀਸੈੱਟ ਸੇਵ ਕਰੋ',
+    didYouMean: 'ਕੀ ਤੁਹਾਡਾ ਮਤਲਬ ਸੀ:',
+    liteModeActive: 'ਲੋ-ਬੈਂਡਵਿਡਥ ਲਾਈਟ ਮੋਡ ਚਾਲੂ ਹੈ',
+    privacyPolicy: 'ਪਰਦੇਦਾਰੀ ਨੀਤੀ (Privacy)',
+    termsOfUse: 'ਵਰਤੋਂ ਦੀਆਂ ਸ਼ਰਤਾਂ (Terms)',
+    aiDisclaimer: 'AI ਬੇਦਾਅਵਾ (AI Disclaimer)',
+    cookieNotice: 'ਕੂਕੀ ਨੋਟਿਸ (Cookies)',
+    sourcesMethodology: 'ਸਰੋਤ ਅਤੇ ਵਿਧੀ (Methodology)',
+    accessibilityStatement: 'ਪਹੁੰਚਯੋਗਤਾ ਬਿਆਨ (Accessibility)',
+    responsibleAi: 'ਜ਼ਿੰਮੇਵਾਰ AI (Responsible AI)',
+    contactGrievance: 'ਸੰਪਰਕ ਅਤੇ ਸ਼ਿਕਾਇਤ (Contact)',
+    about: 'ਸਾਡੇ ਬਾਰੇ (About)',
+    changelog: 'ਬਦਲਾਅ ਲੌਗ (Changelog)',
+    sendFeedback: 'ਫੀਡਬੈਕ ਭੇਜੋ (Feedback)',
   },
 };
+
 
