@@ -46,8 +46,8 @@ export const PhoneBottomNav: React.FC<PhoneBottomNavProps> = ({
       aria-label="Phone bottom navigation"
       className={`md:hidden fixed bottom-0 inset-x-0 z-40 border-t grid grid-cols-5 no-print ${
         isDark
-          ? 'bg-[#050309]/95 border-[#8B5CF6]/30 text-[#F6F4FF]'
-          : 'bg-[#F8F6FF]/95 border-[#7C3AED]/25 text-[#140E24]'
+          ? 'bg-[#050B16]/95 border-cyan-500/25 text-[#E6F1FF]'
+          : 'bg-[#F0F6FC]/95 border-cyan-700/25 text-[#050B16]'
       } backdrop-blur-xl`}
     >
       {items.map((item) => {
@@ -61,16 +61,16 @@ export const PhoneBottomNav: React.FC<PhoneBottomNavProps> = ({
             onClick={() => onSelectMobileTab(item.id)}
             className={`min-h-[56px] flex flex-col items-center justify-center gap-1 text-[11px] font-mono-tabular relative transition-colors cursor-pointer ${
               isActive
-                ? 'text-[#A78BFA] font-bold'
+                ? 'text-[#22D3EE] font-bold'
                 : isDark
-                ? 'text-[#9389B0] hover:text-white'
-                : 'text-[#625680] hover:text-black'
+                ? 'text-[#8FA5C2] hover:text-[#22D3EE]'
+                : 'text-[#475569] hover:text-[#0284C7]'
             }`}
           >
             {item.icon}
             <span>{item.label}</span>
             {item.badge !== undefined && (
-              <span className="absolute top-1.5 right-3.5 px-1.5 py-0.2 rounded-full bg-[#8B5CF6] text-white text-[9px] font-bold">
+              <span className="absolute top-1.5 right-3.5 px-1.5 py-0.2 rounded-full bg-[#22D3EE] text-[#050B16] text-[9px] font-bold shadow-[0_0_8px_rgba(34,211,238,0.5)]">
                 {item.badge}
               </span>
             )}

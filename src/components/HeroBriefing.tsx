@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import {
+  Check,
   ChevronDown,
   ChevronUp,
+  Copy,
   Download,
   FileCode,
   FileSpreadsheet,
   FileText,
   Printer,
+  Share2,
 } from 'lucide-react';
 import { AppSettings, DailyBriefing, LegalPageId } from '../types';
 import { formatTimeInTz, UI_TRANSLATIONS } from '../utils/sanitize';
@@ -39,6 +42,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
   onOpenLegalPage,
 }) => {
   const [expanded, setExpanded] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const isDark = settings.theme === 'dark';
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
 
@@ -63,7 +67,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
   if (!briefing) {
     return (
       <section id="briefing" className="wp-glass-card p-6">
-        <p className="text-sm font-mono-tabular text-[#9389B0]">
+        <p className="text-sm font-mono-tabular text-[#8FA5C2]">
           {labels.collectingData}
         </p>
       </section>
@@ -77,24 +81,40 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
     ...briefing.paragraphs,
   ].join(' ');
 
+  const handleCopyLink = () => {
+    try {
+      navigator.clipboard.writeText(window.location.origin + '/app');
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  const shareText = `WorldPulse Executive Briefing: ${briefing.headline}`;
+  const shareUrl = typeof window !== 'undefined' ? window.location.origin + '/app' : 'https://worldpulse.app';
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+
   return (
     <section
       id="briefing"
       aria-labelledby="briefing-heading"
+      aria-live="polite"
       className="wp-glass-card transition-colors duration-200 overflow-hidden"
     >
       {/* Top Institutional Kicker Bar */}
       <div
         className={`px-5 py-3.5 border-b flex flex-col xl:flex-row xl:items-center justify-between gap-3 ${
-          isDark ? 'border-[#8B5CF6]/25' : 'border-[#7C3AED]/20'
+          isDark ? 'border-cyan-500/25' : 'border-cyan-700/20'
         }`}
       >
         <div
           className={`flex flex-wrap items-center gap-2 text-xs font-mono-tabular ${
-            isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
+            isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'
           }`}
         >
-          <span className="uppercase tracking-wider font-bold text-[#A78BFA]">
+          <span className="uppercase tracking-wider font-bold text-[#22D3EE]">
             Section 01 / Executive Daily Briefing
           </span>
           <span aria-hidden="true">·</span>
@@ -115,8 +135,38 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           </span>
         </div>
 
-        {/* Export Actions: Markdown (.md), CSV, TXT, Print / PDF */}
-        <div className="flex flex-wrap items-center gap-2 no-print">
+        {/* Action Controls: Share (Copy, WhatsApp, X) & Export (.MD, CSV, TXT, PDF) */}
+        <div className="flex flex-wrap items-center gap-1.5 no-print">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            aria-label="Copy briefing link"
+            title="Copy link to briefing"
+            className="wp-btn-secondary px-2.5 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#22D3EE]" />}
+            <span>{copiedLink ? 'Copied' : 'Share'}</span>
+          </button>
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share briefing on WhatsApp"
+            title="Share on WhatsApp"
+            className="wp-btn-secondary px-2 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span className="text-emerald-400 font-bold text-[11px]">WA</span>
+          </a>
+          <a
+            href={twitterUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share briefing on X"
+            title="Share on X"
+            className="wp-btn-secondary px-2 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span className="text-cyan-300 font-bold text-[11px]">X</span>
+          </a>
           {onExportMarkdown && (
             <button
               type="button"
@@ -124,7 +174,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
               className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
               title="Download briefing and top stories as Markdown (.md)"
             >
-              <FileCode className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <FileCode className="w-3.5 h-3.5 text-[#22D3EE]" />
               <span>.MD</span>
             </button>
           )}
@@ -135,7 +185,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
               className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
               title="Download visible stories as CSV spreadsheet"
             >
-              <FileSpreadsheet className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <FileSpreadsheet className="w-3.5 h-3.5 text-[#22D3EE]" />
               <span>CSV</span>
             </button>
           )}
@@ -145,7 +195,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
             className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             title="Download briefing as plain text (.txt)"
           >
-            <FileText className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <FileText className="w-3.5 h-3.5 text-[#22D3EE]" />
             <span>TXT</span>
           </button>
           <button
@@ -154,7 +204,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
             className="wp-btn-secondary px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             title="Print or save briefing as PDF"
           >
-            <Printer className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <Printer className="w-3.5 h-3.5 text-[#22D3EE]" />
             <span>Print / PDF</span>
           </button>
         </div>
@@ -182,18 +232,18 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
         <ol
           className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 rounded-2xl border divide-y md:divide-y-0 md:divide-x overflow-hidden ${
             isDark
-              ? 'border-[#8B5CF6]/25 divide-[#8B5CF6]/20 bg-[#050309]/50'
-              : 'border-[#7C3AED]/20 divide-[#7C3AED]/15 bg-white/70'
+              ? 'border-cyan-500/25 divide-cyan-500/20 bg-[#050B16]/50'
+              : 'border-cyan-700/20 divide-cyan-700/15 bg-white/70'
           }`}
         >
           {briefing.highlights.slice(0, 5).map((item, idx) => (
             <li key={idx} className="p-3.5 sm:p-4 flex flex-col justify-between gap-2">
-              <span className="font-mono-tabular text-[11px] font-bold text-[#A78BFA]">
+              <span className="font-mono-tabular text-[11px] font-bold text-[#22D3EE]">
                 0{idx + 1} / HIGHLIGHT
               </span>
               <p
                 className={`text-xs sm:text-[13px] leading-relaxed ${
-                  isDark ? 'text-[#F6F4FF]/90' : 'text-[#140E24]/90'
+                  isDark ? 'text-[#E6F1FF]/90' : 'text-[#050B16]/90'
                 }`}
               >
                 {item}
@@ -207,8 +257,8 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           <div
             className={`pt-4 border-t grid grid-cols-1 md:grid-cols-3 gap-6 text-sm leading-relaxed ${
               isDark
-                ? 'border-[#8B5CF6]/25 text-[#F6F4FF]/90'
-                : 'border-[#7C3AED]/20 text-[#140E24]/90'
+                ? 'border-cyan-500/25 text-[#E6F1FF]/90'
+                : 'border-cyan-700/20 text-[#050B16]/90'
             }`}
           >
             {briefing.paragraphs.map((p, i) => (
@@ -216,7 +266,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
                 key={i}
                 className={
                   i === 0
-                    ? 'first-letter:font-editorial first-letter:text-3xl first-letter:font-bold first-letter:float-left first-letter:mr-2.5 first-letter:leading-none first-letter:text-[#A78BFA]'
+                    ? 'first-letter:font-editorial first-letter:text-3xl first-letter:font-bold first-letter:float-left first-letter:mr-2.5 first-letter:leading-none first-letter:text-[#22D3EE]'
                     : ''
                 }
               >
@@ -231,7 +281,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
             type="button"
             onClick={() => setExpanded((prev) => !prev)}
             aria-expanded={expanded}
-            className="min-h-[44px] px-3 -ml-3 text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#A78BFA] hover:underline flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+            className="min-h-[44px] px-3 -ml-3 text-xs font-mono-tabular uppercase tracking-wider font-semibold text-[#22D3EE] hover:underline flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
           >
             <span>
               {expanded ? 'Collapse Full Synthesis' : 'Read Full 200-Word Synthesis'}

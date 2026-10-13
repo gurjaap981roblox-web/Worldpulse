@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import {
   Bookmark,
+  Check,
   Clock,
+  Copy,
   Languages,
   Loader2,
   Share2,
@@ -51,6 +53,19 @@ export const TopTenList: React.FC<TopTenListProps> = ({
     Record<string, TranslatedStoryCacheEntry>
   >({});
 
+  const [copiedStoryId, setCopiedStoryId] = useState<string | null>(null);
+
+  const handleCopyStoryLink = (story: Story) => {
+    try {
+      const shareUrl = `${window.location.origin}/app?country=${story.country}`;
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedStoryId(story.id);
+      setTimeout(() => setCopiedStoryId(null), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
   const handleTranslateStory = async (story: Story, targetLang: AppLanguage) => {
     if (targetLang === 'en') return;
     const key = `${story.id}_${targetLang}`;
@@ -79,11 +94,11 @@ export const TopTenList: React.FC<TopTenListProps> = ({
     >
       <div
         className={`p-4 sm:p-5 border-b flex items-center justify-between gap-2 ${
-          isDark ? 'border-[#8B5CF6]/25' : 'border-[#7C3AED]/20'
+          isDark ? 'border-cyan-500/25' : 'border-cyan-700/20'
         }`}
       >
         <div>
-          <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+          <div className="flex items-center gap-2 text-[11px] font-mono-tabular uppercase tracking-wider text-[#22D3EE] font-semibold">
             <span>Section 03</span>
             <span aria-hidden="true">/</span>
             <span>Priority Ledger</span>
@@ -95,7 +110,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
             Top 10 Global Dispatches
           </h2>
         </div>
-        <span className="px-3 py-1 rounded-full bg-[#8B5CF6]/15 border border-[#8B5CF6]/35 text-xs font-mono-tabular font-semibold text-[#A78BFA]">
+        <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-xs font-mono-tabular font-semibold text-[#22D3EE]">
           {topTen.length}/10 Ranked
         </span>
       </div>
@@ -112,15 +127,15 @@ export const TopTenList: React.FC<TopTenListProps> = ({
         </div>
       ) : topTen.length === 0 ? (
         <div className="p-8 text-center">
-          <p className="text-sm font-mono-tabular text-[#9389B0]">
+          <p className="text-sm font-mono-tabular text-[#8FA5C2]">
             {labels.collectingData}
           </p>
         </div>
       ) : (
-        <ol className={`divide-y ${isDark ? 'divide-[#8B5CF6]/20' : 'divide-[#7C3AED]/15'}`}>
+        <ol className={`divide-y ${isDark ? 'divide-[#22D3EE]/20' : 'divide-[#0284C7]/15'}`}>
           {topTen.map((story, idx) => {
             const rankStr = String(idx + 1).padStart(2, '0');
-            const topicColor = TOPIC_COLORS[story.topic]?.hex || '#8B5CF6';
+            const topicColor = TOPIC_COLORS[story.topic]?.hex || '#22D3EE';
             const isSelected = selectedStoryId === story.id;
             const importancePct = Math.min(100, Math.max(10, Math.round(story.importance * 10)));
             const isBookmarked = bookmarkedIds?.has(story.id) || false;
@@ -146,18 +161,18 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                 className={`p-4 sm:p-5 transition-colors duration-150 ${
                   isSelected
                     ? isDark
-                      ? 'bg-[#8B5CF6]/15'
-                      : 'bg-[#7C3AED]/10'
+                      ? 'bg-[#22D3EE]/15'
+                      : 'bg-[#0284C7]/10'
                     : isDark
-                    ? 'hover:bg-[#8B5CF6]/8'
-                    : 'hover:bg-[#7C3AED]/5'
+                    ? 'hover:bg-[#22D3EE]/8'
+                    : 'hover:bg-[#0284C7]/5'
                 }`}
               >
                 <div className="flex items-start gap-3.5">
                   {/* Rank index */}
                   <span
                     className={`font-editorial text-lg font-extrabold leading-none pt-1 select-none shrink-0 ${
-                      idx < 3 ? 'text-[#A78BFA]' : 'text-[#9389B0]'
+                      idx < 3 ? 'text-[#38BDF8]' : 'text-[#8FA5C2]'
                     }`}
                   >
                     {rankStr}
@@ -170,7 +185,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                         <button
                           type="button"
                           onClick={() => onSelectCountry(story.country)}
-                          className="min-h-[44px] px-2.5 py-1 rounded-full border border-[#8B5CF6]/30 font-semibold hover:border-[#A78BFA] inline-flex items-center gap-1.5 cursor-pointer"
+                          className="min-h-[44px] px-2.5 py-1 rounded-full border border-[#22D3EE]/30 font-semibold hover:border-[#38BDF8] inline-flex items-center gap-1.5 cursor-pointer"
                           title={`Open ${story.countryName} Country Dossier`}
                         >
                           <span>{getCountryFlag(story.country)}</span>
@@ -188,15 +203,60 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                         </span>
 
                         {translated && (
-                          <span className="px-2 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] border border-[#8B5CF6]/40 text-[10px]">
+                          <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-[#22D3EE] border border-cyan-500/40 text-[10px]">
                             {labels.aiTranslated} (
                             {translated.lang === 'pa' ? 'ਪੰਜਾਬੀ' : 'हिन्दी'})
                           </span>
                         )}
                       </div>
 
-                      {/* Quick Action Icons (44px touch targets): Bookmark, Timeline, Share Card */}
+                      {/* Quick Action Icons & Share Buttons (44px touch targets) */}
                       <div className="flex items-center gap-1">
+                        {/* Copy Link */}
+                        <button
+                          type="button"
+                          onClick={() => handleCopyStoryLink(story)}
+                          aria-label="Copy story share link"
+                          title="Copy share link"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-[#8FA5C2] hover:text-white transition-colors cursor-pointer"
+                        >
+                          {copiedStoryId === story.id ? (
+                            <Check className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-4 h-4 text-[#22D3EE]" />
+                          )}
+                        </button>
+
+                        {/* WhatsApp Share */}
+                        <a
+                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                            story.headline + ' ' + (typeof window !== 'undefined' ? window.location.origin : '') + '/app?country=' + story.country
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Share story on WhatsApp"
+                          title="Share on WhatsApp"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-emerald-400 transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
+                        >
+                          WA
+                        </a>
+
+                        {/* X (Twitter) Share */}
+                        <a
+                          href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                            story.headline
+                          )}&url=${encodeURIComponent(
+                            (typeof window !== 'undefined' ? window.location.origin : '') + '/app?country=' + story.country
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Share story on X"
+                          title="Share on X"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-cyan-300 transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
+                        >
+                          X
+                        </a>
+
                         {onToggleBookmark && (
                           <button
                             type="button"
@@ -205,8 +265,8 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                             title={isBookmarked ? 'Saved in Bookmarks' : 'Bookmark story'}
                             className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
                               isBookmarked
-                                ? 'border-[#A78BFA] bg-[#8B5CF6]/20 text-[#A78BFA]'
-                                : 'border-transparent hover:border-[#8B5CF6]/40 text-[#9389B0] hover:text-white'
+                                ? 'border-cyan-400 bg-cyan-500/20 text-[#22D3EE]'
+                                : 'border-transparent hover:border-cyan-500/40 text-[#8FA5C2] hover:text-white'
                             }`}
                           >
                             <Bookmark
@@ -221,7 +281,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                             onClick={() => onOpenTimeline(story)}
                             aria-label="Track story timeline across days"
                             title="Timeline view across days"
-                            className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-[#8B5CF6]/40 flex items-center justify-center text-[#9389B0] hover:text-white transition-colors cursor-pointer"
+                            className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-[#8FA5C2] hover:text-white transition-colors cursor-pointer"
                           >
                             <Clock className="w-4 h-4" />
                           </button>
@@ -232,7 +292,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                             onClick={() => onShareStoryCard(story)}
                             aria-label="Share story as image card"
                             title="Share story as an image card with source link"
-                            className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-[#8B5CF6]/40 flex items-center justify-center text-[#9389B0] hover:text-white transition-colors cursor-pointer"
+                            className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-[#8FA5C2] hover:text-white transition-colors cursor-pointer"
                           >
                             <Share2 className="w-4 h-4" />
                           </button>
@@ -247,7 +307,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                       className="text-left w-full group cursor-pointer"
                     >
                       <h3
-                        className={`text-sm sm:text-base font-bold leading-snug group-hover:text-[#A78BFA] transition-colors ${
+                        className={`text-sm sm:text-base font-bold leading-snug group-hover:text-[#22D3EE] transition-colors ${
                           idx === 0 ? 'text-base sm:text-lg' : ''
                         }`}
                       >
@@ -258,7 +318,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                     {/* Summary */}
                     <p
                       className={`text-xs sm:text-[13px] leading-relaxed ${
-                        isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
+                        isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'
                       }`}
                     >
                       {translated ? translated.summary : story.summary}
@@ -267,7 +327,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                     {/* Importance Bar & On-Demand Hindi/Punjabi Translation */}
                     <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-[140px]">
-                        <span className="text-[11px] font-mono-tabular text-[#A78BFA] font-semibold">
+                        <span className="text-[11px] font-mono-tabular text-[#22D3EE] font-semibold">
                           Importance {story.importance.toFixed(1)}/10
                         </span>
                         <div
@@ -282,10 +342,10 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                               width: `${importancePct}%`,
                               backgroundColor:
                                 story.importance >= 8
-                                  ? '#F43F5E'
+                                  ? '#F87171'
                                   : story.importance >= 6.5
-                                  ? '#8B5CF6'
-                                  : '#A78BFA',
+                                  ? '#38BDF8'
+                                  : '#22D3EE',
                             }}
                           />
                         </div>
@@ -307,10 +367,10 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                               disabled={isBusy}
                               className={`min-h-[44px] px-3 py-1 rounded-full border text-[11px] font-mono-tabular inline-flex items-center gap-1 transition-colors cursor-pointer ${
                                 hasTrans
-                                  ? 'border-[#8B5CF6] bg-[#8B5CF6]/20 text-[#A78BFA] font-semibold'
+                                  ? 'border-cyan-400 bg-cyan-500/20 text-[#22D3EE] font-semibold'
                                   : isDark
-                                  ? 'border-[#8B5CF6]/25 text-[#9389B0] hover:text-white'
-                                  : 'border-[#7C3AED]/20 text-[#625680] hover:text-black'
+                                  ? 'border-cyan-500/25 text-[#8FA5C2] hover:text-white'
+                                  : 'border-cyan-700/20 text-[#1E3A5F] hover:text-black'
                               }`}
                             >
                               {isBusy ? (

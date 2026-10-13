@@ -57,7 +57,7 @@ body {
   background-size: 100% 100%, 36px 36px, 36px 36px;
 }
 
-/* Cyber Infographic Glass Cards */
+/* Cyber Infographic Glass Cards with Subtle Cyan Border Glow */
 .wp-glass-card {
   background: var(--wp-bg-glass);
   backdrop-filter: blur(var(--wp-blur-glass));
@@ -76,7 +76,7 @@ body {
 }
 
 .wp-glass-card-lift:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   border-color: var(--wp-border-strong);
   box-shadow: var(--wp-shadow-glow);
 }
@@ -89,18 +89,18 @@ body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--wp-border-strong);
   border-radius: var(--wp-radius-pill);
-  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.7),
+  box-shadow: 0 12px 36px -6px rgba(0, 0, 0, 0.75),
     0 -2px 24px -2px rgba(34, 211, 238, 0.35);
 }
 
 .wp-pill-navbar::before {
   content: '';
   position: absolute;
-  top: -12px;
+  top: -10px;
   left: 12%;
   right: 12%;
-  height: 14px;
-  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.75) 0%, rgba(56, 189, 248, 0.25) 55%, transparent 80%);
+  height: 12px;
+  background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.85) 0%, rgba(56, 189, 248, 0.3) 55%, transparent 80%);
   filter: blur(6px);
   pointer-events: none;
   border-radius: 9999px;
@@ -131,21 +131,42 @@ body {
   color: var(--wp-text-primary);
   font-weight: 600;
   border: 1px solid var(--wp-border-strong);
-  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+  transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .wp-btn-secondary:hover:not(:disabled) {
-  background: rgba(34, 211, 238, 0.18);
+  background: rgba(34, 211, 238, 0.16);
   border-color: var(--wp-accent-light);
+  box-shadow: 0 0 16px -2px rgba(34, 211, 238, 0.3);
   transform: translateY(-1px);
 }
 
-/* Harmonize Dashboard Panels with Black & Purple Glow Tokens */
+/* Bento Card container styling and subtle cyan glow */
+.bento-card {
+  background: var(--wp-bg-glass);
+  backdrop-filter: blur(var(--wp-blur-glass));
+  -webkit-backdrop-filter: blur(var(--wp-blur-glass));
+  border: 1px solid var(--wp-border);
+  border-radius: var(--wp-radius-card);
+  box-shadow: var(--wp-shadow-card);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+  overflow: hidden;
+}
+
+.bento-card:hover {
+  border-color: var(--wp-border-strong);
+  box-shadow: var(--wp-shadow-glow);
+}
+
+/* Harmonize Dashboard Panels with Dark Navy & Cyan Glow Tokens */
 .wp-purple-theme .text-\[\#E05A2B\] {
   color: var(--wp-accent-light) !important;
 }
 .wp-purple-theme .bg-\[\#E05A2B\] {
   background-color: var(--wp-accent) !important;
+  color: #050B16 !important;
 }
 .wp-purple-theme .hover\:bg-\[\#c94b20\]:hover {
   background-color: var(--wp-accent-deep) !important;
@@ -178,6 +199,11 @@ body {
   border-radius: var(--wp-radius-card);
   overflow: hidden;
   box-shadow: var(--wp-shadow-card);
+  border-color: var(--wp-border) !important;
+}
+.wp-purple-theme section.border:hover {
+  border-color: var(--wp-border-strong) !important;
+  box-shadow: var(--wp-shadow-glow) !important;
 }
 
 /* Gentle Float Animation for Product Preview */

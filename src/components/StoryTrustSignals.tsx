@@ -61,7 +61,7 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
       {/* Row 1: Published & Last-Updated Time, Confirmed/Developing Badge, Source Diversity 5-Dot Meter, Contradiction Tag */}
       <div
         className={`flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-tabular ${
-          isDark ? 'text-[#9389B0]' : 'text-[#625680]'
+          isDark ? 'text-[#8FA5C2]' : 'text-[#625680]'
         }`}
       >
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -100,7 +100,7 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
                   key={dot}
                   className={`w-2 h-2 rounded-full ${
                     dot <= distinctSourcesCount
-                      ? 'bg-[#8B5CF6] shadow-[0_0_6px_rgba(139,92,246,0.8)]'
+                      ? 'bg-[#22D3EE] shadow-[0_0_6px_rgba(139,92,246,0.8)]'
                       : isDark
                       ? 'bg-white/15'
                       : 'bg-black/15'
@@ -144,12 +144,12 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
             href={reportMailto}
             className={`min-h-[44px] px-3 py-1 rounded-full border text-[11px] font-mono-tabular inline-flex items-center gap-1 transition-colors ${
               isDark
-                ? 'border-[#8B5CF6]/30 text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                : 'border-[#7C3AED]/25 text-[#3F3559] hover:text-black'
+                ? 'border-[#22D3EE]/30 text-[#8FA5C2] hover:text-white hover:border-[#38BDF8]'
+                : 'border-[#0284C7]/25 text-[#3F3559] hover:text-black'
             }`}
             title="Report an issue or inaccuracy with this story"
           >
-            <Flag className="w-3 h-3 text-[#A78BFA]" />
+            <Flag className="w-3 h-3 text-[#38BDF8]" />
             <span>Report issue</span>
           </a>
         </div>
@@ -160,7 +160,7 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
         <div
           className={`p-3.5 rounded-xl border space-y-2 text-xs ${
             isDark
-              ? 'bg-[#050309] border-amber-500/40 text-[#F6F4FF]'
+              ? 'bg-[#0A1830] border-amber-500/40 text-[#E6F1FF]'
               : 'bg-amber-50/70 border-amber-500/40 text-[#140E24]'
           }`}
         >
@@ -175,8 +175,8 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-2.5 rounded-lg border border-[#8B5CF6]/25 space-y-1">
-              <div className="font-mono-tabular font-bold text-[#A78BFA]">
+            <div className="p-2.5 rounded-lg border border-[#22D3EE]/25 space-y-1">
+              <div className="font-mono-tabular font-bold text-[#38BDF8]">
                 Outlet A: {contradiction.versionA.source}
               </div>
               <p className="text-xs leading-relaxed">{contradiction.versionA.text}</p>
@@ -184,14 +184,14 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
                 href={contradiction.versionA.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-mono-tabular text-[#A78BFA] hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-mono-tabular text-[#38BDF8] hover:underline"
               >
                 <span>Verify Outlet A</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
             </div>
-            <div className="p-2.5 rounded-lg border border-[#8B5CF6]/25 space-y-1">
-              <div className="font-mono-tabular font-bold text-[#A78BFA]">
+            <div className="p-2.5 rounded-lg border border-[#22D3EE]/25 space-y-1">
+              <div className="font-mono-tabular font-bold text-[#38BDF8]">
                 Outlet B: {contradiction.versionB.source}
               </div>
               <p className="text-xs leading-relaxed">{contradiction.versionB.text}</p>
@@ -199,7 +199,7 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
                 href={contradiction.versionB.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] font-mono-tabular text-[#A78BFA] hover:underline"
+                className="inline-flex items-center gap-1 text-[11px] font-mono-tabular text-[#38BDF8] hover:underline"
               >
                 <span>Verify Outlet B</span>
                 <ExternalLink className="w-3 h-3" />
@@ -221,15 +221,15 @@ export const StoryTrustSignals: React.FC<StoryTrustSignalsProps> = ({
               rel="noopener noreferrer"
               className={`min-h-[44px] px-3 py-1.5 rounded-full border text-[11px] font-mono-tabular inline-flex items-center gap-1.5 transition-colors ${
                 isDark
-                  ? 'bg-[#050309]/80 border-[#8B5CF6]/30 text-[#F6F4FF] hover:border-[#A78BFA]'
-                  : 'bg-white border-[#7C3AED]/25 text-[#140E24] hover:border-[#7C3AED]'
+                  ? 'bg-[#0A1830]/80 border-[#22D3EE]/30 text-[#E6F1FF] hover:border-[#38BDF8]'
+                  : 'bg-white border-[#0284C7]/25 text-[#140E24] hover:border-[#0284C7]'
               }`}
             >
               <span className="font-semibold">{src.name}</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] text-[10px]">
+              <span className="px-1.5 py-0.5 rounded-full bg-[#22D3EE]/20 text-[#38BDF8] text-[10px]">
                 {sourceType}
               </span>
-              <ExternalLink className="w-3 h-3 text-[#A78BFA] shrink-0" />
+              <ExternalLink className="w-3 h-3 text-[#38BDF8] shrink-0" />
             </a>
           );
         })}

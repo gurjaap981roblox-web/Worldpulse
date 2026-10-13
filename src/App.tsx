@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bell,
   Bookmark,
@@ -104,8 +104,6 @@ import {
 import { useOnlineStatus } from './hooks/usePWAInstall';
 import { TopBar } from './components/TopBar';
 import { HeroBriefing } from './components/HeroBriefing';
-import { SpeechArchivePanel } from './components/SpeechArchivePanel';
-import { WorldMapPanel } from './components/WorldMapPanel';
 import { LivePulseSection } from './components/LivePulseSection';
 import { TopTenList } from './components/TopTenList';
 import { EconomicChangePanel } from './components/EconomicChangePanel';
@@ -130,10 +128,20 @@ import {
   FirstVisitOnboardingTour,
   LEGAL_HASH_TO_ID,
   LegalFooterLinks,
-  LegalTrustModal,
 } from './components/LegalTrustCenter';
 import { SearchAndFilterBar } from './components/SearchAndFilterBar';
 import { LandingPage } from './components/LandingPage';
+
+// Speed Requirement 6: Code-split heavy panels with React.lazy and Suspense
+const SpeechArchivePanel = lazy(() =>
+  import('./components/SpeechArchivePanel').then((m) => ({ default: m.SpeechArchivePanel }))
+);
+const WorldMapPanel = lazy(() =>
+  import('./components/WorldMapPanel').then((m) => ({ default: m.WorldMapPanel }))
+);
+const LegalTrustModal = lazy(() =>
+  import('./components/LegalTrustCenter').then((m) => ({ default: m.LegalTrustModal }))
+);
 
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings());
@@ -151,6 +159,7 @@ export default function App() {
   );
 
   // Determine whether to show the Landing Page (/) or Main App (/app)
+  // Requirement 1: Always show the landing page at / for everyone (remove the "returning visitor skips it" shortcut). The dashboard is only at /app.
   const [showLandingPage, setShowLandingPage] = useState<boolean>(() => {
     try {
       const path = window.location.pathname;
@@ -166,12 +175,9 @@ export default function App() {
       ) {
         return false;
       }
-      if (hasEnteredAppBefore()) {
-        return false;
-      }
       return true;
     } catch {
-      return false;
+      return true;
     }
   });
 
@@ -488,6 +494,59 @@ export default function App() {
     }, 160);
     return () => clearTimeout(timer);
   }, [searchInput]);
+
+  // Requirement 16: Keyboard shortcuts: "/" to focus search, and "Esc" to close modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeTag = (document.activeElement as HTMLElement)?.tagName;
+      const isInputActive = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT';
+
+      if (e.key === '/' && !isInputActive) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+      } else if (e.key === 'Escape') {
+        if (selectedCountryCode) {
+          setSelectedCountryCode(null);
+        } else if (selectedStory) {
+          setSelectedStory(null);
+        } else if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+        } else if (activeLegalPage) {
+          handleCloseLegalPage();
+        } else if (timelineStory) {
+          setTimelineStory(null);
+        } else if (shareCardStory) {
+          setShareCardStory(null);
+        } else if (isCompareOpen) {
+          setIsCompareOpen(false);
+        } else if (isAskWorldOpen) {
+          setIsAskWorldOpen(false);
+        } else if (isAccountAlertsOpen) {
+          setIsAccountAlertsOpen(false);
+        } else if (isDevApiOpen) {
+          setIsDevApiOpen(false);
+        } else if (showMobileMoreDrawer) {
+          setShowMobileMoreDrawer(false);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    selectedCountryCode,
+    selectedStory,
+    isSettingsOpen,
+    activeLegalPage,
+    timelineStory,
+    shareCardStory,
+    isCompareOpen,
+    isAskWorldOpen,
+    isAccountAlertsOpen,
+    isDevApiOpen,
+    showMobileMoreDrawer,
+  ]);
 
   // Evaluate Custom Alert Rules and fire Web Push / Browser Notification if matched
   const evaluateAlertRules = useCallback(
@@ -1062,12 +1121,12 @@ export default function App() {
     return (
       <div
         className={`min-h-screen p-4 font-sans ${
-          isDark ? 'bg-[#050309] text-[#F6F4FF]' : 'bg-[#F8F6FF] text-[#140E24]'
+          isDark ? 'bg-[#0A1830] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#140E24]'
         }`}
       >
-        <div className="flex items-center justify-between border-b border-[#8B5CF6]/25 pb-2.5 mb-3">
+        <div className="flex items-center justify-between border-b border-[#22D3EE]/25 pb-2.5 mb-3">
           <div>
-            <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+            <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#38BDF8] font-semibold">
               LIVE SYNDICATION WIDGET · {labels.updatedAgo} {minutesAgo} {labels.minAgo}
             </span>
             <h1 className="font-editorial text-lg font-bold">WorldPulse Top 5 Global Dispatches</h1>
@@ -1076,22 +1135,22 @@ export default function App() {
             href={`${window.location.origin}/app`}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs font-mono-tabular text-[#A78BFA] hover:underline"
+            className="text-xs font-mono-tabular text-[#38BDF8] hover:underline"
           >
             Open Full Desk ↗
           </a>
         </div>
         {topFive.length === 0 ? (
-          <p className="text-xs font-mono-tabular py-8 text-center text-[#9389B0]">
+          <p className="text-xs font-mono-tabular py-8 text-center text-[#8FA5C2]">
             {labels.collectingData}
           </p>
         ) : (
-          <ol className="divide-y divide-[#8B5CF6]/20">
+          <ol className="divide-y divide-[#22D3EE]/20">
             {topFive.map((s, idx) => (
               <li key={s.id} className="py-2.5 flex items-start justify-between gap-3">
                 <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-[#9389B0]">
-                    <span className="text-[#A78BFA] font-bold">0{idx + 1}</span>
+                  <div className="flex items-center gap-2 text-[11px] font-mono-tabular text-[#8FA5C2]">
+                    <span className="text-[#38BDF8] font-bold">0{idx + 1}</span>
                     <span>
                       {getCountryFlag(s.country)} {s.country}
                     </span>
@@ -1109,7 +1168,7 @@ export default function App() {
                     href={s.sources[0].url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[11px] font-mono-tabular text-[#A78BFA] hover:underline shrink-0 inline-flex items-center gap-1"
+                    className="text-[11px] font-mono-tabular text-[#38BDF8] hover:underline shrink-0 inline-flex items-center gap-1"
                   >
                     <span>{s.sources[0].name}</span>
                     <ExternalLink className="w-3 h-3" />
@@ -1167,7 +1226,7 @@ export default function App() {
     <div
       id="top"
       className={`min-h-screen pb-20 md:pb-0 flex flex-col transition-colors duration-200 ${
-        isDark ? 'bg-[#050309] text-[#F6F4FF]' : 'bg-[#F8F6FF] text-[#140E24]'
+        isDark ? 'bg-[#050B16] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#050B16]'
       }`}
     >
       {/* Top Bar */}
@@ -1193,14 +1252,20 @@ export default function App() {
       <div
         className={`border-b px-4 sm:px-6 py-2 text-xs font-mono-tabular transition-colors no-print ${
           isDark
-            ? 'bg-[#0B0713] border-[#8B5CF6]/20 text-[#9389B0]'
-            : 'bg-[#F0ECFA] border-[#7C3AED]/20 text-[#625680]'
+            ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2]'
+            : 'bg-[#E2ECF7] border-cyan-700/20 text-[#1E3A5F]'
         }`}
       >
         <div className="max-w-[1440px] mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Database className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
-            <span className="font-semibold text-[#A78BFA]">
+            <Database className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+            <span
+              className={`font-semibold ${
+                minutesAgo >= 90
+                  ? 'text-amber-300 bg-amber-500/15 border border-amber-500/40 px-2 py-0.5 rounded-full'
+                  : 'text-cyan-300'
+              }`}
+            >
               {labels.updatedAgo} {minutesAgo} {labels.minAgo}
             </span>
             <span aria-hidden="true">·</span>
@@ -1242,10 +1307,10 @@ export default function App() {
               }}
               className={`min-h-[36px] px-2.5 py-1 rounded-full border text-[11px] cursor-pointer transition-colors ${
                 settings.strictSupabaseOnly
-                  ? 'border-[#8B5CF6] bg-[#8B5CF6]/20 text-[#A78BFA] font-semibold'
+                  ? 'border-[#22D3EE] bg-[#22D3EE]/20 text-[#38BDF8] font-semibold'
                   : isDark
-                  ? 'border-[#8B5CF6]/25 hover:border-[#A78BFA]'
-                  : 'border-[#7C3AED]/25 hover:border-[#7C3AED]'
+                  ? 'border-[#22D3EE]/25 hover:border-[#38BDF8]'
+                  : 'border-[#0284C7]/25 hover:border-[#0284C7]'
               }`}
               title="Toggle between strict Supabase-only view and Live Browser Fallback"
             >
@@ -1253,7 +1318,7 @@ export default function App() {
             </button>
 
             {/* Language Switcher: English, Hindi, Punjabi */}
-            <div className="flex items-center rounded-full border border-[#8B5CF6]/30 p-0.5">
+            <div className="flex items-center rounded-full border border-cyan-500/30 p-0.5">
               {(['en', 'hi', 'pa'] as AppLanguage[]).map((lang) => (
                 <button
                   key={lang}
@@ -1261,8 +1326,8 @@ export default function App() {
                   onClick={() => handleUpdateSettings({ ...settings, language: lang })}
                   className={`min-h-[32px] px-2.5 py-0.5 rounded-full text-[11px] cursor-pointer transition-colors ${
                     settings.language === lang
-                      ? 'bg-[#8B5CF6] text-white font-semibold'
-                      : 'hover:text-[#A78BFA]'
+                      ? 'bg-[#22D3EE] text-[#050B16] font-bold'
+                      : 'hover:text-[#22D3EE]'
                   }`}
                 >
                   {lang === 'en' ? 'EN' : lang === 'hi' ? 'हिन्दी' : 'ਪੰਜਾਬੀ'}
@@ -1281,7 +1346,7 @@ export default function App() {
         >
           <WifiOff className="w-4 h-4 shrink-0" />
           <span>
-            Offline Mode — Displaying cached snapshot data. Live updates will resume automatically when reconnected.
+            Offline, showing saved data — Live updates will resume automatically when reconnected.
           </span>
         </div>
       )}
@@ -1292,8 +1357,8 @@ export default function App() {
         <div
           className={`p-2.5 rounded-2xl border flex flex-wrap items-center justify-between gap-2 no-print ${
             isDark
-              ? 'bg-[#0B0713]/85 border-[#8B5CF6]/25'
-              : 'bg-white/90 border-[#7C3AED]/20'
+              ? 'bg-[#0A1830]/85 border-cyan-500/25'
+              : 'bg-white/90 border-cyan-700/20'
           }`}
         >
           {/* Left: Domain Tabs (Overview, All Countries, India + Punjab, Cyber, WHO Health, Conflict ACLED, My Feed, Saved) */}
@@ -1303,8 +1368,8 @@ export default function App() {
               onClick={() => setActiveTab('overview')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'overview'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               {labels.overview}
@@ -1315,8 +1380,8 @@ export default function App() {
               onClick={() => setActiveTab('countries')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'countries'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <Globe className="w-3.5 h-3.5" />
@@ -1328,8 +1393,8 @@ export default function App() {
               onClick={() => setActiveTab('india')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'india'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <span>🇮🇳</span>
@@ -1345,10 +1410,10 @@ export default function App() {
               }}
               className={`min-h-[44px] px-3 py-1.5 rounded-full text-xs font-mono-tabular border whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'india' && punjabOnly
-                  ? 'border-[#A78BFA] bg-[#8B5CF6]/25 text-white font-semibold'
+                  ? 'border-cyan-400 bg-cyan-500/25 text-white font-semibold'
                   : isDark
-                  ? 'border-[#8B5CF6]/25 text-[#C4BDD9] hover:border-[#A78BFA]'
-                  : 'border-[#7C3AED]/25 text-[#3F3559] hover:border-[#7C3AED]'
+                  ? 'border-cyan-500/25 text-[#8FA5C2] hover:border-cyan-400'
+                  : 'border-cyan-700/25 text-[#1E3A5F] hover:border-cyan-700'
               }`}
               title="Filter India dispatches specifically for Punjab (Chandigarh, Amritsar, Ludhiana, Jalandhar, Patiala)"
             >
@@ -1360,8 +1425,8 @@ export default function App() {
               onClick={() => setActiveTab('cyber')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'cyber'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <ShieldAlert className="w-3.5 h-3.5 text-cyan-400" />
@@ -1373,8 +1438,8 @@ export default function App() {
               onClick={() => setActiveTab('health')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'health'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <Stethoscope className="w-3.5 h-3.5 text-pink-500" />
@@ -1386,8 +1451,8 @@ export default function App() {
               onClick={() => setActiveTab('conflict')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'conflict'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <Swords className="w-3.5 h-3.5 text-rose-500" />
@@ -1399,8 +1464,8 @@ export default function App() {
               onClick={() => setActiveTab('myfeed')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'myfeed'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               {labels.myfeed}
@@ -1411,8 +1476,8 @@ export default function App() {
               onClick={() => setActiveTab('saved')}
               className={`min-h-[44px] px-3.5 py-1.5 rounded-full text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-colors ${
                 activeTab === 'saved'
-                  ? 'bg-[#8B5CF6] text-white font-semibold shadow-[0_0_16px_rgba(139,92,246,0.4)]'
-                  : 'hover:text-[#A78BFA]'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_16px_rgba(34,211,238,0.4)]'
+                  : 'hover:text-[#22D3EE]'
               }`}
             >
               <Bookmark className="w-3.5 h-3.5" />
@@ -1441,7 +1506,7 @@ export default function App() {
               onClick={() => setIsCompareOpen(true)}
               className="wp-btn-secondary min-h-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
-              <Scale className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Scale className="w-3.5 h-3.5 text-[#22D3EE]" />
               <span>{labels.compareCountries}</span>
             </button>
 
@@ -1453,7 +1518,7 @@ export default function App() {
               {currentUser ? (
                 <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
               ) : (
-                <Bell className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <Bell className="w-3.5 h-3.5 text-[#22D3EE]" />
               )}
               <span>{labels.alertsAndAccount}</span>
             </button>
@@ -1463,7 +1528,7 @@ export default function App() {
               onClick={() => setIsDevApiOpen(true)}
               className="wp-btn-secondary min-h-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 whitespace-nowrap cursor-pointer"
             >
-              <Code2 className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Code2 className="w-3.5 h-3.5 text-[#22D3EE]" />
               <span>{labels.devApi}</span>
             </button>
           </div>
@@ -1496,7 +1561,7 @@ export default function App() {
         {/* Active Country Dossier Strip & View Density Switcher */}
         <div className="flex flex-wrap items-center justify-between gap-2 no-print">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#9389B0] mr-1">
+            <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#8FA5C2] mr-1">
               Active Country Dossiers:
             </span>
             {topCountries.slice(0, 6).map((c) => (
@@ -1506,14 +1571,14 @@ export default function App() {
                 onClick={() => setSelectedCountryCode(c.code)}
                 className={`min-h-[44px] px-3 py-1.5 rounded-full border text-xs font-mono-tabular font-medium flex items-center gap-1.5 transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
                   isDark
-                    ? 'bg-[#0B0713] border-[#8B5CF6]/25 hover:border-[#A78BFA] text-[#F6F4FF]'
-                    : 'bg-white border-[#7C3AED]/25 hover:border-[#7C3AED] text-[#140E24]'
+                    ? 'bg-[#0A1830] border-cyan-500/25 hover:border-cyan-400 text-[#E6F1FF]'
+                    : 'bg-white border-cyan-700/25 hover:border-cyan-700 text-[#050B16]'
                 }`}
                 title={`Open ${c.name} Country Dossier (${c.count} active dispatches)`}
               >
                 <span>{getCountryFlag(c.code)}</span>
                 <span>{c.code}</span>
-                <span className="text-[#A78BFA] font-semibold">{c.count}</span>
+                <span className="text-cyan-400 font-semibold">{c.count}</span>
               </button>
             ))}
           </div>
@@ -1522,7 +1587,7 @@ export default function App() {
             role="group"
             aria-label="Dashboard panel density"
             className={`flex items-center rounded-full border p-0.5 shrink-0 ${
-              isDark ? 'bg-[#0B0713] border-[#8B5CF6]/25' : 'bg-white border-[#7C3AED]/25'
+              isDark ? 'bg-[#0A1830] border-cyan-500/25' : 'bg-white border-cyan-700/25'
             }`}
           >
             <button
@@ -1530,8 +1595,8 @@ export default function App() {
               onClick={() => setViewMode('all')}
               className={`min-h-[38px] px-3.5 py-1 rounded-full text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
                 viewMode === 'all'
-                  ? 'bg-[#8B5CF6] text-white font-semibold'
-                  : 'text-[#9389B0] hover:text-white'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold'
+                  : 'text-[#8FA5C2] hover:text-white'
               }`}
             >
               Full Desk
@@ -1541,8 +1606,8 @@ export default function App() {
               onClick={() => setViewMode('core')}
               className={`min-h-[38px] px-3.5 py-1 rounded-full text-xs font-mono-tabular transition-colors whitespace-nowrap cursor-pointer ${
                 viewMode === 'core'
-                  ? 'bg-[#8B5CF6] text-white font-semibold'
-                  : 'text-[#9389B0] hover:text-white'
+                  ? 'bg-[#22D3EE] text-[#050B16] font-bold'
+                  : 'text-[#8FA5C2] hover:text-white'
               }`}
             >
               Core View
@@ -1608,29 +1673,46 @@ export default function App() {
         />
 
         {/* Diplomatic & Public Address Speech Summarizer (Ask When & Where) */}
-        <SpeechArchivePanel stories={stories} settings={settings} />
+        <Suspense
+          fallback={
+            <div className="wp-glass-card rounded-2xl p-6 min-h-[140px] flex items-center justify-center animate-pulse">
+              <div className="w-6 h-6 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          }
+        >
+          <SpeechArchivePanel stories={stories} settings={settings} />
+        </Suspense>
 
         {/* Tablet-First 12-Column Architectural Grid (All Existing Panels Preserved) */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           {/* Left Column (7/12): Map Monitor + Live Pulse + Economic & FX Change + Disasters */}
           <div className="lg:col-span-7 space-y-5">
             {!settings.liteMode && (
-              <WorldMapPanel
-                stories={filteredStories}
-                selectedTopicFilter={selectedTopicFilter}
-                onSelectTopicFilter={setSelectedTopicFilter}
-                selectedStory={selectedStory}
-                onSelectStory={setSelectedStory}
-                onSelectCountry={(code) => setSelectedCountryCode(code)}
-                onVerifyStory={handleVerifyStory}
-                verifyingStoryId={verifyingStoryId}
-                settings={settings}
-                mapStyle={mapStyle}
-                onChangeMapStyle={setMapStyle}
-                mapFocusTarget={mapFocusTarget}
-                selectedCountryFilter={selectedCountryFilter}
-                onClearCountryFilter={() => setSelectedCountryFilter(null)}
-              />
+              <Suspense
+                fallback={
+                  <div className="wp-glass-card rounded-2xl p-6 min-h-[420px] flex flex-col items-center justify-center gap-3 animate-pulse">
+                    <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-mono-tabular text-cyan-300">Loading Geospatial Telemetry Map...</span>
+                  </div>
+                }
+              >
+                <WorldMapPanel
+                  stories={filteredStories}
+                  selectedTopicFilter={selectedTopicFilter}
+                  onSelectTopicFilter={setSelectedTopicFilter}
+                  selectedStory={selectedStory}
+                  onSelectStory={setSelectedStory}
+                  onSelectCountry={(code) => setSelectedCountryCode(code)}
+                  onVerifyStory={handleVerifyStory}
+                  verifyingStoryId={verifyingStoryId}
+                  settings={settings}
+                  mapStyle={mapStyle}
+                  onChangeMapStyle={setMapStyle}
+                  mapFocusTarget={mapFocusTarget}
+                  selectedCountryFilter={selectedCountryFilter}
+                  onClearCountryFilter={() => setSelectedCountryFilter(null)}
+                />
+              </Suspense>
             )}
 
             <LivePulseSection
@@ -1702,14 +1784,14 @@ export default function App() {
       <footer
         className={`mt-10 border-t py-8 px-4 sm:px-6 text-xs transition-colors duration-200 no-print ${
           isDark
-            ? 'border-[#8B5CF6]/25 bg-[#050309] text-[#9389B0]'
-            : 'border-[#7C3AED]/20 bg-[#F0ECFA] text-[#625680]'
+            ? 'border-cyan-500/20 bg-[#050B16] text-[#8FA5C2]'
+            : 'border-cyan-700/20 bg-[#F0F6FC] text-[#1E3A5F]'
         }`}
       >
         <div className="max-w-[1440px] mx-auto space-y-5">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="space-y-1 max-w-3xl">
-              <p className="font-mono-tabular uppercase tracking-wider font-semibold text-[#A78BFA]">
+              <p className="font-mono-tabular uppercase tracking-wider font-semibold text-cyan-400">
                 Colophon &amp; Methodology — How WorldPulse is Made
               </p>
               <p className="leading-relaxed">
@@ -1726,36 +1808,36 @@ export default function App() {
               <button
                 type="button"
                 onClick={handleGoToLanding}
-                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] text-[#A78BFA] cursor-pointer"
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-cyan-500/30 hover:border-cyan-400 text-cyan-300 cursor-pointer"
               >
                 Landing Page (/)
               </button>
               <button
                 type="button"
                 onClick={() => setIsAccountAlertsOpen(true)}
-                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-cyan-500/30 hover:border-cyan-400 cursor-pointer"
               >
                 Supabase Auth &amp; RLS SQL
               </button>
               <button
                 type="button"
                 onClick={() => setIsDevApiOpen(true)}
-                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-cyan-500/30 hover:border-cyan-400 cursor-pointer"
               >
                 Developer API &amp; Widget
               </button>
               <button
                 type="button"
                 onClick={() => setIsSettingsOpen(true)}
-                className="min-h-[44px] px-3 py-1.5 rounded-full border border-[#8B5CF6]/30 hover:border-[#A78BFA] cursor-pointer"
+                className="min-h-[44px] px-3 py-1.5 rounded-full border border-cyan-500/30 hover:border-cyan-400 cursor-pointer"
               >
                 Source Health &amp; Settings
               </button>
             </div>
           </div>
 
-          {/* All 10 Legal & Trust Page Links */}
-          <div className="pt-4 border-t border-[#8B5CF6]/20">
+          {/* All Legal & Trust Page Links */}
+          <div className="pt-4 border-t border-cyan-500/20">
             <LegalFooterLinks settings={settings} onOpenLegalPage={handleOpenLegalPage} />
           </div>
         </div>
@@ -1763,15 +1845,15 @@ export default function App() {
 
       {/* Mobile "More" Quick Sheet when user taps "More" in PhoneBottomNav */}
       {showMobileMoreDrawer && (
-        <div className="md:hidden fixed inset-x-0 bottom-14 z-40 p-4 border-t border-[#8B5CF6]/35 bg-[#0B0713]/98 backdrop-blur-xl space-y-3 no-print">
+        <div className="md:hidden fixed inset-x-0 bottom-14 z-40 p-4 border-t border-cyan-500/35 bg-[#050B16]/98 backdrop-blur-xl space-y-3 no-print">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-wider text-cyan-400 font-semibold">
               More Sections &amp; Tools
             </span>
             <button
               type="button"
               onClick={() => setShowMobileMoreDrawer(false)}
-              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#C4BDD9]"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8FA5C2] hover:text-white"
             >
               <X className="w-4 h-4" />
             </button>
@@ -1780,17 +1862,17 @@ export default function App() {
             <button
               type="button"
               onClick={() => handleSelectMobileTab('saved')}
-              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 bg-[#0A1830] text-left flex items-center gap-2 hover:border-cyan-400"
             >
-              <Bookmark className="w-4 h-4 text-[#A78BFA]" />
+              <Bookmark className="w-4 h-4 text-cyan-400" />
               <span>Saved ({bookmarks.length})</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelectMobileTab('changes')}
-              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 bg-[#0A1830] text-left flex items-center gap-2 hover:border-cyan-400"
             >
-              <Sparkles className="w-4 h-4 text-[#A78BFA]" />
+              <Sparkles className="w-4 h-4 text-cyan-400" />
               <span>Economy &amp; 24h</span>
             </button>
             <button
@@ -1799,9 +1881,9 @@ export default function App() {
                 setShowMobileMoreDrawer(false);
                 setIsSettingsOpen(true);
               }}
-              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 bg-[#0A1830] text-left flex items-center gap-2 hover:border-cyan-400"
             >
-              <Shield className="w-4 h-4 text-[#A78BFA]" />
+              <Shield className="w-4 h-4 text-cyan-400" />
               <span>Settings &amp; A11y</span>
             </button>
             <button
@@ -1810,9 +1892,9 @@ export default function App() {
                 setShowMobileMoreDrawer(false);
                 handleOpenLegalPage('privacy');
               }}
-              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2"
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 bg-[#0A1830] text-left flex items-center gap-2 hover:border-cyan-400"
             >
-              <Shield className="w-4 h-4 text-[#A78BFA]" />
+              <Shield className="w-4 h-4 text-cyan-400" />
               <span>Legal &amp; Trust</span>
             </button>
             <button
@@ -1821,9 +1903,9 @@ export default function App() {
                 setShowMobileMoreDrawer(false);
                 handleGoToLanding();
               }}
-              className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 bg-[#050309] text-left flex items-center gap-2 col-span-2"
+              className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 bg-[#0A1830] text-left flex items-center gap-2 col-span-2 hover:border-cyan-400"
             >
-              <Home className="w-4 h-4 text-[#A78BFA]" />
+              <Home className="w-4 h-4 text-cyan-400" />
               <span>Open WorldPulse Landing Page (/)</span>
             </button>
           </div>
@@ -1929,15 +2011,17 @@ export default function App() {
       />
 
       {/* Legal & Trust Center Modal (Privacy, Terms, AI Disclaimer, Cookies, Sources, A11y, Responsible AI, Contact, About, Changelog) */}
-      <LegalTrustModal
-        activePage={activeLegalPage}
-        onSelectPage={handleOpenLegalPage}
-        onClose={handleCloseLegalPage}
-        settings={settings}
-        stories={stories}
-        onPurgeCache={handleClearCache}
-        onExportJsonBackup={handleExportMarkdown}
-      />
+      <Suspense fallback={null}>
+        <LegalTrustModal
+          activePage={activeLegalPage}
+          onSelectPage={handleOpenLegalPage}
+          onClose={handleCloseLegalPage}
+          settings={settings}
+          stories={stories}
+          onPurgeCache={handleClearCache}
+          onExportJsonBackup={handleExportMarkdown}
+        />
+      </Suspense>
 
       {/* First-Visit 3-Step Onboarding Tour (Map, Daily Briefing, Ask the World) */}
       {showOnboardingTour && (

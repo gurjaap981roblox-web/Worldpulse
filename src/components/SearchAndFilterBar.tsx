@@ -364,7 +364,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       {/* Top Row: Search Box with Boolean / Phrase Hint + Preset, Export & Share Actions */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#A78BFA] pointer-events-none" />
+          <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[#38BDF8] pointer-events-none" />
           <input
             ref={searchInputRef}
             type="search"
@@ -374,8 +374,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             aria-label="Search stories by keyword, exact phrase, boolean AND, OR, or exclusion"
             className={`w-full min-h-[44px] pl-10 pr-10 py-2 rounded-full border text-xs sm:text-sm font-mono-tabular transition-colors focus:outline-none ${
               isDark
-                ? 'bg-[#050309]/90 border-[#8B5CF6]/35 text-[#F6F4FF] placeholder:text-[#9389B0]'
-                : 'bg-white border-[#7C3AED]/30 text-[#140E24] placeholder:text-[#625680]'
+                ? 'bg-[#0A1830]/90 border-[#22D3EE]/35 text-[#E6F1FF] placeholder:text-[#8FA5C2]'
+                : 'bg-white border-[#0284C7]/30 text-[#140E24] placeholder:text-[#625680]'
             }`}
           />
           {currentQuery && (
@@ -383,7 +383,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               type="button"
               onClick={() => handleQueryChange('')}
               aria-label="Clear search query"
-              className="min-h-[44px] min-w-[44px] absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#9389B0] hover:text-white cursor-pointer"
+              className="min-h-[44px] min-w-[44px] absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#8FA5C2] hover:text-white cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -396,7 +396,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             onClick={() => setShowPresetForm((prev) => !prev)}
             className="wp-btn-secondary px-3.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
           >
-            <BookmarkPlus className="w-3.5 h-3.5 text-[#A78BFA]" />
+            <BookmarkPlus className="w-3.5 h-3.5 text-[#38BDF8]" />
             <span>{labels.savePreset}</span>
           </button>
 
@@ -408,21 +408,21 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               className="wp-btn-secondary px-3.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
               title="Export filtered stories"
             >
-              <Download className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Download className="w-3.5 h-3.5 text-[#38BDF8]" />
               <span>Export</span>
             </button>
             {showExportMenu && (
               <div
                 className={`absolute right-0 mt-2 w-48 rounded-2xl border p-2 space-y-1 shadow-2xl z-30 ${
                   isDark
-                    ? 'bg-[#0B0713] border-[#8B5CF6]/40 text-[#F6F4FF]'
-                    : 'bg-white border-[#7C3AED]/30 text-[#140E24]'
+                    ? 'bg-[#050B16] border-[#22D3EE]/40 text-[#E6F1FF]'
+                    : 'bg-white border-[#0284C7]/30 text-[#140E24]'
                 }`}
               >
                 <button
                   type="button"
                   onClick={handleExportCsv}
-                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#22D3EE]/20 cursor-pointer"
                 >
                   <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
                   <span>Export CSV</span>
@@ -430,7 +430,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
                 <button
                   type="button"
                   onClick={handleExportJson}
-                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#22D3EE]/20 cursor-pointer"
                 >
                   <FileJson className="w-4 h-4 text-amber-400" />
                   <span>Export JSON</span>
@@ -438,7 +438,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
                 <button
                   type="button"
                   onClick={handleExportMarkdown}
-                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#22D3EE]/20 cursor-pointer"
                 >
                   <FileText className="w-4 h-4 text-sky-400" />
                   <span>Export Markdown</span>
@@ -449,9 +449,9 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
                     setShowExportMenu(false);
                     window.print();
                   }}
-                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                  className="w-full min-h-[44px] px-3 rounded-xl flex items-center gap-2 text-xs font-mono-tabular hover:bg-[#22D3EE]/20 cursor-pointer"
                 >
-                  <Printer className="w-4 h-4 text-[#A78BFA]" />
+                  <Printer className="w-4 h-4 text-[#38BDF8]" />
                   <span>Print Dossier</span>
                 </button>
               </div>
@@ -467,7 +467,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             {isLinkCopied ? (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
-              <Copy className="w-3.5 h-3.5 text-[#A78BFA]" />
+              <Copy className="w-3.5 h-3.5 text-[#38BDF8]" />
             )}
             <span>{isLinkCopied ? 'Copied Filter Link' : 'Share Filter Link'}</span>
           </button>
@@ -490,7 +490,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
         <form
           onSubmit={handleSavePreset}
           className={`p-3 rounded-xl border flex flex-wrap items-center gap-2 ${
-            isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/25 bg-white'
+            isDark ? 'border-[#22D3EE]/30 bg-[#0A1830]' : 'border-[#0284C7]/25 bg-white'
           }`}
         >
           <input
@@ -501,8 +501,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             aria-label="Filter preset name"
             className={`min-h-[44px] flex-1 px-3 rounded-lg border text-xs font-mono-tabular ${
               isDark
-                ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-white'
-                : 'bg-[#F8F6FF] border-[#7C3AED]/25 text-black'
+                ? 'bg-[#050B16] border-[#22D3EE]/30 text-white'
+                : 'bg-[#F0F6FC] border-[#0284C7]/25 text-black'
             }`}
           />
           <button
@@ -518,7 +518,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2.5 text-xs font-mono-tabular">
         {/* 1. Date Range */}
         <div>
-          <label htmlFor="filter-date-range" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-date-range" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             Date Range
           </label>
           <select
@@ -527,8 +527,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             onChange={(e) => onChangeDateRange(e.target.value as DateRangeFilter)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-                : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+                ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+                : 'bg-white border-[#0284C7]/25 text-[#140E24]'
             }`}
           >
             <option value="24h">Last 24 hours</option>
@@ -540,7 +540,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
         {/* 2. Country */}
         <div>
-          <label htmlFor="filter-country" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-country" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             Country
           </label>
           <select
@@ -551,8 +551,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             }
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-                : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+                ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+                : 'bg-white border-[#0284C7]/25 text-[#140E24]'
             }`}
           >
             <option value="ALL">All Countries</option>
@@ -566,7 +566,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
         {/* 3. Topic */}
         <div>
-          <label htmlFor="filter-topic" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-topic" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             Topic
           </label>
           <select
@@ -575,8 +575,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             onChange={(e) => handleTopicChange(e.target.value as 'All' | Topic)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-                : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+                ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+                : 'bg-white border-[#0284C7]/25 text-[#140E24]'
             }`}
           >
             <option value="All">All Topics</option>
@@ -590,7 +590,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
         {/* 4. Source */}
         <div>
-          <label htmlFor="filter-source" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-source" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             Source Outlet
           </label>
           <select
@@ -599,8 +599,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             onChange={(e) => onChangeSource && onChangeSource(e.target.value)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-                : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+                ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+                : 'bg-white border-[#0284C7]/25 text-[#140E24]'
             }`}
           >
             {availableSources.map((src) => (
@@ -613,7 +613,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
         {/* 5. Status (Confirmed / Developing) */}
         <div>
-          <label htmlFor="filter-status" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-status" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             Verification Status
           </label>
           <select
@@ -622,8 +622,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             onChange={(e) => onChangeStatusFilter && onChangeStatusFilter(e.target.value as StoryStatusFilter)}
             className={`w-full min-h-[44px] px-3 rounded-xl border ${
               isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-                : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+                ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+                : 'bg-white border-[#0284C7]/25 text-[#140E24]'
             }`}
           >
             <option value="all">All Statuses</option>
@@ -634,7 +634,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
         {/* 6. Minimum Importance */}
         <div>
-          <label htmlFor="filter-min-imp" className="block text-[10px] uppercase text-[#A78BFA] mb-1">
+          <label htmlFor="filter-min-imp" className="block text-[10px] uppercase text-[#38BDF8] mb-1">
             {labels.minImportance}: {activeMinImp}+ / 10
           </label>
           <div className="flex items-center gap-2 min-h-[44px]">
@@ -646,17 +646,17 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               step={1}
               value={activeMinImp}
               onChange={(e) => handleMinImpChange(Number(e.target.value))}
-              className="flex-1 accent-[#8B5CF6] min-h-[44px] cursor-pointer"
+              className="flex-1 accent-[#22D3EE] min-h-[44px] cursor-pointer"
             />
             <button
               type="button"
               onClick={() => handleMinImpChange(activeMinImp >= 7 ? 1 : 7)}
               className={`min-h-[44px] px-2.5 rounded-lg border text-[11px] font-semibold cursor-pointer ${
                 activeMinImp >= 7
-                  ? 'bg-[#8B5CF6] border-[#A78BFA] text-white'
+                  ? 'bg-[#22D3EE] border-[#38BDF8] text-white'
                   : isDark
-                  ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#C4BDD9]'
-                  : 'bg-white border-[#7C3AED]/25 text-[#3F3559]'
+                  ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#8FA5C2]'
+                  : 'bg-white border-[#0284C7]/25 text-[#3F3559]'
               }`}
             >
               7+
@@ -668,7 +668,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       {/* Custom Date Range Picker Row */}
       {dateRange === 'custom' && (
         <div className="flex flex-wrap items-center gap-3 pt-1 text-xs font-mono-tabular">
-          <Calendar className="w-4 h-4 text-[#A78BFA]" />
+          <Calendar className="w-4 h-4 text-[#38BDF8]" />
           <label className="inline-flex items-center gap-2">
             <span>From:</span>
             <input
@@ -677,8 +677,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               onChange={(e) => onChangeCustomStartDate && onChangeCustomStartDate(e.target.value)}
               className={`min-h-[44px] px-3 rounded-xl border ${
                 isDark
-                  ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
-                  : 'bg-white border-[#7C3AED]/25 text-black'
+                  ? 'bg-[#0A1830] border-[#22D3EE]/30 text-white'
+                  : 'bg-white border-[#0284C7]/25 text-black'
               }`}
             />
           </label>
@@ -690,8 +690,8 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
               onChange={(e) => onChangeCustomEndDate && onChangeCustomEndDate(e.target.value)}
               className={`min-h-[44px] px-3 rounded-xl border ${
                 isDark
-                  ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
-                  : 'bg-white border-[#7C3AED]/25 text-black'
+                  ? 'bg-[#0A1830] border-[#22D3EE]/30 text-white'
+                  : 'bg-white border-[#0284C7]/25 text-black'
               }`}
             />
           </label>
@@ -701,7 +701,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
       {/* Active Removable Filter Chips */}
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-2 pt-1">
-          <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#9389B0]">
+          <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#8FA5C2]">
             Active Filters ({filteredCount} matches):
           </span>
 
@@ -709,7 +709,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => handleQueryChange('')}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Search: &ldquo;{currentQuery}&rdquo;</span>
               <X className="w-3.5 h-3.5" />
@@ -720,7 +720,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => onChangeDateRange('24h')}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>
                 Date: {dateRange === '7d' ? 'Last 7 days' : dateRange === '30d' ? 'Last 30 days' : 'Custom'}
@@ -733,7 +733,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => handleCountryChange(null)}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>
                 Country: {getCountryFlag(selectedCountry)} {selectedCountry}
@@ -746,7 +746,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => handleTopicChange('All')}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Topic: {selectedTopic}</span>
               <X className="w-3.5 h-3.5" />
@@ -757,7 +757,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => onChangeSource && onChangeSource('All')}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Source: {selectedSource}</span>
               <X className="w-3.5 h-3.5" />
@@ -768,7 +768,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => onChangeStatusFilter && onChangeStatusFilter('all')}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Status: {statusFilter}</span>
               <X className="w-3.5 h-3.5" />
@@ -779,7 +779,7 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
             <button
               type="button"
               onClick={() => handleMinImpChange(1)}
-              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#8B5CF6]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-3 py-1.5 rounded-full bg-[#22D3EE]/20 border border-[#22D3EE]/45 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Importance: {activeMinImp}+</span>
               <X className="w-3.5 h-3.5" />
@@ -790,19 +790,19 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
 
       {/* Saved Filter Presets Row */}
       {activePresets.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#8B5CF6]/15">
-          <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA]">
+        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#22D3EE]/15">
+          <span className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#38BDF8]">
             Saved Presets:
           </span>
           {activePresets.map((p) => (
             <div
               key={p.id}
-              className="inline-flex items-center rounded-full border border-[#8B5CF6]/35 bg-[#8B5CF6]/10 overflow-hidden"
+              className="inline-flex items-center rounded-full border border-[#22D3EE]/35 bg-[#22D3EE]/10 overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => handleRestorePreset(p)}
-                className="min-h-[44px] px-3 py-1 text-xs font-mono-tabular hover:bg-[#8B5CF6]/20 cursor-pointer"
+                className="min-h-[44px] px-3 py-1 text-xs font-mono-tabular hover:bg-[#22D3EE]/20 cursor-pointer"
                 title={`Restore preset: ${p.name}`}
               >
                 {p.name}
@@ -825,12 +825,12 @@ export const SearchAndFilterBar: React.FC<SearchAndFilterBarProps> = ({
         <div
           className={`p-3.5 rounded-xl border flex flex-wrap items-center justify-between gap-3 ${
             isDark
-              ? 'border-[#8B5CF6]/40 bg-[#8B5CF6]/10 text-[#F6F4FF]'
-              : 'border-[#7C3AED]/30 bg-[#7C3AED]/10 text-[#140E24]'
+              ? 'border-[#22D3EE]/40 bg-[#22D3EE]/10 text-[#E6F1FF]'
+              : 'border-[#0284C7]/30 bg-[#0284C7]/10 text-[#140E24]'
           }`}
         >
           <div className="flex items-center gap-2 text-xs font-mono-tabular">
-            <Sparkles className="w-4 h-4 text-[#A78BFA]" />
+            <Sparkles className="w-4 h-4 text-[#38BDF8]" />
             <span>
               No exact matches for &ldquo;{currentQuery}&rdquo;. {labels.didYouMean}{' '}
               <strong>{didYouMean.label}</strong>?

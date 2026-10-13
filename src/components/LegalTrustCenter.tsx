@@ -37,6 +37,7 @@ export const LEGAL_PAGE_HASHES: Record<string, LegalPageId> = {
   '#ai-disclaimer': 'ai-disclaimer',
   '#cookies': 'cookies',
   '#methodology': 'methodology',
+  '#security': 'security',
   '#accessibility': 'accessibility',
   '#responsible-ai': 'responsible-ai',
   '#contact': 'contact',
@@ -73,12 +74,12 @@ export const AiDisclaimerLine: React.FC<AiDisclaimerLineProps> = ({
     <div
       className={`mt-2.5 pt-2 border-t flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono-tabular no-print ${
         isDark
-          ? 'border-[#8B5CF6]/20 text-[#9389B0]'
-          : 'border-[#7C3AED]/20 text-[#625680]'
+          ? 'border-[#22D3EE]/20 text-[#8FA5C2]'
+          : 'border-[#0284C7]/20 text-[#625680]'
       }`}
     >
       <div className="flex items-center gap-1.5">
-        <AlertTriangle className="w-3.5 h-3.5 text-[#A78BFA] shrink-0" />
+        <AlertTriangle className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
         <span>{labels.aiDisclaimerShort}</span>
         <a
           href="#ai-disclaimer"
@@ -88,7 +89,7 @@ export const AiDisclaimerLine: React.FC<AiDisclaimerLineProps> = ({
               onOpenLegalPage('ai-disclaimer');
             }
           }}
-          className="text-[#A78BFA] hover:underline font-semibold ml-1"
+          className="text-[#38BDF8] hover:underline font-semibold ml-1"
         >
           ({labels.aiDisclaimer})
         </a>
@@ -96,7 +97,7 @@ export const AiDisclaimerLine: React.FC<AiDisclaimerLineProps> = ({
 
       <a
         href={mailtoUrl}
-        className="inline-flex items-center gap-1 text-[#A78BFA] hover:underline font-semibold"
+        className="inline-flex items-center gap-1 text-[#38BDF8] hover:underline font-semibold"
         title="Report inaccurate AI summary or wrong answer via email"
       >
         <Mail className="w-3 h-3" />
@@ -126,6 +127,7 @@ export const LEGAL_NAV_ITEMS: Array<{ id: LegalPageId; labelKey: string; default
   { id: 'ai-disclaimer', labelKey: 'aiDisclaimer', defaultLabel: 'AI Disclaimer' },
   { id: 'cookies', labelKey: 'cookieNotice', defaultLabel: 'Cookie Notice' },
   { id: 'methodology', labelKey: 'sourcesMethodology', defaultLabel: 'Sources & Methodology' },
+  { id: 'security', labelKey: 'securityPolicy', defaultLabel: 'Security Architecture & SSRF Policy' },
   { id: 'accessibility', labelKey: 'accessibilityStatement', defaultLabel: 'Accessibility Statement' },
   { id: 'responsible-ai', labelKey: 'responsibleAi', defaultLabel: 'Responsible AI & Transparency' },
   { id: 'contact', labelKey: 'contactGrievance', defaultLabel: 'Contact & Grievance' },
@@ -218,18 +220,18 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
         ref={modalRef}
         className={`w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border overflow-hidden shadow-2xl ${
           isDark
-            ? 'bg-[#0B0713] border-[#8B5CF6]/40 text-[#F6F4FF]'
-            : 'bg-[#F8F6FF] border-[#7C3AED]/30 text-[#140E24]'
+            ? 'bg-[#050B16] border-[#22D3EE]/40 text-[#E6F1FF]'
+            : 'bg-[#F0F6FC] border-[#0284C7]/30 text-[#140E24]'
         }`}
       >
         {/* Top Modal Header */}
         <div
           className={`px-5 py-4 border-b flex items-center justify-between gap-3 ${
-            isDark ? 'border-[#8B5CF6]/25 bg-[#050309]' : 'border-[#7C3AED]/20 bg-[#F0EBFF]'
+            isDark ? 'border-[#22D3EE]/25 bg-[#050B16]' : 'border-[#0284C7]/20 bg-[#E6F1FF]'
           }`}
         >
           <div>
-            <div className="flex items-center gap-2 text-xs font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+            <div className="flex items-center gap-2 text-xs font-mono-tabular uppercase tracking-wider text-[#38BDF8] font-semibold">
               <Scale className="w-3.5 h-3.5" />
               <span>WorldPulse Legal, Trust &amp; Transparency Center</span>
             </div>
@@ -247,8 +249,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
             aria-label="Close Legal and Trust modal"
             className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
               isDark
-                ? 'border-[#8B5CF6]/35 bg-[#110C1D] text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                : 'border-[#7C3AED]/30 bg-white text-[#3F3559] hover:text-black'
+                ? 'border-[#22D3EE]/35 bg-[#0A1830] text-[#8FA5C2] hover:text-white hover:border-[#38BDF8]'
+                : 'border-[#0284C7]/30 bg-white text-[#3F3559] hover:text-black'
             }`}
           >
             <X className="w-5 h-5" />
@@ -261,7 +263,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
           <nav
             aria-label="Legal and trust pages"
             className={`md:w-64 shrink-0 border-b md:border-b-0 md:border-r p-3 flex md:flex-col gap-1.5 overflow-x-auto md:overflow-y-auto ${
-              isDark ? 'border-[#8B5CF6]/20 bg-[#050309]/70' : 'border-[#7C3AED]/15 bg-[#F0EBFF]/60'
+              isDark ? 'border-[#22D3EE]/20 bg-[#050B16]/70' : 'border-[#0284C7]/15 bg-[#E6F1FF]/60'
             }`}
           >
             {LEGAL_NAV_ITEMS.map((item) => {
@@ -273,10 +275,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                   onClick={() => onSelectPage(item.id)}
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl text-left text-xs font-mono-tabular font-semibold transition-all whitespace-nowrap md:whitespace-normal shrink-0 cursor-pointer ${
                     isSelected
-                      ? 'bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white shadow-md'
+                      ? 'bg-gradient-to-r from-[#22D3EE] to-[#0369A1] text-white shadow-md'
                       : isDark
-                      ? 'text-[#C4BDD9] hover:bg-[#8B5CF6]/15 hover:text-white'
-                      : 'text-[#3F3559] hover:bg-[#7C3AED]/10 hover:text-black'
+                      ? 'text-[#8FA5C2] hover:bg-[#22D3EE]/15 hover:text-white'
+                      : 'text-[#3F3559] hover:bg-[#0284C7]/10 hover:text-black'
                   }`}
                 >
                   {labels[item.labelKey] || item.defaultLabel}
@@ -290,8 +292,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
             <div
               className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono-tabular border ${
                 isDark
-                  ? 'border-[#8B5CF6]/30 bg-[#8B5CF6]/10 text-[#A78BFA]'
-                  : 'border-[#7C3AED]/25 bg-[#7C3AED]/10 text-[#6D28D9]'
+                  ? 'border-[#22D3EE]/30 bg-[#22D3EE]/10 text-[#38BDF8]'
+                  : 'border-[#0284C7]/25 bg-[#0284C7]/10 text-[#0369A1]'
               }`}
             >
               <span>Last updated: {LAST_UPDATED_DATE}</span>
@@ -310,7 +312,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </p>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">1. What is Stored on Your Device</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">1. What is Stored on Your Device</h4>
                   <p>
                     By default, WorldPulse stores your preferences (theme, language, font size, followed
                     countries/topics, saved filter presets), 7-day story snapshots, bookmarks, and AI
@@ -323,7 +325,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">2. What is Sent to the AI Server</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">2. What is Sent to the AI Server</h4>
                   <p>
                     When AI synthesis, translation, or &ldquo;Ask the World&rdquo; is used, only public news
                     headlines, short public dispatches, or your question text (capped at 1,000 characters)
@@ -333,7 +335,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">
+                  <h4 className="font-semibold text-[#38BDF8]">
                     3. India DPDP Act (2023) &amp; EU GDPR Rights
                   </h4>
                   <p>
@@ -346,10 +348,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
 
                 <div
                   className={`p-4 rounded-xl border space-y-3 ${
-                    isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/25 bg-white'
+                    isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/25 bg-white'
                   }`}
                 >
-                  <h4 className="font-semibold text-[#A78BFA]">
+                  <h4 className="font-semibold text-[#38BDF8]">
                     4. Delete Your Data Immediately (&ldquo;Purge Local Cache&rdquo;)
                   </h4>
                   <p className="text-xs">
@@ -373,7 +375,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     <button
                       type="button"
                       onClick={() => onSelectPage('contact')}
-                      className="min-h-[44px] px-4 py-2 rounded-full border border-[#8B5CF6]/40 text-xs font-mono-tabular text-[#A78BFA] hover:bg-[#8B5CF6]/15 cursor-pointer"
+                      className="min-h-[44px] px-4 py-2 rounded-full border border-[#22D3EE]/40 text-xs font-mono-tabular text-[#38BDF8] hover:bg-[#22D3EE]/15 cursor-pointer"
                     >
                       Contact Privacy / Grievance Officer →
                     </button>
@@ -475,10 +477,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
 
                 <div
                   className={`p-4 rounded-xl border space-y-3 ${
-                    isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/25 bg-white'
+                    isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/25 bg-white'
                   }`}
                 >
-                  <div className="text-xs font-mono-tabular font-semibold text-[#A78BFA]">
+                  <div className="text-xs font-mono-tabular font-semibold text-[#38BDF8]">
                     Current Preference Status:{' '}
                     {cookiePref.decided
                       ? cookiePref.preferences
@@ -490,14 +492,14 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     <button
                       type="button"
                       onClick={() => handleSaveCookiePref(true)}
-                      className="min-h-[44px] px-4 py-2 rounded-full bg-[#8B5CF6] text-white text-xs font-mono-tabular font-semibold cursor-pointer"
+                      className="min-h-[44px] px-4 py-2 rounded-full bg-[#22D3EE] text-white text-xs font-mono-tabular font-semibold cursor-pointer"
                     >
                       Accept All (Necessary + Preferences)
                     </button>
                     <button
                       type="button"
                       onClick={() => handleSaveCookiePref(false)}
-                      className="min-h-[44px] px-4 py-2 rounded-full border border-[#8B5CF6]/40 text-xs font-mono-tabular font-semibold cursor-pointer"
+                      className="min-h-[44px] px-4 py-2 rounded-full border border-[#22D3EE]/40 text-xs font-mono-tabular font-semibold cursor-pointer"
                     >
                       Reject Optional (Necessary Only)
                     </button>
@@ -516,49 +518,49 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </p>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">1. Complete List of Data Sources</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">1. Complete List of Data Sources</h4>
                   <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono-tabular">
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>BBC World</strong> — Global Broadcast &amp; Wire RSS
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>Al Jazeera</strong> — International News RSS
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>The Guardian / World</strong> — Global Newspaper Dispatches
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>Reuters / Global Wires</strong> — International Agency Feeds
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>USGS Earthquake Hazards</strong> — M4.5+ Global Seismic Sensors
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>NASA EONET</strong> — Wildfires, Volcanoes &amp; Severe Storms
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>GDELT Project</strong> — Global Event &amp; Media Mention Telemetry
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>CoinGecko</strong> — Digital Asset Prices &amp; 7-Day Sparklines
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>European Central Bank (ECB / Frankfurter)</strong> — Sovereign FX Rates
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>World Bank Open Data</strong> — Sovereign GDP &amp; CPI Inflation
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>Open-Meteo</strong> — Global City Weather &amp; Extreme Wind/Temp
                     </li>
-                    <li className="p-2.5 rounded-xl border border-[#8B5CF6]/20">
+                    <li className="p-2.5 rounded-xl border border-[#22D3EE]/20">
                       • <strong>Wikimedia REST API</strong> — Most-Read Global Attention Trends
                     </li>
                   </ul>
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">
+                  <h4 className="font-semibold text-[#38BDF8]">
                     2. Collection Cadence &amp; Importance Ranking (1–10)
                   </h4>
                   <p>
@@ -570,7 +572,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">
+                  <h4 className="font-semibold text-[#38BDF8]">
                     3. &ldquo;Confirmed&rdquo; vs. &ldquo;Developing&rdquo; Status
                   </h4>
                   <p>
@@ -582,13 +584,72 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">4. Known Limitations</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">4. Known Limitations</h4>
                   <p>
                     Public RSS feeds and APIs focus primarily on English-language and major regional
                     dispatches; rural or unindexed local events may appear with a delay. Country coordinates
                     often represent national or regional capitals unless exact sensor coordinates are
                     provided.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* 5b. SECURITY & SSRF PROTECTION ARCHITECTURE */}
+            {activePage === 'security' && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold">Security Architecture &amp; SSRF Protection</h3>
+                <p>
+                  WorldPulse implements defense-in-depth security hardening across our Express backend,
+                  Vite frontend runtime, and server-side proxies to safeguard user privacy and infrastructure integrity.
+                </p>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-[#38BDF8]">1. Strict Content Security Policy (CSP) &amp; Headers</h4>
+                  <ul className="list-disc pl-5 space-y-1.5 text-xs">
+                    <li>
+                      <strong>Content-Security-Policy:</strong> Configured via Helmet with strict origin allowlists. Disables <code>unsafe-eval</code> and only allows vetted script, style, and media origins.
+                    </li>
+                    <li>
+                      <strong>HSTS:</strong> Enforces <code>Strict-Transport-Security: max-age=31536000; includeSubDomains</code> for 1 year.
+                    </li>
+                    <li>
+                      <strong>Frame Protection:</strong> <code>X-Frame-Options: DENY</code> by default; allows secure framing only when explicitly requested via <code>?embed=1</code>.
+                    </li>
+                    <li>
+                      <strong>Permissions-Policy:</strong> Explicitly disables camera, microphone, payment, and USB devices to prevent unauthorized hardware access.
+                    </li>
+                    <li>
+                      <strong>Fingerprint Removal:</strong> <code>X-Powered-By</code> header is permanently removed.
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-[#38BDF8]">2. Server-Side Request Forgery (SSRF) Protection</h4>
+                  <p className="text-xs">
+                    Our outgoing proxies (<code>/api/proxy/rss</code>, <code>/api/proxy/gdelt</code>) enforce strict destination allowlists:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    <li>Strictly HTTPS only; plain HTTP and other protocols are rejected.</li>
+                    <li>Only pre-approved global news wire and sensor domains are permitted.</li>
+                    <li>Blocks localhost, 127.0.0.1, link-local (169.254.x), and private RFC1918 subnets (10.x, 172.16–31.x, 192.168.x).</li>
+                    <li>All outgoing fetch requests use an AbortController with a 10-second timeout, and response payloads are strictly capped at 2 MB.</li>
+                  </ul>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-semibold text-[#38BDF8]">3. Rate Limiting &amp; Input Validation</h4>
+                  <p className="text-xs">
+                    Per-IP rate limiters prevent denial-of-service abuse while allowing seamless browsing:
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-xs">
+                    <li>Non-AI API endpoints: 60 requests per minute.</li>
+                    <li>AI proxy endpoints: 20 requests per hour.</li>
+                    <li>Interactive Q&amp;A and translation: 10 requests per minute.</li>
+                    <li>Global daily circuit breaker (300 calls/day) to prevent runaway cloud usage.</li>
+                    <li>Strict input validation with length, type, and character allowlists on every API endpoint.</li>
+                  </ul>
                 </div>
               </div>
             )}
@@ -676,10 +737,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 {/* Clearly Marked Placeholders as Requested */}
                 <div
                   className={`p-4 rounded-xl border font-mono-tabular text-xs space-y-1.5 ${
-                    isDark ? 'border-[#8B5CF6]/35 bg-[#050309]' : 'border-[#7C3AED]/30 bg-white'
+                    isDark ? 'border-[#22D3EE]/35 bg-[#050B16]' : 'border-[#0284C7]/30 bg-white'
                   }`}
                 >
-                  <div className="text-[#A78BFA] font-semibold uppercase tracking-wider mb-1">
+                  <div className="text-[#38BDF8] font-semibold uppercase tracking-wider mb-1">
                     Designated Grievance Officer &amp; Contact Details
                   </div>
                   <div>
@@ -709,8 +770,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                         onChange={(e) => setContactCategory(e.target.value)}
                         className={`w-full min-h-[44px] px-3 rounded-xl border text-xs font-mono-tabular ${
                           isDark
-                            ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
-                            : 'bg-white border-[#7C3AED]/25 text-black'
+                            ? 'bg-[#050B16] border-[#22D3EE]/30 text-white'
+                            : 'bg-white border-[#0284C7]/25 text-black'
                         }`}
                       >
                         <option value="General Feedback">General Feedback</option>
@@ -741,8 +802,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                         placeholder="Brief summary of your request..."
                         className={`w-full min-h-[44px] px-3 rounded-xl border text-xs font-mono-tabular ${
                           isDark
-                            ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
-                            : 'bg-white border-[#7C3AED]/25 text-black'
+                            ? 'bg-[#050B16] border-[#22D3EE]/30 text-white'
+                            : 'bg-white border-[#0284C7]/25 text-black'
                         }`}
                       />
                     </div>
@@ -764,8 +825,8 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                       placeholder="Include any story headline, source link, or details..."
                       className={`w-full p-3 rounded-xl border text-xs font-mono-tabular ${
                         isDark
-                          ? 'bg-[#050309] border-[#8B5CF6]/30 text-white'
-                          : 'bg-white border-[#7C3AED]/25 text-black'
+                          ? 'bg-[#050B16] border-[#22D3EE]/30 text-white'
+                          : 'bg-white border-[#0284C7]/25 text-black'
                       }`}
                     />
                   </div>
@@ -793,14 +854,14 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </p>
 
                 <div className="space-y-2">
-                  <h4 className="font-semibold text-[#A78BFA]">How It Works in 3 Steps</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">How It Works in 3 Steps</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div
                       className={`p-4 rounded-xl border ${
-                        isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/20 bg-white'
+                        isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/20 bg-white'
                       }`}
                     >
-                      <div className="text-xs font-mono-tabular font-bold text-[#A78BFA] mb-1">
+                      <div className="text-xs font-mono-tabular font-bold text-[#38BDF8] mb-1">
                         01 / COLLECT
                       </div>
                       <p className="text-xs">
@@ -810,10 +871,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     </div>
                     <div
                       className={`p-4 rounded-xl border ${
-                        isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/20 bg-white'
+                        isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/20 bg-white'
                       }`}
                     >
-                      <div className="text-xs font-mono-tabular font-bold text-[#A78BFA] mb-1">
+                      <div className="text-xs font-mono-tabular font-bold text-[#38BDF8] mb-1">
                         02 / UNDERSTAND
                       </div>
                       <p className="text-xs">
@@ -823,10 +884,10 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     </div>
                     <div
                       className={`p-4 rounded-xl border ${
-                        isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/20 bg-white'
+                        isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/20 bg-white'
                       }`}
                     >
-                      <div className="text-xs font-mono-tabular font-bold text-[#A78BFA] mb-1">
+                      <div className="text-xs font-mono-tabular font-bold text-[#38BDF8] mb-1">
                         03 / SHOW
                       </div>
                       <p className="text-xs">
@@ -838,7 +899,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                 </div>
 
                 <div className="space-y-1.5">
-                  <h4 className="font-semibold text-[#A78BFA]">Data-Source Summary</h4>
+                  <h4 className="font-semibold text-[#38BDF8]">Data-Source Summary</h4>
                   <p className="text-xs">
                     Powered by Supabase primary tables plus BBC, Al Jazeera, The Guardian, Reuters, USGS,
                     NASA EONET, GDELT, CoinGecko, European Central Bank, World Bank, Open-Meteo, WHO, and
@@ -852,7 +913,7 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
             {activePage === 'changelog' && (
               <div className="space-y-4">
                 <h3 className="text-lg font-bold">WorldPulse Changelog</h3>
-                <p className="text-xs font-mono-tabular text-[#A78BFA]">
+                <p className="text-xs font-mono-tabular text-[#38BDF8]">
                   Maintained in <code>src/data/changelog.ts</code>
                 </p>
                 <div className="space-y-4">
@@ -860,14 +921,14 @@ export const LegalTrustModal: React.FC<LegalTrustModalProps> = ({
                     <div
                       key={entry.version}
                       className={`p-4 rounded-xl border space-y-2 ${
-                        isDark ? 'border-[#8B5CF6]/30 bg-[#050309]' : 'border-[#7C3AED]/20 bg-white'
+                        isDark ? 'border-[#22D3EE]/30 bg-[#050B16]' : 'border-[#0284C7]/20 bg-white'
                       }`}
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] text-xs font-mono-tabular font-bold">
+                        <span className="px-2.5 py-0.5 rounded-full bg-[#22D3EE]/20 text-[#38BDF8] text-xs font-mono-tabular font-bold">
                           {entry.version}
                         </span>
-                        <span className="text-xs font-mono-tabular text-[#9389B0]">
+                        <span className="text-xs font-mono-tabular text-[#8FA5C2]">
                           {entry.date}
                         </span>
                       </div>
@@ -932,23 +993,23 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
       aria-label="Cookie and local storage consent banner"
       className={`fixed bottom-16 lg:bottom-4 left-4 right-4 z-40 max-w-4xl mx-auto p-4 sm:p-5 rounded-2xl border shadow-2xl no-print ${
         isDark
-          ? 'bg-[#0B0713]/95 border-[#8B5CF6]/50 text-[#F6F4FF]'
-          : 'bg-[#F8F6FF]/95 border-[#7C3AED]/40 text-[#140E24]'
+          ? 'bg-[#050B16]/95 border-[#22D3EE]/50 text-[#E6F1FF]'
+          : 'bg-[#F0F6FC]/95 border-[#0284C7]/40 text-[#140E24]'
       } backdrop-blur-xl`}
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div className="space-y-1 text-xs leading-relaxed">
-          <div className="flex items-center gap-2 font-mono-tabular font-bold text-[#A78BFA] uppercase tracking-wider">
+          <div className="flex items-center gap-2 font-mono-tabular font-bold text-[#38BDF8] uppercase tracking-wider">
             <Cookie className="w-4 h-4" />
             <span>Storage &amp; Privacy Notice — Zero Analytics or Tracking</span>
           </div>
-          <p className={isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}>
+          <p className={isDark ? 'text-[#8FA5C2]' : 'text-[#3F3559]'}>
             WorldPulse uses browser <code>localStorage</code> only to save your language, theme,
             bookmarks, and story caches. <strong>No analytics, ad cookies, or tracking scripts are used.</strong>{' '}
             <button
               type="button"
               onClick={onOpenCookiePolicy}
-              className="text-[#A78BFA] underline font-semibold cursor-pointer"
+              className="text-[#38BDF8] underline font-semibold cursor-pointer"
             >
               Read Cookie Notice
             </button>
@@ -957,7 +1018,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
           {customizing && (
             <div className="pt-2 flex flex-wrap items-center gap-4 font-mono-tabular">
               <label className="inline-flex items-center gap-2 opacity-80">
-                <input type="checkbox" checked disabled className="w-4 h-4 accent-[#8B5CF6]" />
+                <input type="checkbox" checked disabled className="w-4 h-4 accent-[#22D3EE]" />
                 <span>Necessary (Always On)</span>
               </label>
               <label className="inline-flex items-center gap-2 cursor-pointer">
@@ -965,7 +1026,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
                   type="checkbox"
                   checked={prefChecked}
                   onChange={(e) => setPrefChecked(e.target.checked)}
-                  className="w-4 h-4 accent-[#8B5CF6]"
+                  className="w-4 h-4 accent-[#22D3EE]"
                 />
                 <span>Preferences (Theme, Language &amp; Saved Filters)</span>
               </label>
@@ -993,7 +1054,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
               <button
                 type="button"
                 onClick={() => setCustomizing(true)}
-                className="min-h-[44px] px-3 py-2 text-xs font-mono-tabular text-[#A78BFA] hover:underline cursor-pointer"
+                className="min-h-[44px] px-3 py-2 text-xs font-mono-tabular text-[#38BDF8] hover:underline cursor-pointer"
               >
                 Customize
               </button>
@@ -1087,18 +1148,18 @@ export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
       <div
         className={`w-full max-w-lg rounded-2xl border p-6 space-y-5 shadow-2xl ${
           isDark
-            ? 'bg-[#0B0713] border-[#8B5CF6]/50 text-[#F6F4FF]'
-            : 'bg-[#F8F6FF] border-[#7C3AED]/40 text-[#140E24]'
+            ? 'bg-[#050B16] border-[#22D3EE]/50 text-[#E6F1FF]'
+            : 'bg-[#F0F6FC] border-[#0284C7]/40 text-[#140E24]'
         }`}
       >
         <div className="flex items-center justify-between">
-          <span className="px-3 py-1 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] text-xs font-mono-tabular font-bold">
+          <span className="px-3 py-1 rounded-full bg-[#22D3EE]/20 text-[#38BDF8] text-xs font-mono-tabular font-bold">
             Welcome Tour · Step {current.step}
           </span>
           <button
             type="button"
             onClick={handleFinish}
-            className="min-h-[44px] px-3 text-xs font-mono-tabular text-[#9389B0] hover:text-white cursor-pointer"
+            className="min-h-[44px] px-3 text-xs font-mono-tabular text-[#8FA5C2] hover:text-white cursor-pointer"
           >
             Skip Tour
           </button>
@@ -1108,7 +1169,7 @@ export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
           <h3 id="onboarding-tour-title" className="text-xl font-bold">
             {current.title}
           </h3>
-          <p className={`text-sm leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+          <p className={`text-sm leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#3F3559]'}`}>
             {current.description}
           </p>
         </div>
@@ -1119,7 +1180,7 @@ export const OnboardingTourModal: React.FC<OnboardingTourModalProps> = ({
               <span
                 key={idx}
                 className={`h-2 rounded-full transition-all ${
-                  idx === stepIndex ? 'w-6 bg-[#8B5CF6]' : 'w-2 bg-[#8B5CF6]/30'
+                  idx === stepIndex ? 'w-6 bg-[#22D3EE]' : 'w-2 bg-[#22D3EE]/30'
                 }`}
               />
             ))}
@@ -1177,12 +1238,12 @@ export const LegalFooterLinks: React.FC<LegalFooterLinksProps> = ({
   return (
     <footer
       className={`py-6 px-4 border-t no-print ${
-        isDark ? 'border-[#8B5CF6]/20 bg-[#06030A] text-[#9389B0]' : 'border-[#7C3AED]/20 bg-[#F4F1FA] text-[#625680]'
+        isDark ? 'border-[#22D3EE]/20 bg-[#050B16] text-[#8FA5C2]' : 'border-[#0284C7]/20 bg-[#F0F6FC] text-[#625680]'
       } text-xs ${className}`}
     >
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-sm tracking-wide text-[#8B5CF6]">WORLDPULSE</span>
+          <span className="font-bold text-sm tracking-wide text-[#22D3EE]">WORLDPULSE</span>
           <span>© 2026 WorldPulse Intel · Open Public Telemetry</span>
         </div>
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
@@ -1191,7 +1252,7 @@ export const LegalFooterLinks: React.FC<LegalFooterLinksProps> = ({
               key={item.id}
               type="button"
               onClick={() => onOpenLegalPage(item.id)}
-              className="hover:text-[#A78BFA] transition-colors cursor-pointer text-[11px]"
+              className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px]"
             >
               {item.defaultLabel}
             </button>

@@ -57,14 +57,18 @@ export const TopBar: React.FC<TopBarProps> = ({
   ).length;
 
   const isDark = settings.theme === 'dark';
+  const minutesAgo = lastUpdated
+    ? Math.max(0, Math.floor((Date.now() - Number(lastUpdated)) / 60000))
+    : 0;
+  const isOlderThan90Min = minutesAgo >= 90;
 
   return (
     <>
       <header
         className={`sticky top-0 z-30 border-b transition-colors duration-200 no-print ${
           isDark
-            ? 'bg-[#050309]/85 border-[#8B5CF6]/25 text-[#F6F4FF]'
-            : 'bg-[#F8F6FF]/90 border-[#7C3AED]/20 text-[#140E24]'
+            ? 'bg-[#050B16]/90 border-cyan-500/20 text-[#E6F1FF]'
+            : 'bg-[#F0F6FC]/95 border-cyan-600/20 text-[#050B16]'
         } backdrop-blur-xl`}
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
@@ -74,7 +78,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               href="#top"
               className="flex items-center gap-2 font-editorial text-xl sm:text-2xl font-extrabold tracking-tight whitespace-nowrap"
             >
-              <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6] shadow-[0_0_12px_#8B5CF6]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#22D3EE] shadow-[0_0_12px_#22D3EE]" />
               <span>WorldPulse</span>
             </a>
 
@@ -85,11 +89,11 @@ export const TopBar: React.FC<TopBarProps> = ({
                 title="View WorldPulse Landing Page (/)"
                 className={`hidden sm:inline-flex min-h-[38px] px-2.5 py-1 rounded-full border text-[11px] font-mono-tabular items-center gap-1 transition-colors cursor-pointer ${
                   isDark
-                    ? 'border-[#8B5CF6]/30 bg-[#0B0713] text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                    : 'border-[#7C3AED]/25 bg-white text-[#3F3559] hover:text-black'
+                    ? 'border-cyan-500/30 bg-[#0A1830] text-[#8FA5C2] hover:text-[#22D3EE] hover:border-cyan-400'
+                    : 'border-cyan-700/25 bg-white text-[#1E3A5F] hover:text-[#0284C7]'
                 }`}
               >
-                <Home className="w-3 h-3 text-[#A78BFA]" />
+                <Home className="w-3 h-3 text-[#22D3EE]" />
                 <span>Landing</span>
               </button>
             )}
@@ -100,37 +104,54 @@ export const TopBar: React.FC<TopBarProps> = ({
             aria-label="Primary dashboard sections"
             className="hidden xl:flex items-center gap-5 text-xs font-mono-tabular"
           >
-            <a href="#briefing" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#briefing" className="hover:text-[#22D3EE] transition-colors">
               01. Briefing
             </a>
-            <a href="#map-monitor" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#map-monitor" className="hover:text-[#22D3EE] transition-colors">
               02. Map
             </a>
-            <a href="#top-stories" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#top-stories" className="hover:text-[#22D3EE] transition-colors">
               03. Top 10
             </a>
-            <a href="#economic-change" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#economic-change" className="hover:text-[#22D3EE] transition-colors">
               04. Economy &amp; FX
             </a>
-            <a href="#speech-dossier" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#speech-dossier" className="hover:text-[#22D3EE] transition-colors">
               05. Speeches
             </a>
           </nav>
 
-          {/* Zone 3: Compact Glass Controls (Search, Language, Telemetry, Refresh, Theme, Settings) */}
+          {/* Zone 3: Compact Glass Controls (Last Updated Badge, Search, Language, Refresh, Theme, Settings) */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* Last updated badge: turns amber if older than 90 minutes */}
             <div
-              className={`hidden lg:flex items-center gap-2 text-xs font-mono-tabular whitespace-nowrap ${
-                isDark ? 'text-[#9389B0]' : 'text-[#625680]'
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono-tabular border transition-colors ${
+                isOlderThan90Min
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
+                  : isDark
+                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300'
+                  : 'bg-cyan-50 border-cyan-300 text-cyan-900'
+              }`}
+              title={`Last refreshed at ${formatTimeInTz(lastUpdated, settings.timezone)}`}
+            >
+              <span
+                className={`w-1.5 h-1.5 rounded-full ${
+                  isOlderThan90Min ? 'bg-amber-400' : 'bg-cyan-400 animate-pulse'
+                }`}
+              />
+              <span className="font-semibold whitespace-nowrap">
+                {minutesAgo === 0 ? 'Last updated just now' : `Last updated ${minutesAgo}m ago`}
+              </span>
+            </div>
+
+            <div
+              className={`hidden 2xl:flex items-center gap-2 text-xs font-mono-tabular whitespace-nowrap ${
+                isDark ? 'text-[#8FA5C2]' : 'text-[#475569]'
               }`}
               aria-live="polite"
             >
-              <span className="font-semibold text-[#A78BFA]">
+              <span className="font-semibold text-[#22D3EE]">
                 {isRefreshing ? 'SYNCING' : 'LIVE'}
-              </span>
-              <span aria-hidden="true">·</span>
-              <span title={`Timezone: ${settings.timezone}`}>
-                {formatTimeInTz(lastUpdated, settings.timezone)}
               </span>
               <span aria-hidden="true">·</span>
               <span title="Auto-refresh countdown">T-{countdownFormatted}</span>
@@ -149,7 +170,7 @@ export const TopBar: React.FC<TopBarProps> = ({
             </div>
 
             {aiStatusText && (
-              <span className="hidden 2xl:inline-block text-xs text-[#A78BFA] font-mono-tabular truncate max-w-[160px]">
+              <span className="hidden 2xl:inline-block text-xs text-[#22D3EE] font-mono-tabular truncate max-w-[160px]">
                 {aiStatusText}
               </span>
             )}
@@ -163,11 +184,11 @@ export const TopBar: React.FC<TopBarProps> = ({
                 title="Search stories (/)"
                 className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
                   isDark
-                    ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                    : 'bg-white border-[#7C3AED]/25 text-[#3F3559] hover:text-black'
+                    ? 'bg-[#0A1830] border-cyan-500/30 text-[#8FA5C2] hover:text-[#22D3EE] hover:border-cyan-400'
+                    : 'bg-white border-cyan-700/25 text-[#1E3A5F] hover:text-[#0284C7]'
                 }`}
               >
-                <Search className="w-4 h-4 text-[#A78BFA]" />
+                <Search className="w-4 h-4 text-[#22D3EE]" />
               </button>
             )}
 
@@ -177,7 +198,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 role="group"
                 aria-label="Language switch"
                 className={`hidden sm:flex items-center rounded-full border p-0.5 text-xs font-mono-tabular ${
-                  isDark ? 'bg-[#0B0713] border-[#8B5CF6]/30' : 'bg-white border-[#7C3AED]/25'
+                  isDark ? 'bg-[#0A1830] border-cyan-500/30' : 'bg-white border-cyan-700/25'
                 }`}
               >
                 {(['en', 'hi', 'pa'] as const).map((code) => (
@@ -187,10 +208,10 @@ export const TopBar: React.FC<TopBarProps> = ({
                     onClick={() => onChangeLanguage(code)}
                     className={`min-h-[36px] px-2.5 rounded-full font-semibold transition-colors cursor-pointer ${
                       settings.language === code
-                        ? 'bg-[#8B5CF6] text-white'
+                        ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_10px_rgba(34,211,238,0.4)]'
                         : isDark
-                        ? 'text-[#C4BDD9] hover:text-white'
-                        : 'text-[#3F3559] hover:text-black'
+                        ? 'text-[#8FA5C2] hover:text-[#22D3EE]'
+                        : 'text-[#1E3A5F] hover:text-[#0284C7]'
                     }`}
                   >
                     {code === 'en' ? 'EN' : code === 'hi' ? 'हि' : 'ਪੰ'}
@@ -219,7 +240,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 aria-label="Install WorldPulse PWA"
                 className="wp-btn-secondary px-3 py-2 text-xs font-mono-tabular hidden md:flex items-center gap-1.5 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <Download className="w-3.5 h-3.5 text-[#22D3EE]" />
                 <span>Install</span>
               </button>
             )}
@@ -231,7 +252,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                 aria-label="Install WorldPulse on iOS"
                 className="wp-btn-secondary px-3 py-2 text-xs font-mono-tabular hidden md:flex items-center gap-1.5 cursor-pointer"
               >
-                <Download className="w-3.5 h-3.5 text-[#A78BFA]" />
+                <Download className="w-3.5 h-3.5 text-[#22D3EE]" />
                 <span>Install</span>
               </button>
             )}
@@ -243,11 +264,11 @@ export const TopBar: React.FC<TopBarProps> = ({
               aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
               className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center border transition-colors cursor-pointer ${
                 isDark
-                  ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                  : 'bg-white border-[#7C3AED]/25 text-[#3F3559] hover:text-black'
+                  ? 'bg-[#0A1830] border-cyan-500/30 text-[#8FA5C2] hover:text-[#22D3EE] hover:border-cyan-400'
+                  : 'bg-white border-cyan-700/25 text-[#1E3A5F] hover:text-[#0284C7]'
               }`}
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-cyan-600" />}
             </button>
 
             {/* Settings Button */}
@@ -257,8 +278,8 @@ export const TopBar: React.FC<TopBarProps> = ({
               aria-label="Open settings and source status"
               className={`min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center border transition-colors cursor-pointer ${
                 isDark
-                  ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-[#C4BDD9] hover:text-white hover:border-[#A78BFA]'
-                  : 'bg-white border-[#7C3AED]/25 text-[#3F3559] hover:text-black'
+                  ? 'bg-[#0A1830] border-cyan-500/30 text-[#8FA5C2] hover:text-[#22D3EE] hover:border-cyan-400'
+                  : 'bg-white border-cyan-700/25 text-[#1E3A5F] hover:text-[#0284C7]'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -272,8 +293,8 @@ export const TopBar: React.FC<TopBarProps> = ({
               aria-expanded={mobileMenuOpen}
               className={`xl:hidden min-h-[44px] min-w-[44px] rounded-full flex items-center justify-center border transition-colors cursor-pointer ${
                 isDark
-                  ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-[#C4BDD9]'
-                  : 'bg-white border-[#7C3AED]/25 text-[#3F3559]'
+                  ? 'bg-[#0A1830] border-cyan-500/30 text-[#8FA5C2] hover:text-[#22D3EE]'
+                  : 'bg-white border-cyan-700/25 text-[#1E3A5F] hover:text-[#0284C7]'
               }`}
             >
               {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -285,42 +306,42 @@ export const TopBar: React.FC<TopBarProps> = ({
         {mobileMenuOpen && (
           <div
             className={`xl:hidden px-4 py-3 border-t space-y-3 text-xs font-mono-tabular ${
-              isDark ? 'border-[#8B5CF6]/25 bg-[#0B0713]' : 'border-[#7C3AED]/20 bg-[#F0EBFF]'
+              isDark ? 'border-cyan-500/20 bg-[#0A1830]' : 'border-cyan-700/20 bg-[#E6F1FF]'
             }`}
           >
             <div className="flex flex-wrap gap-2">
               <a
                 href="#briefing"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 flex items-center"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center hover:bg-cyan-500/10"
               >
                 01. Briefing
               </a>
               <a
                 href="#map-monitor"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 flex items-center"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center hover:bg-cyan-500/10"
               >
                 02. Map
               </a>
               <a
                 href="#top-stories"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 flex items-center"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center hover:bg-cyan-500/10"
               >
                 03. Top 10
               </a>
               <a
                 href="#economic-change"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 flex items-center"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center hover:bg-cyan-500/10"
               >
                 04. Economy &amp; FX
               </a>
               <a
                 href="#speech-dossier"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] px-3 py-2 rounded-xl border border-[#8B5CF6]/30 flex items-center"
+                className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/30 flex items-center hover:bg-cyan-500/10"
               >
                 05. Speeches
               </a>
@@ -331,7 +352,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                     setMobileMenuOpen(false);
                     onGoToLanding();
                   }}
-                  className="min-h-[44px] px-3 py-2 rounded-xl border border-[#A78BFA]/50 text-[#A78BFA] flex items-center gap-1"
+                  className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-500/40 text-cyan-400 flex items-center gap-1.5 hover:bg-cyan-500/10 cursor-pointer"
                 >
                   <Home className="w-3.5 h-3.5" />
                   <span>Landing Page (/)</span>
@@ -342,30 +363,61 @@ export const TopBar: React.FC<TopBarProps> = ({
         )}
       </header>
 
-      {/* iOS Safari Guided Install Modal */}
+      {/* Add to Home Screen Guided Modal for Android & iPhone */}
       {showIOSModal && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
-          aria-labelledby="ios-install-title"
+          aria-labelledby="a2hs-guide-title"
         >
-          <div className="wp-glass-card w-full max-w-sm p-6 space-y-4">
-            <h3 id="ios-install-title" className="font-editorial text-lg font-bold">
-              Install WorldPulse on iPad / iPhone
-            </h3>
-            <p className="text-sm leading-relaxed text-[#C4BDD9]">
-              1. Tap the <strong>Share</strong> button in Safari.
-              <br />
-              2. Select <strong>Add to Home Screen</strong>.
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowIOSModal(false)}
-              className="wp-btn-primary w-full py-2.5 text-xs font-mono-tabular uppercase tracking-wider cursor-pointer"
-            >
-              Close
-            </button>
+          <div className="wp-glass-card w-full max-w-md p-6 space-y-4 border border-cyan-500/35 shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+            <div className="flex items-center justify-between border-b border-cyan-500/20 pb-3">
+              <h3 id="a2hs-guide-title" className="font-editorial text-lg font-bold text-white flex items-center gap-2">
+                <Download className="w-4 h-4 text-[#22D3EE]" />
+                <span>Add WorldPulse to Home Screen</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowIOSModal(false)}
+                aria-label="Close guide"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center text-[#8FA5C2] hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs font-mono-tabular">
+              {/* iPhone / iPad */}
+              <div className="p-3.5 rounded-xl border border-cyan-500/25 bg-cyan-500/5 space-y-2">
+                <div className="font-bold text-[#22D3EE] text-sm">Apple iPhone &amp; iPad (Safari)</div>
+                <ol className="list-decimal pl-4 space-y-1 text-[#8FA5C2] leading-relaxed">
+                  <li>Tap the <strong>Share</strong> icon (box with upward arrow) at the bottom of Safari.</li>
+                  <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+                  <li>Tap <strong>Add</strong> in the top-right corner to launch WorldPulse as a standalone app.</li>
+                </ol>
+              </div>
+
+              {/* Android */}
+              <div className="p-3.5 rounded-xl border border-cyan-500/25 bg-cyan-500/5 space-y-2">
+                <div className="font-bold text-[#22D3EE] text-sm">Android (Chrome &amp; Edge)</div>
+                <ol className="list-decimal pl-4 space-y-1 text-[#8FA5C2] leading-relaxed">
+                  <li>Tap the <strong>Three Dots (⋮)</strong> menu in the upper-right corner.</li>
+                  <li>Select <strong>Install app</strong> or <strong>Add to Home screen</strong>.</li>
+                  <li>Confirm installation to add the WorldPulse app icon to your launcher.</li>
+                </ol>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowIOSModal(false)}
+                className="wp-btn-primary w-full py-2.5 text-xs font-mono-tabular uppercase tracking-wider cursor-pointer"
+              >
+                Got It
+              </button>
+            </div>
           </div>
         </div>
       )}

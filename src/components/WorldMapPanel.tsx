@@ -4,6 +4,7 @@ import {
   ExternalLink,
   Flame,
   Globe,
+  List,
   Maximize2,
   Satellite,
   SearchCheck,
@@ -59,6 +60,7 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
   const [touchStartY, setTouchStartY] = useState<number | null>(null);
   const [sheetTranslateY, setSheetTranslateY] = useState(0);
+  const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
 
   const isDark = settings.theme === 'dark';
 
@@ -363,6 +365,27 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
 
             <button
               type="button"
+              onClick={() => {
+                const nextMode = viewMode === 'map' ? 'list' : 'map';
+                setViewMode(nextMode);
+                if (nextMode === 'map' && mapInstanceRef.current) {
+                  setTimeout(() => mapInstanceRef.current?.invalidateSize(), 50);
+                }
+              }}
+              className={`min-h-[44px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
+                isDark
+                  ? 'bg-[#090A0D] border-cyan-500/30 text-cyan-300 hover:text-[#F3F2EE] hover:border-cyan-400'
+                  : 'bg-[#EFEAE0]/60 border-cyan-700/30 text-cyan-800 hover:text-[#181615] hover:border-cyan-600'
+              }`}
+              aria-label={viewMode === 'map' ? 'Switch to accessible list view' : 'Switch to map view'}
+              title={viewMode === 'map' ? 'Switch to accessible list view' : 'Switch to map view'}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>{viewMode === 'map' ? 'List View' : 'Map View'}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleResetView}
               className={`min-h-[44px] px-3 py-1.5 border text-xs font-mono-tabular flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 isDark
@@ -418,14 +441,79 @@ export const WorldMapPanel: React.FC<WorldMapPanelProps> = ({
         </div>
       </div>
 
-      {/* Interactive Leaflet Map Canvas */}
+      {/* Interactive Leaflet Map Canvas & Descriptive List View Alternative */}
       <div className="relative w-full h-[380px] sm:h-[440px] lg:h-[480px]">
         <div
           ref={mapContainerRef}
-          className="w-full h-full z-10"
+          className={`w-full h-full z-10 ${viewMode === 'list' ? 'hidden' : 'block'}`}
           role="region"
           aria-label="Interactive world map showing live news and disaster markers"
         />
+
+        {viewMode === 'list' && (
+          <div
+            className={`w-full h-full overflow-y-auto p-4 space-y-2.5 z-10 ${
+              isDark ? 'bg-[#050B16] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#050B16]'
+            }`}
+            role="region"
+            aria-label="Accessible list view of plotted map dispatches"
+          >
+            <div className="flex items-center justify-between text-xs font-mono-tabular text-cyan-400 font-semibold border-b pb-2 border-cyan-500/20">
+              <span>{stories.length} Geolocated Events Tracked</span>
+              <span>Select any event to view intelligence</span>
+            </div>
+            {stories.map((s) => (
+              <div
+                key={s.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => onSelectStory(s)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelectStory(s);
+                  }
+                }}
+                className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                  selectedStory?.id === s.id
+                    ? 'border-cyan-400 bg-cyan-500/15 ring-1 ring-cyan-400'
+                    : isDark
+                    ? 'bg-[#0A1830] border-cyan-500/20 hover:border-cyan-400/60 hover:bg-[#0E2244]'
+                    : 'bg-white border-cyan-700/20 hover:border-cyan-500/60 hover:bg-cyan-50/50'
+                }`}
+              >
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 text-xs font-mono-tabular">
+                    <span className="text-base">{getCountryFlag(s.country)}</span>
+                    <span className="font-bold text-cyan-400">{s.countryName}</span>
+                    <span className="text-[#8FA5C2]">·</span>
+                    <span
+                      className="font-semibold px-2 py-0.5 rounded-full text-[10px]"
+                      style={{
+                        backgroundColor: `${TOPIC_COLORS[s.topic]?.hex || '#22D3EE'}22`,
+                        color: TOPIC_COLORS[s.topic]?.hex || '#22D3EE',
+                      }}
+                    >
+                      {s.topic}
+                    </span>
+                    <span className="text-[#8FA5C2] hidden sm:inline">
+                      ({s.lat.toFixed(1)}°, {s.lng.toFixed(1)}°)
+                    </span>
+                  </div>
+                  <div className="text-xs sm:text-sm font-semibold leading-snug line-clamp-2">
+                    {s.headline}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 shrink-0 text-xs font-mono-tabular self-end sm:self-center">
+                  <span className="px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold text-[11px]">
+                    Score {s.importance}/10
+                  </span>
+                  <span className="text-[#8FA5C2] text-[11px]">{formatRelativeTime(s.time)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Screen-reader accessible summary list of plotted map markers */}
         <div className="sr-only" aria-live="polite">

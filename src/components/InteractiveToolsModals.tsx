@@ -986,7 +986,7 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
 
           {/* 6 Example Questions as Clickable Chips */}
           <div className="pt-2 space-y-2">
-            <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+            <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#38BDF8] font-semibold">
               Example Questions (Tap to Ask):
             </div>
             <div className="flex flex-wrap gap-2">
@@ -996,7 +996,7 @@ export const AskTheWorldModal: React.FC<AskTheWorldModalProps> = ({
                   type="button"
                   disabled={isLoading}
                   onClick={() => runQuestion(exQ)}
-                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#8B5CF6]/35 bg-[#8B5CF6]/10 hover:bg-[#8B5CF6]/20 text-xs font-mono-tabular text-left transition-colors cursor-pointer disabled:opacity-50"
+                  className="min-h-[44px] px-3.5 py-1.5 rounded-full border border-[#22D3EE]/35 bg-[#22D3EE]/10 hover:bg-[#22D3EE]/20 text-xs font-mono-tabular text-left transition-colors cursor-pointer disabled:opacity-50"
                 >
                   {exQ}
                 </button>

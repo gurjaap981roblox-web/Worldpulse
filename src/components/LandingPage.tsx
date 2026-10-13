@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  Download,
   FileText,
   Globe,
   Headphones,
@@ -42,6 +43,7 @@ import {
   UI_TRANSLATIONS,
 } from '../utils/sanitize';
 import { isReturningVisitor } from '../services/storage';
+import { usePWAInstall } from '../hooks/usePWAInstall';
 
 export interface LandingPageProps {
   stories: Story[];
@@ -73,7 +75,7 @@ const CITY_NODES = [
   { lat: 25.2, lng: 55.27, label: 'Dubai' },
 ];
 
-// Lightweight Canvas 3D-Style Glowing Rotating Globe with Pulsing City Dots
+// Lightweight Canvas 3D-Style Glowing Rotating Globe with Pulsing City Dots in Cyan
 const GlowingOrbGlobe: React.FC<{ reduceMotion: boolean; isDark: boolean }> = ({
   reduceMotion,
   isDark,
@@ -102,10 +104,10 @@ const GlowingOrbGlobe: React.FC<{ reduceMotion: boolean; isDark: boolean }> = ({
 
       ctx.clearRect(0, 0, w, h);
 
-      // Outer purple atmospheric halo
+      // Outer cyan atmospheric halo
       const outerGrad = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius * 1.25);
-      outerGrad.addColorStop(0, isDark ? 'rgba(139, 92, 246, 0.32)' : 'rgba(124, 58, 237, 0.22)');
-      outerGrad.addColorStop(0.6, isDark ? 'rgba(91, 33, 182, 0.14)' : 'rgba(139, 92, 246, 0.08)');
+      outerGrad.addColorStop(0, isDark ? 'rgba(34, 211, 238, 0.28)' : 'rgba(2, 132, 199, 0.2)');
+      outerGrad.addColorStop(0.6, isDark ? 'rgba(8, 145, 178, 0.12)' : 'rgba(14, 165, 233, 0.08)');
       outerGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
       ctx.fillStyle = outerGrad;
       ctx.beginPath();
@@ -122,13 +124,13 @@ const GlowingOrbGlobe: React.FC<{ reduceMotion: boolean; isDark: boolean }> = ({
         radius
       );
       if (isDark) {
-        sphereGrad.addColorStop(0, '#2e1065');
-        sphereGrad.addColorStop(0.55, '#0f0720');
-        sphereGrad.addColorStop(1, '#050309');
+        sphereGrad.addColorStop(0, '#0E2A47');
+        sphereGrad.addColorStop(0.55, '#07162C');
+        sphereGrad.addColorStop(1, '#050B16');
       } else {
-        sphereGrad.addColorStop(0, '#ede9fe');
-        sphereGrad.addColorStop(0.65, '#ddd6fe');
-        sphereGrad.addColorStop(1, '#c4b5fd');
+        sphereGrad.addColorStop(0, '#E0F2FE');
+        sphereGrad.addColorStop(0.65, '#BAE6FD');
+        sphereGrad.addColorStop(1, '#7DD3FC');
       }
 
       ctx.fillStyle = sphereGrad;
@@ -137,12 +139,12 @@ const GlowingOrbGlobe: React.FC<{ reduceMotion: boolean; isDark: boolean }> = ({
       ctx.fill();
 
       // Glowing rim border
-      ctx.strokeStyle = isDark ? 'rgba(167, 139, 250, 0.55)' : 'rgba(124, 58, 237, 0.45)';
+      ctx.strokeStyle = isDark ? 'rgba(34, 211, 238, 0.55)' : 'rgba(2, 132, 199, 0.45)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       // Latitude rings
-      ctx.strokeStyle = isDark ? 'rgba(167, 139, 250, 0.14)' : 'rgba(109, 40, 217, 0.16)';
+      ctx.strokeStyle = isDark ? 'rgba(34, 211, 238, 0.16)' : 'rgba(2, 132, 199, 0.16)';
       ctx.lineWidth = 1;
       for (const latDeg of [-60, -30, 0, 30, 60]) {
         const latRad = (latDeg * Math.PI) / 180;
@@ -176,15 +178,15 @@ const GlowingOrbGlobe: React.FC<{ reduceMotion: boolean; isDark: boolean }> = ({
           const pulse = prefersReduce ? 1 : 0.75 + 0.45 * Math.sin(time * 0.004 + idx);
 
           // Outer glow ring
-          ctx.fillStyle = `rgba(167, 139, 250, ${0.28 * alpha})`;
+          ctx.fillStyle = `rgba(34, 211, 238, ${0.32 * alpha})`;
           ctx.beginPath();
           ctx.arc(x, y, 6 * pulse, 0, Math.PI * 2);
           ctx.fill();
 
           // Bright city core dot
           ctx.fillStyle = isDark
-            ? `rgba(245, 243, 255, ${alpha})`
-            : `rgba(109, 40, 217, ${alpha})`;
+            ? `rgba(230, 241, 255, ${alpha})`
+            : `rgba(2, 132, 199, ${alpha})`;
           ctx.beginPath();
           ctx.arc(x, y, 2.6, 0, Math.PI * 2);
           ctx.fill();
@@ -247,12 +249,8 @@ const FAQ_ITEMS = [
     a: 'We read from our primary Supabase intelligence tables backed by BBC World, Al Jazeera, The Guardian, Reuters, USGS Earthquake Hazards, NASA EONET, GDELT, CoinGecko, the European Central Bank, World Bank, Open-Meteo, WHO, and Wikimedia.',
   },
   {
-    q: 'Does it work on phones and 10-inch tablets?',
+    q: 'Does it work on phones and tablets?',
     a: 'Yes. Every button is at least 44px tall for touch accuracy, and WorldPulse can be installed as a Progressive Web App (PWA) on iOS, Android, iPad, and desktop with Low-Bandwidth Lite Mode support.',
-  },
-  {
-    q: 'Do you store or sell my personal data?',
-    a: 'Never. Your theme, language, bookmarks, and filter presets stay in your browser localStorage. We use zero advertising trackers or analytics scripts, and you can purge your local cache with one click.',
   },
 ];
 
@@ -281,6 +279,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [heroQuestion, setHeroQuestion] = useState('');
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
   const returningUser = useMemo(() => isReturningVisitor(), []);
+  const { isInstallable, isInstalled, install } = usePWAInstall();
 
   const handleOpenApp = (initialQuestion?: string, selectedStory?: Story) => {
     if (onOpenDashboard) onOpenDashboard(initialQuestion, selectedStory);
@@ -309,7 +308,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   // Use Supabase stories when populated, otherwise gracefully fall back to monitored stories
   const activeStories = supabaseStories.length > 0 ? supabaseStories : stories;
-  const top3Stories = activeStories.slice(0, 3);
+  const top5Stories = activeStories.slice(0, 5);
 
   const stats = useMemo(() => {
     const totalStories = supabaseState.storiesCount || activeStories.length;
@@ -335,7 +334,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div
       className={`min-h-screen wp-grain-bg transition-colors duration-200 ${
-        isDark ? 'bg-[#050309] text-[#F6F4FF]' : 'bg-[#F8F6FF] text-[#140E24]'
+        isDark ? 'bg-[#050B16] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#050B16]'
       }`}
     >
       {/* Skip to content link */}
@@ -344,7 +343,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </a>
 
       {/* =====================================================================
-          SECTION 1: FLOATING PILL NAVBAR WITH CURVED PURPLE GLOW ARC
+          SECTION 1: FLOATING PILL NAVBAR WITH CURVED CYAN GLOW ARC
          ===================================================================== */}
       <header className="sticky top-4 z-40 px-4 sm:px-6">
         <div className="max-w-6xl mx-auto wp-pill-navbar px-4 sm:px-6 py-2.5 flex items-center justify-between gap-3">
@@ -357,7 +356,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             }}
             className="flex items-center gap-2.5 font-editorial text-lg sm:text-xl font-extrabold tracking-tight shrink-0"
           >
-            <span className="w-3 h-3 rounded-full bg-[#8B5CF6] shadow-[0_0_14px_#8B5CF6]" />
+            <span className="w-3 h-3 rounded-full bg-[#22D3EE] shadow-[0_0_14px_#22D3EE]" />
             <span>WorldPulse</span>
           </a>
 
@@ -366,27 +365,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             aria-label="Landing page navigation"
             className="hidden md:flex items-center gap-6 text-xs font-mono-tabular"
           >
-            <a href="#how-it-works" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#how-it-works" className="hover:text-[#22D3EE] transition-colors">
               How it works
             </a>
-            <a href="#features" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#features" className="hover:text-[#22D3EE] transition-colors">
               Features
             </a>
-            <a href="#languages" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#languages" className="hover:text-[#22D3EE] transition-colors">
               Languages
             </a>
-            <a href="#faq" className="hover:text-[#A78BFA] transition-colors">
+            <a href="#faq" className="hover:text-[#22D3EE] transition-colors">
               FAQ
             </a>
           </nav>
 
-          {/* Right Controls: Language Switch, Theme Toggle, Open Dashboard Pill */}
+          {/* Right Controls: Language Switch, Theme Toggle, Install App, Open App */}
           <div className="hidden sm:flex items-center gap-2">
             <div
               role="group"
               aria-label="Switch interface language"
               className={`flex items-center rounded-full border p-0.5 text-xs font-mono-tabular ${
-                isDark ? 'border-[#8B5CF6]/35 bg-[#050309]' : 'border-[#7C3AED]/30 bg-white'
+                isDark ? 'border-cyan-500/30 bg-[#0A1830]' : 'border-cyan-700/25 bg-white'
               }`}
             >
               {(
@@ -402,10 +401,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => handleLanguageChange(l.code)}
                   className={`min-h-[38px] px-2.5 rounded-full font-semibold transition-colors cursor-pointer ${
                     settings.language === l.code
-                      ? 'bg-[#8B5CF6] text-white'
+                      ? 'bg-[#22D3EE] text-[#050B16] font-bold shadow-[0_0_10px_rgba(34,211,238,0.4)]'
                       : isDark
-                      ? 'text-[#C4BDD9] hover:text-white'
-                      : 'text-[#3F3559] hover:text-black'
+                      ? 'text-[#8FA5C2] hover:text-[#22D3EE]'
+                      : 'text-[#1E3A5F] hover:text-[#0284C7]'
                   }`}
                 >
                   {l.label}
@@ -419,38 +418,63 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
               className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center transition-colors cursor-pointer ${
                 isDark
-                  ? 'border-[#8B5CF6]/35 bg-[#050309] text-[#C4BDD9] hover:text-white'
-                  : 'border-[#7C3AED]/30 bg-white text-[#3F3559] hover:text-black'
+                  ? 'border-cyan-500/30 bg-[#0A1830] text-[#8FA5C2] hover:text-[#22D3EE] hover:border-cyan-400'
+                  : 'border-cyan-700/25 bg-white text-[#1E3A5F] hover:text-[#0284C7]'
               }`}
             >
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-cyan-600" />}
             </button>
+
+            {isInstallable && !isInstalled && (
+              <button
+                type="button"
+                onClick={install}
+                className="wp-btn-secondary px-3.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+                title="Install WorldPulse on your device"
+              >
+                <Download className="w-3.5 h-3.5 text-[#22D3EE]" />
+                <span>Install app</span>
+              </button>
+            )}
 
             <button
               type="button"
               onClick={() => handleOpenApp()}
               className="wp-btn-primary px-5 py-2 text-xs font-mono-tabular inline-flex items-center gap-2 cursor-pointer"
             >
-              <span>{returningUser ? 'Welcome back · Open dashboard' : 'Open dashboard'}</span>
+              <span>Open app</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* Mobile Menu Toggle Button */}
           <div className="flex sm:hidden items-center gap-2">
+            {isInstallable && !isInstalled && (
+              <button
+                type="button"
+                onClick={install}
+                className="wp-btn-secondary px-2.5 py-2 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+                title="Install App"
+              >
+                <Download className="w-3.5 h-3.5 text-[#22D3EE]" />
+                <span className="text-[11px]">Install</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => handleOpenApp()}
               className="wp-btn-primary px-3.5 py-2 text-xs font-mono-tabular cursor-pointer"
             >
-              Dashboard
+              Open app
             </button>
             <button
               type="button"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Toggle navigation menu"
               aria-expanded={mobileMenuOpen}
-              className="min-h-[44px] min-w-[44px] rounded-full border border-[#8B5CF6]/40 flex items-center justify-center cursor-pointer"
+              className={`min-h-[44px] min-w-[44px] rounded-full border flex items-center justify-center cursor-pointer ${
+                isDark ? 'border-cyan-500/35 text-[#8FA5C2]' : 'border-cyan-700/30 text-[#1E3A5F]'
+              }`}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -464,33 +488,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <a
                 href="#how-it-works"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-[#8B5CF6]/15"
+                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-cyan-500/10"
               >
                 How it works
               </a>
               <a
                 href="#features"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-[#8B5CF6]/15"
+                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-cyan-500/10"
               >
                 Features
               </a>
               <a
                 href="#languages"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-[#8B5CF6]/15"
+                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-cyan-500/10"
               >
                 Languages
               </a>
               <a
                 href="#faq"
                 onClick={() => setMobileMenuOpen(false)}
-                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-[#8B5CF6]/15"
+                className="min-h-[44px] flex items-center px-3 rounded-xl hover:bg-cyan-500/10"
               >
                 FAQ
               </a>
             </div>
-            <div className="flex items-center justify-between pt-2 border-t border-[#8B5CF6]/20">
+            <div className="flex items-center justify-between pt-2 border-t border-cyan-500/20">
               <div className="flex gap-1">
                 {(['en', 'hi', 'pa'] as const).map((code) => (
                   <button
@@ -499,8 +523,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     onClick={() => handleLanguageChange(code)}
                     className={`min-h-[44px] px-3 rounded-full text-xs font-mono-tabular ${
                       settings.language === code
-                        ? 'bg-[#8B5CF6] text-white'
-                        : 'border border-[#8B5CF6]/30'
+                        ? 'bg-[#22D3EE] text-[#050B16] font-bold'
+                        : 'border border-cyan-500/30'
                     }`}
                   >
                     {code === 'en' ? 'English' : code === 'hi' ? 'हिन्दी' : 'ਪੰਜਾਬੀ'}
@@ -511,9 +535,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 type="button"
                 onClick={handleToggleTheme}
                 aria-label="Toggle theme"
-                className="min-h-[44px] min-w-[44px] rounded-full border border-[#8B5CF6]/35 flex items-center justify-center"
+                className="min-h-[44px] min-w-[44px] rounded-full border border-cyan-500/35 flex items-center justify-center"
               >
-                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                {isDark ? <Sun className="w-4 h-4 text-amber-300" /> : <Moon className="w-4 h-4 text-cyan-600" />}
               </button>
             </div>
           </div>
@@ -525,15 +549,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             SECTION 2: HERO WITH GLOWING 3D ORB/GLOBE & ASK THE WORLD INPUT
            ===================================================================== */}
         <section className="relative text-center pt-4 sm:pt-8">
-          {/* Background Ambient Purple Glow */}
+          {/* Background Ambient Cyan Glow */}
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-[340px] sm:w-[620px] h-[340px] rounded-full bg-[#8B5CF6]/20 blur-[110px]"
+            className="pointer-events-none absolute -top-16 left-1/2 -translate-x-1/2 w-[340px] sm:w-[620px] h-[340px] rounded-full bg-cyan-500/15 blur-[120px]"
           />
 
           <div className="relative z-10 max-w-3xl mx-auto space-y-6">
             {/* Small Live Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#8B5CF6]/45 bg-[#8B5CF6]/15 text-xs font-mono-tabular text-[#A78BFA] shadow-[0_0_24px_rgba(139,92,246,0.25)]">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-cyan-500/35 bg-cyan-500/10 text-xs font-mono-tabular text-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.25)]">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>{labels.liveBadge}</span>
             </div>
@@ -544,9 +568,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <button
                   type="button"
                   onClick={() => handleOpenApp()}
-                  className="min-h-[44px] px-4 py-1.5 rounded-full bg-[#8B5CF6]/20 border border-[#A78BFA]/50 text-xs font-mono-tabular text-[#F6F4FF] inline-flex items-center gap-2 hover:bg-[#8B5CF6]/30 cursor-pointer"
+                  className="min-h-[44px] px-4 py-1.5 rounded-full bg-cyan-500/15 border border-cyan-400/40 text-xs font-mono-tabular text-cyan-100 inline-flex items-center gap-2 hover:bg-cyan-500/25 cursor-pointer transition-colors"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[#A78BFA]" />
+                  <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                   <span>Returning visitor detected — Jump straight to your live dashboard</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
@@ -561,7 +585,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Short Subheading about the last 24 hours */}
             <p
               className={`text-base sm:text-lg max-w-2xl mx-auto leading-relaxed ${
-                isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
+                isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'
               }`}
             >
               {labels.heroSubhead}
@@ -591,17 +615,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="max-w-xl mx-auto pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
             >
               <div className="relative flex-1">
-                <MessageSquare className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-[#A78BFA]" />
+                <MessageSquare className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-cyan-400" />
                 <input
                   type="text"
                   value={heroQuestion}
                   onChange={(e) => setHeroQuestion(e.target.value)}
                   placeholder={labels.askWorldPlaceholder}
                   aria-label="Ask the world anything"
-                  className={`w-full min-h-[48px] pl-11 pr-4 py-2.5 rounded-full border text-sm font-mono-tabular focus:outline-none ${
+                  className={`w-full min-h-[48px] pl-11 pr-4 py-2.5 rounded-full border text-sm font-mono-tabular focus:outline-none focus:border-cyan-400 transition-colors ${
                     isDark
-                      ? 'bg-[#0B0713]/90 border-[#8B5CF6]/45 text-white placeholder:text-[#9389B0]'
-                      : 'bg-white border-[#7C3AED]/35 text-black placeholder:text-[#625680]'
+                      ? 'bg-[#0A1830]/90 border-cyan-500/35 text-white placeholder:text-[#64748B]'
+                      : 'bg-white border-cyan-700/25 text-black placeholder:text-[#64748B]'
                   }`}
                 />
               </div>
@@ -628,7 +652,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
            ===================================================================== */}
         <section aria-label="Live dashboard preview" className="relative">
           <div className="text-center mb-6 space-y-1">
-            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
               LIVE SITUATION DESK PREVIEW
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -636,21 +660,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </h2>
           </div>
 
-          <div className="wp-glass-card wp-float-preview p-4 sm:p-6 border border-[#8B5CF6]/45 shadow-[0_0_55px_-10px_rgba(139,92,246,0.4)]">
+          <div className="wp-glass-card wp-float-preview p-4 sm:p-6 border border-cyan-500/35 shadow-[0_0_55px_-10px_rgba(34,211,238,0.25)]">
             {/* Mock Browser Frame Top Bar */}
-            <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#8B5CF6]/20 text-xs font-mono-tabular">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b border-cyan-500/20 text-xs font-mono-tabular">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" />
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-                <span className="ml-2 text-[#A78BFA] font-semibold">
+                <span className="ml-2 text-cyan-400 font-semibold">
                   worldpulse.app/app · Live Telemetry
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => handleOpenApp()}
-                className="min-h-[44px] px-3 py-1 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] hover:bg-[#8B5CF6]/30 cursor-pointer"
+                className="min-h-[44px] px-3.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/25 cursor-pointer transition-colors"
               >
                 Enter Interactive View →
               </button>
@@ -660,67 +684,68 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               {/* Left Preview: Executive Briefing + Mini Map Status */}
               <div
                 className={`lg:col-span-7 p-4 rounded-2xl border flex flex-col justify-between space-y-4 ${
-                  isDark ? 'bg-[#050309]/80 border-[#8B5CF6]/25' : 'bg-white border-[#7C3AED]/20'
+                  isDark ? 'bg-[#050B16]/85 border-cyan-500/25' : 'bg-white border-cyan-700/20'
                 }`}
               >
                 <div className="space-y-2">
-                  <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
+                  <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#22D3EE] font-semibold">
                     Executive Daily Briefing · Live Synthesis
                   </div>
                   <h3 className="text-base sm:text-lg font-bold leading-snug">
                     {briefing?.headline ||
-                      top3Stories[0]?.headline ||
+                      top5Stories[0]?.headline ||
                       'Monitoring live global dispatches, seismic activity, and sovereign market shifts'}
                   </h3>
-                  <p className={`text-xs leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+                  <p className={`text-xs leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}`}>
                     {briefing?.highlights?.[0] ||
-                      top3Stories[0]?.summary ||
+                      top5Stories[0]?.summary ||
                       'Real-time dispatches verified across international news wires and public sensors.'}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#8B5CF6]/15 text-xs font-mono-tabular">
-                  <div className="p-2.5 rounded-xl bg-[#8B5CF6]/10">
-                    <div className="text-[10px] text-[#A78BFA]">STORIES</div>
+                <div className="grid grid-cols-3 gap-2 pt-2 border-t border-cyan-500/15 text-xs font-mono-tabular">
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                    <div className="text-[10px] text-[#22D3EE]">STORIES</div>
                     <div className="text-base font-bold">{stats.totalStories}</div>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#8B5CF6]/10">
-                    <div className="text-[10px] text-[#A78BFA]">COUNTRIES</div>
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                    <div className="text-[10px] text-[#22D3EE]">COUNTRIES</div>
                     <div className="text-base font-bold">{stats.countriesCount}</div>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-[#8B5CF6]/10">
-                    <div className="text-[10px] text-[#A78BFA]">UPDATED</div>
+                  <div className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20">
+                    <div className="text-[10px] text-[#22D3EE]">UPDATED</div>
                     <div className="text-xs font-bold truncate">{stats.lastUpdatedStr}</div>
                   </div>
                 </div>
               </div>
 
-              {/* Right Preview: Live Priority Dispatches */}
+              {/* Right Preview: Live Top 5 Priority Dispatches */}
               <div
                 className={`lg:col-span-5 p-4 rounded-2xl border space-y-2.5 ${
-                  isDark ? 'bg-[#050309]/80 border-[#8B5CF6]/25' : 'bg-white border-[#7C3AED]/20'
+                  isDark ? 'bg-[#050B16]/85 border-cyan-500/25' : 'bg-white border-cyan-700/20'
                 }`}
               >
-                <div className="text-[11px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] font-semibold">
-                  Top Priority Dispatches
+                <div className="flex items-center justify-between text-[11px] font-mono-tabular uppercase tracking-wider text-[#22D3EE] font-semibold">
+                  <span>Top 5 Priority Dispatches</span>
+                  <span className="text-[10px] opacity-75">Live</span>
                 </div>
-                {top3Stories.length === 0 ? (
-                  <p className="text-xs font-mono-tabular py-6 text-[#9389B0]">
+                {top5Stories.length === 0 ? (
+                  <p className="text-xs font-mono-tabular py-6 text-[#64748B]">
                     {labels.collectingData}
                   </p>
                 ) : (
-                  top3Stories.map((st, i) => (
+                  top5Stories.map((st, i) => (
                     <button
                       key={st.id}
                       type="button"
                       onClick={() => handleOpenApp(undefined, st)}
-                      className="w-full text-left p-2.5 rounded-xl border border-[#8B5CF6]/20 hover:border-[#A78BFA] transition-colors block cursor-pointer"
+                      className="w-full text-left p-2 rounded-xl border border-cyan-500/20 hover:border-cyan-400/60 bg-cyan-500/5 transition-colors block cursor-pointer"
                     >
-                      <div className="flex items-center justify-between text-[10px] font-mono-tabular text-[#A78BFA]">
+                      <div className="flex items-center justify-between text-[10px] font-mono-tabular text-cyan-400">
                         <span>
                           0{i + 1} · {getCountryFlag(st.country)} {st.countryName} · {st.topic}
                         </span>
-                        <span>{st.importance.toFixed(1)}/10</span>
+                        <span className="font-semibold">{st.importance.toFixed(1)}/10</span>
                       </div>
                       <div className="text-xs font-semibold line-clamp-1 mt-0.5">
                         {st.headline}
@@ -760,14 +785,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 sub: 'Wires, sensors & central banks',
               },
             ].map((item) => (
-              <div key={item.label} className="wp-glass-card p-5 text-center space-y-1">
-                <div className="text-xs font-mono-tabular uppercase tracking-wider text-[#A78BFA]">
+              <div key={item.label} className="wp-glass-card p-5 text-center space-y-1 border border-cyan-500/25">
+                <div className="text-xs font-mono-tabular uppercase tracking-wider text-[#22D3EE]">
                   {item.label}
                 </div>
                 <div className="text-2xl sm:text-3xl font-extrabold font-mono-tabular">
                   {item.value}
                 </div>
-                <div className="text-[11px] text-[#9389B0]">{item.sub}</div>
+                <div className="text-[11px] text-[#8FA5C2]">{item.sub}</div>
               </div>
             ))}
           </div>
@@ -777,7 +802,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             SECTION 5: "POWERED BY TRUSTED DATA" STRIP
            ===================================================================== */}
         <section aria-label="Powered by trusted data sources" className="text-center space-y-4">
-          <div className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+          <div className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
             POWERED BY PUBLIC WIRES &amp; SCIENTIFIC SENSORS
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2.5">
@@ -786,8 +811,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 key={srcName}
                 className={`px-4 py-2 rounded-full border text-xs font-mono-tabular font-bold tracking-wider uppercase ${
                   isDark
-                    ? 'bg-[#0B0713] border-[#8B5CF6]/30 text-[#C4BDD9]'
-                    : 'bg-white border-[#7C3AED]/25 text-[#3F3559]'
+                    ? 'bg-[#0A1830] border-cyan-500/30 text-[#E6F1FF]'
+                    : 'bg-white border-cyan-700/25 text-[#1E3A5F]'
                 }`}
               >
                 {srcName}
@@ -798,7 +823,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={() => onOpenLegalPage('methodology')}
-              className="min-h-[44px] px-4 py-2 text-xs font-mono-tabular text-[#A78BFA] hover:underline inline-flex items-center gap-1.5 cursor-pointer"
+              className="min-h-[44px] px-4 py-2 text-xs font-mono-tabular text-cyan-400 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
             >
               <span>Inspect full Sources &amp; Methodology</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -807,16 +832,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* =====================================================================
-            SECTION 6: LIVE TOP 3 STORIES FROM SUPABASE
+            SECTION 6: LIVE TOP 5 STORIES FROM SUPABASE
            ===================================================================== */}
         <section aria-label="Live top stories" className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
-              <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+              <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
                 LIVE TELEMETRY DISPATCHES
               </span>
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mt-1">
-                Top 3 stories happening right now
+                Top 5 stories happening right now
               </h2>
             </div>
             <button
@@ -829,52 +854,51 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {top3Stories.length === 0 ? (
-            <div className="wp-glass-card p-8 text-center text-sm font-mono-tabular text-[#9389B0]">
+          {top5Stories.length === 0 ? (
+            <div className="wp-glass-card p-8 text-center text-sm font-mono-tabular text-[#8FA5C2]">
               {labels.collectingData}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {top3Stories.map((story) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              {top5Stories.map((story, i) => (
                 <article
                   key={story.id}
-                  className="wp-glass-card wp-glass-card-lift p-5 flex flex-col justify-between space-y-4"
+                  className="wp-glass-card wp-glass-card-lift p-4.5 flex flex-col justify-between space-y-3.5 border border-cyan-500/25"
                 >
-                  <div className="space-y-2.5">
+                  <div className="space-y-2">
                     <div className="flex items-center justify-between gap-2 text-xs font-mono-tabular">
-                      <span className="font-semibold text-[#A78BFA]">
-                        {getCountryFlag(story.country)} {story.countryName}
+                      <span className="font-semibold text-cyan-300 truncate">
+                        0{i + 1} · {getCountryFlag(story.country)} {story.countryName}
                       </span>
                       <span
-                        className="px-2.5 py-0.5 rounded-full text-[11px] font-semibold border"
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0"
                         style={{
-                          borderColor: `${TOPIC_COLORS[story.topic]?.hex || '#8B5CF6'}66`,
-                          color: TOPIC_COLORS[story.topic]?.hex || '#A78BFA',
+                          borderColor: `${TOPIC_COLORS[story.topic]?.hex || '#22D3EE'}66`,
+                          color: TOPIC_COLORS[story.topic]?.hex || '#22D3EE',
                         }}
                       >
                         {story.topic}
                       </span>
                     </div>
 
-                    <h3 className="text-base font-bold leading-snug">{story.headline}</h3>
+                    <h3 className="text-sm font-bold leading-snug line-clamp-2">{story.headline}</h3>
                     <p
                       className={`text-xs leading-relaxed line-clamp-3 ${
-                        isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
+                        isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'
                       }`}
                     >
                       {story.summary}
                     </p>
                   </div>
 
-                  <div className="pt-3 border-t border-[#8B5CF6]/20 flex items-center justify-between text-xs font-mono-tabular">
-                    <span>
-                      Importance <strong>{story.importance.toFixed(1)}/10</strong> ·{' '}
-                      {story.sources.length} {story.sources.length === 1 ? 'source' : 'sources'}
+                  <div className="pt-2.5 border-t border-cyan-500/20 flex items-center justify-between text-xs font-mono-tabular">
+                    <span className="text-[11px] text-[#8FA5C2]">
+                      Imp <strong>{story.importance.toFixed(1)}/10</strong>
                     </span>
                     <button
                       type="button"
                       onClick={() => handleOpenApp(undefined, story)}
-                      className="min-h-[44px] px-3 text-[#A78BFA] font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
+                      className="min-h-[44px] px-2 text-cyan-300 font-semibold hover:underline inline-flex items-center gap-1 cursor-pointer"
                     >
                       <span>Open</span>
                       <ArrowRight className="w-3.5 h-3.5" />
@@ -887,11 +911,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* =====================================================================
-            SECTION 7: HOW IT WORKS IN 3 STEPS
+            SECTION 7: HOW IT WORKS IN 3 STEPS: COLLECT, ANALYZE, BRIEF
            ===================================================================== */}
         <section id="how-it-works" className="space-y-6">
           <div className="text-center space-y-1">
-            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
               ARCHITECTURE &amp; PIPELINE
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -907,22 +931,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 desc: 'We read verified stories from Supabase alongside international news wires, USGS seismic sensors, NASA EONET satellite events, and sovereign FX/crypto markets.',
               },
               {
-                step: '02 · UNDERSTAND',
+                step: '02 · ANALYZE',
                 title: 'AI tags, ranks 1–10 & verifies sources',
                 desc: 'Duplicate headlines are clustered, source diversity is measured across outlets, and AI scores importance from 1 to 10 while flagging developing vs. confirmed stories.',
               },
               {
-                step: '03 · SHOW',
-                title: 'Explore map, briefing & 24h changes',
+                step: '03 · BRIEF',
+                title: 'Synthesize briefing & explore 24h changes',
                 desc: 'Inspect the interactive world map, read or listen to the Daily Briefing in English, Hindi, or Punjabi, and see what escalated or faded in the last 24 hours.',
               },
             ].map((item) => (
-              <div key={item.step} className="wp-glass-card p-6 space-y-2.5">
-                <div className="text-xs font-mono-tabular font-bold text-[#A78BFA]">
+              <div key={item.step} className="wp-glass-card p-6 space-y-2.5 border border-cyan-500/25">
+                <div className="text-xs font-mono-tabular font-bold text-[#22D3EE]">
                   {item.step}
                 </div>
                 <h3 className="text-lg font-bold">{item.title}</h3>
-                <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+                <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}`}>
                   {item.desc}
                 </p>
               </div>
@@ -935,7 +959,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
            ===================================================================== */}
         <section id="features" className="space-y-6">
           <div className="text-center space-y-1">
-            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
               BUILT FOR CLARITY
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -978,12 +1002,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 desc: 'Summarize major public addresses, central bank remarks, and UN summits by date & place.',
               },
             ].map((feat) => (
-              <div key={feat.title} className="wp-glass-card wp-glass-card-lift p-5 space-y-2">
-                <div className="w-8 h-8 rounded-xl bg-[#8B5CF6]/20 border border-[#8B5CF6]/40 flex items-center justify-center text-[#A78BFA]">
+              <div key={feat.title} className="wp-glass-card wp-glass-card-lift p-5 space-y-2 border border-cyan-500/20">
+                <div className="w-8 h-8 rounded-xl bg-cyan-500/15 border border-cyan-500/35 flex items-center justify-center text-cyan-400">
                   <Sparkles className="w-4 h-4" />
                 </div>
                 <h3 className="text-base font-bold">{feat.title}</h3>
-                <p className={`text-xs leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+                <p className={`text-xs leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}`}>
                   {feat.desc}
                 </p>
               </div>
@@ -992,30 +1016,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Two Highlighted Wide Cards: Hindi/Punjabi & Listen to the Briefing */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
-            <div className="wp-glass-card p-6 border border-[#A78BFA]/45 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] text-xs font-mono-tabular font-semibold">
+            <div className="wp-glass-card p-6 border border-cyan-500/35 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-mono-tabular font-semibold border border-cyan-500/30">
                 <Languages className="w-3.5 h-3.5" />
                 <span>Multilingual Intelligence · English · हिन्दी · ਪੰਜਾਬੀ</span>
               </div>
               <h3 className="text-xl font-bold">
                 Native support for English, Hindi, and Punjabi
               </h3>
-              <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+              <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}`}>
                 Switch the entire dashboard interface or translate any global dispatch on demand into
                 Hindi (हिन्दी) or Punjabi (ਪੰਜਾਬੀ), complete with a dedicated India &amp; Punjab
                 quick filter.
               </p>
             </div>
 
-            <div className="wp-glass-card p-6 border border-[#A78BFA]/45 space-y-3">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#8B5CF6]/20 text-[#A78BFA] text-xs font-mono-tabular font-semibold">
+            <div className="wp-glass-card p-6 border border-cyan-500/35 space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/15 text-cyan-300 text-xs font-mono-tabular font-semibold border border-cyan-500/30">
                 <Volume2 className="w-3.5 h-3.5" />
                 <span>Hands-Free Audio Briefing</span>
               </div>
               <h3 className="text-xl font-bold">
                 Listen to the Daily Briefing &amp; Top 10 stories
               </h3>
-              <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}`}>
+              <p className={`text-xs sm:text-sm leading-relaxed ${isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}`}>
                 Use built-in browser text-to-speech with play, pause, stop, 0.75x–1.5x speed
                 control, and automatic voice selection for English (en-IN), Hindi (hi-IN), and
                 Punjabi (pa-IN).
@@ -1029,7 +1053,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
            ===================================================================== */}
         <section id="languages" className="space-y-6">
           <div className="text-center space-y-1">
-            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
               THREE SCRIPTS · ONE GLOBAL FEED
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -1061,11 +1085,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   'ਗਲੋਬਲ ਕੇਂਦਰੀ ਬੈਂਕਾਂ ਅਤੇ ਊਰਜਾ ਬਾਜ਼ਾਰਾਂ ਵਿੱਚ ਹਲਚਲ; 40 ਤੋਂ ਵੱਧ ਦੇਸ਼ਾਂ ਤੋਂ ਪ੍ਰਮੁੱਖ ਕੂਟਨੀਤਕ ਅਤੇ ਭੂਚਾਲ ਸਬੰਧੀ ਖਬਰਾਂ ਦਰਜ।',
               },
             ].map((item) => (
-              <div key={item.code} className="wp-glass-card p-5 flex flex-col justify-between space-y-4">
+              <div key={item.code} className="wp-glass-card p-5 flex flex-col justify-between space-y-4 border border-cyan-500/25">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs font-mono-tabular">
-                    <span className="font-bold text-[#A78BFA]">{item.name}</span>
-                    <span className="text-[#9389B0]">{item.scriptTag}</span>
+                    <span className="font-bold text-cyan-300">{item.name}</span>
+                    <span className="text-[#8FA5C2]">{item.scriptTag}</span>
                   </div>
                   <p className="text-sm leading-relaxed font-medium">&ldquo;{item.sample}&rdquo;</p>
                 </div>
@@ -1087,10 +1111,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {/* =====================================================================
             SECTION 10: TRUST SECTION (Verification & AI Transparency)
            ===================================================================== */}
-        <section className="wp-glass-card p-6 sm:p-8 space-y-5">
+        <section className="wp-glass-card p-6 sm:p-8 space-y-5 border border-cyan-500/30">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
-              <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+              <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
                 VERIFICATION &amp; TRANSPARENCY
               </span>
               <h2 className="text-2xl font-bold">
@@ -1123,29 +1147,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
-            <div className="p-4 rounded-xl border border-[#8B5CF6]/25 space-y-1">
-              <div className="font-mono-tabular font-bold text-[#A78BFA]">
+            <div className="p-4 rounded-xl border border-cyan-500/25 space-y-1 bg-cyan-500/5">
+              <div className="font-mono-tabular font-bold text-cyan-400">
                 Direct Source Attribution
               </div>
-              <p className={isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}>
+              <p className={isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}>
                 Every story card displays source-type badges (Wire, Broadcaster, Newspaper,
                 Government/Sensor) and links directly to the original report.
               </p>
             </div>
-            <div className="p-4 rounded-xl border border-[#8B5CF6]/25 space-y-1">
-              <div className="font-mono-tabular font-bold text-[#A78BFA]">
+            <div className="p-4 rounded-xl border border-cyan-500/25 space-y-1 bg-cyan-500/5">
+              <div className="font-mono-tabular font-bold text-cyan-400">
                 Confidence &amp; Contradiction Checks
               </div>
-              <p className={isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}>
+              <p className={isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}>
                 We show a 5-dot source diversity meter, a confidence score, and a &ldquo;Sources
                 differ&rdquo; tag when outlets report varying figures.
               </p>
             </div>
-            <div className="p-4 rounded-xl border border-[#8B5CF6]/25 space-y-1">
-              <div className="font-mono-tabular font-bold text-[#A78BFA]">
+            <div className="p-4 rounded-xl border border-cyan-500/25 space-y-1 bg-cyan-500/5">
+              <div className="font-mono-tabular font-bold text-cyan-400">
                 One-Click Issue Reporting
               </div>
-              <p className={isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'}>
+              <p className={isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'}>
                 Spot an inaccurate summary? Every AI briefing and story card includes a prefilled
                 &ldquo;Report wrong answer / issue&rdquo; button.
               </p>
@@ -1154,11 +1178,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* =====================================================================
-            SECTION 11: FAQ ACCORDION (6+ Questions, Keyboard Accessible)
+            SECTION 11: FAQ ACCORDION (5 Canonical Questions, Keyboard Accessible)
            ===================================================================== */}
         <section id="faq" className="max-w-3xl mx-auto space-y-6">
           <div className="text-center space-y-1">
-            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+            <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#22D3EE] font-semibold">
               FREQUENTLY ASKED QUESTIONS
             </span>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
@@ -1170,7 +1194,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {FAQ_ITEMS.map((item, idx) => {
               const isOpen = openFaqIndex === idx;
               return (
-                <div key={item.q} className="wp-glass-card overflow-hidden">
+                <div key={item.q} className="wp-glass-card overflow-hidden border border-cyan-500/25">
                   <button
                     type="button"
                     onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
@@ -1179,15 +1203,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   >
                     <span>{item.q}</span>
                     {isOpen ? (
-                      <ChevronUp className="w-4 h-4 text-[#A78BFA] shrink-0" />
+                      <ChevronUp className="w-4 h-4 text-cyan-400 shrink-0" />
                     ) : (
-                      <ChevronDown className="w-4 h-4 text-[#A78BFA] shrink-0" />
+                      <ChevronDown className="w-4 h-4 text-cyan-400 shrink-0" />
                     )}
                   </button>
                   {isOpen && (
                     <div
-                      className={`px-5 pb-4 text-xs sm:text-sm leading-relaxed border-t border-[#8B5CF6]/15 pt-3 ${
-                        isDark ? 'text-[#C4BDD9]' : 'text-[#3F3559]'
+                      className={`px-5 pb-4 text-xs sm:text-sm leading-relaxed border-t border-cyan-500/15 pt-3 ${
+                        isDark ? 'text-[#8FA5C2]' : 'text-[#1E3A5F]'
                       }`}
                     >
                       {item.a}
@@ -1200,16 +1224,16 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* =====================================================================
-            SECTION 12: FINAL CALL-TO-ACTION BANNER WITH GLOWING PURPLE GRADIENT
+            SECTION 12: FINAL CALL-TO-ACTION BANNER WITH GLOWING CYAN GRADIENT
            ===================================================================== */}
-        <section className="rounded-3xl p-8 sm:p-12 text-center border border-[#A78BFA]/45 bg-gradient-to-br from-[#2E1065]/80 via-[#1E1B4B]/70 to-[#0B0713] shadow-[0_0_60px_-10px_rgba(139,92,246,0.5)] space-y-5">
-          <span className="text-xs font-mono-tabular uppercase tracking-widest text-[#A78BFA] font-semibold">
+        <section className="rounded-3xl p-8 sm:p-12 text-center border border-cyan-500/35 bg-gradient-to-br from-[#0A1830] via-[#050B16] to-[#020617] shadow-[0_0_60px_-10px_rgba(34,211,238,0.25)] space-y-5">
+          <span className="text-xs font-mono-tabular uppercase tracking-widest text-cyan-400 font-semibold">
             READY WHEN YOU ARE
           </span>
           <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
             Explore the live world dashboard now
           </h2>
-          <p className="text-sm sm:text-base text-[#DDD6FE] max-w-xl mx-auto">
+          <p className="text-sm sm:text-base text-cyan-100/90 max-w-xl mx-auto">
             No sign-up required. Instant access to the global map, Top 10 dispatches, audio
             briefing, and sovereign market telemetry.
           </p>
@@ -1227,21 +1251,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </main>
 
       {/* =====================================================================
-          SECTION 13: MULTI-COLUMN FOOTER (Product, Legal, Company + Language)
+          SECTION 13: MULTI-COLUMN FOOTER (Privacy, Terms, Cookies, Accessibility, Security, Feed JSON/RSS, Contact)
          ===================================================================== */}
       <footer
         className={`border-t py-12 px-4 sm:px-6 text-xs ${
           isDark
-            ? 'border-[#8B5CF6]/25 bg-[#050309] text-[#9389B0]'
-            : 'border-[#7C3AED]/20 bg-[#F0EBFF] text-[#625680]'
+            ? 'border-cyan-500/20 bg-[#050B16] text-[#8FA5C2]'
+            : 'border-cyan-700/20 bg-[#F0F6FC] text-[#1E3A5F]'
         }`}
       >
         <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Column 1: Brand & Language Switch */}
           <div className="space-y-3">
-            <div className="flex items-center gap-2 font-editorial text-lg font-bold text-[#F6F4FF]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#8B5CF6]" />
-              <span className={isDark ? 'text-white' : 'text-[#140E24]'}>WorldPulse</span>
+            <div className="flex items-center gap-2 font-editorial text-lg font-bold text-white">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#22D3EE] shadow-[0_0_8px_#22D3EE]" />
+              <span className={isDark ? 'text-white' : 'text-[#050B16]'}>WorldPulse</span>
             </div>
             <p className="leading-relaxed">
               Live global situation monitor aggregating verified public news wires, seismic sensors,
@@ -1255,8 +1279,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={() => handleLanguageChange(code)}
                   className={`min-h-[44px] px-3 py-1.5 rounded-full font-mono-tabular border cursor-pointer ${
                     settings.language === code
-                      ? 'bg-[#8B5CF6] border-[#A78BFA] text-white font-semibold'
-                      : 'border-[#8B5CF6]/30 hover:border-[#A78BFA]'
+                      ? 'bg-[#22D3EE] border-[#22D3EE] text-[#050B16] font-bold'
+                      : 'border-cyan-500/30 hover:border-cyan-400'
                   }`}
                 >
                   {code === 'en' ? 'English' : code === 'hi' ? 'हिन्दी' : 'ਪੰਜਾਬੀ'}
@@ -1265,46 +1289,59 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* Column 2: Product */}
+          {/* Column 2: Product & Syndication Feeds */}
           <div className="space-y-2">
-            <div className="font-mono-tabular uppercase tracking-wider font-bold text-[#A78BFA]">
-              Product
+            <div className="font-mono-tabular uppercase tracking-wider font-bold text-cyan-400">
+              Product &amp; Feeds
             </div>
             <ul className="space-y-1">
               <li>
                 <button
                   type="button"
                   onClick={() => handleOpenApp()}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA] cursor-pointer"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300 cursor-pointer"
                 >
                   Live Dashboard (/app)
                 </button>
               </li>
               <li>
-                <a href="#how-it-works" className="min-h-[44px] flex items-center hover:text-[#A78BFA]">
+                <a href="#how-it-works" className="min-h-[44px] flex items-center hover:text-cyan-300">
                   How It Works
                 </a>
               </li>
               <li>
-                <a href="#features" className="min-h-[44px] flex items-center hover:text-[#A78BFA]">
+                <a href="#features" className="min-h-[44px] flex items-center hover:text-cyan-300">
                   Features &amp; Audio Briefing
                 </a>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={() => onOpenLegalPage('methodology')}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA] cursor-pointer"
+                <a
+                  href="/api/v1/feed.json"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300 gap-1.5"
                 >
-                  {labels.sourcesMethodology}
-                </button>
+                  <span>Feed (JSON)</span>
+                  <span className="text-[10px] text-cyan-400">↗</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/api/v1/feed.xml"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300 gap-1.5"
+                >
+                  <span>Feed (RSS)</span>
+                  <span className="text-[10px] text-cyan-400">↗</span>
+                </a>
               </li>
             </ul>
           </div>
 
-          {/* Column 3: Legal & Trust */}
+          {/* Column 3: Legal & Trust (Privacy, Terms, Cookies, Accessibility, Security) */}
           <div className="space-y-2">
-            <div className="font-mono-tabular uppercase tracking-wider font-bold text-[#A78BFA]">
+            <div className="font-mono-tabular uppercase tracking-wider font-bold text-cyan-400">
               Legal &amp; Trust
             </div>
             <ul className="space-y-1">
@@ -1315,9 +1352,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('privacy');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
-                  {labels.privacyPolicy}
+                  Privacy
                 </a>
               </li>
               <li>
@@ -1327,21 +1364,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('terms');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
-                  {labels.termsOfUse}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#ai-disclaimer"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onOpenLegalPage('ai-disclaimer');
-                  }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
-                >
-                  {labels.aiDisclaimer}
+                  Terms
                 </a>
               </li>
               <li>
@@ -1351,9 +1376,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('cookies');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
-                  {labels.cookieNotice}
+                  Cookies
                 </a>
               </li>
               <li>
@@ -1363,32 +1388,53 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('accessibility');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
-                  {labels.accessibilityStatement}
+                  Accessibility
                 </a>
               </li>
               <li>
                 <a
-                  href="#responsible-ai"
+                  href="#security"
                   onClick={(e) => {
                     e.preventDefault();
-                    onOpenLegalPage('responsible-ai');
+                    onOpenLegalPage('security');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
-                  {labels.responsibleAi}
+                  Security
                 </a>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onOpenLegalPage('methodology')}
+                  className="min-h-[44px] flex items-center hover:text-cyan-300 cursor-pointer text-left"
+                >
+                  {labels.sourcesMethodology}
+                </button>
               </li>
             </ul>
           </div>
 
-          {/* Column 4: Company & Feedback */}
+          {/* Column 4: Contact & Feedback */}
           <div className="space-y-2">
-            <div className="font-mono-tabular uppercase tracking-wider font-bold text-[#A78BFA]">
-              Company
+            <div className="font-mono-tabular uppercase tracking-wider font-bold text-cyan-400">
+              Contact &amp; Feedback
             </div>
             <ul className="space-y-1">
+              <li>
+                <a
+                  href="#contact"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onOpenLegalPage('contact');
+                  }}
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
+                >
+                  Contact
+                </a>
+              </li>
               <li>
                 <a
                   href="#about"
@@ -1396,7 +1442,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('about');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
                   {labels.about}
                 </a>
@@ -1408,27 +1454,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     e.preventDefault();
                     onOpenLegalPage('changelog');
                   }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
+                  className="min-h-[44px] flex items-center hover:text-cyan-300"
                 >
                   {labels.changelog}
                 </a>
               </li>
               <li>
                 <a
-                  href="#contact"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onOpenLegalPage('contact');
-                  }}
-                  className="min-h-[44px] flex items-center hover:text-[#A78BFA]"
-                >
-                  {labels.contactGrievance}
-                </a>
-              </li>
-              <li>
-                <a
                   href="mailto:[EMAIL]?subject=WorldPulse%20User%20Feedback"
-                  className="min-h-[44px] flex items-center gap-1.5 text-[#A78BFA] hover:underline font-semibold"
+                  className="min-h-[44px] flex items-center gap-1.5 text-cyan-300 hover:underline font-semibold"
                 >
                   <Mail className="w-3.5 h-3.5" />
                   <span>{labels.sendFeedback}</span>

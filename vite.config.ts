@@ -14,11 +14,11 @@ export default defineConfig(() => {
         includeAssets: ['icon.svg', 'apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         manifest: {
           id: '/',
-          name: 'WorldPulse — Live World Monitoring Dashboard',
+          name: 'WorldPulse – Live World News, Map & Daily Briefing',
           short_name: 'WorldPulse',
-          description: 'Live world-monitoring dashboard aggregating global news, earthquakes, natural events, markets, and weather with Gemini AI synthesis.',
-          theme_color: '#050309',
-          background_color: '#050309',
+          description: 'Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time.',
+          theme_color: '#050B16',
+          background_color: '#050B16',
           display: 'standalone',
           start_url: '/app',
           scope: '/',
@@ -99,7 +99,7 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(process.cwd(), '.'),
       },
     },
     server: {

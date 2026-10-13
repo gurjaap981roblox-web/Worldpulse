@@ -43,6 +43,7 @@ export type LegalPageId =
   | 'ai-disclaimer'
   | 'cookies'
   | 'methodology'
+  | 'security'
   | 'accessibility'
   | 'responsible-ai'
   | 'contact'

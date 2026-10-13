@@ -355,20 +355,56 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* 2B. Accessibility & Low-Bandwidth Lite Mode */}
           <section className="space-y-3">
-            <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-bold text-[#A78BFA] flex items-center gap-1.5">
+            <h3 className="text-xs font-mono-tabular uppercase tracking-wider font-bold text-cyan-400 flex items-center gap-1.5">
               <Eye className="w-3.5 h-3.5" />
               <span>02B. Accessibility, Simple Language &amp; Low-Bandwidth Lite Mode</span>
             </h3>
             <div
               className={`p-4 border rounded-2xl space-y-4 ${
-                isDark ? 'bg-[#090A0D] border-[#222631]' : 'bg-[#EFEAE0]/50 border-[#DCD5C7]'
+                isDark ? 'bg-[#050B16] border-cyan-500/20' : 'bg-[#F0F6FC] border-cyan-700/20'
               }`}
             >
-              {/* Font Size Control: Small / Normal / Large / Extra large */}
+              {/* Text-Size Control: A- / A+ and scale buttons */}
               <div>
-                <span className="block text-xs font-mono-tabular font-semibold mb-1.5">
-                  Font Size Scale
-                </span>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="block text-xs font-mono-tabular font-semibold">
+                    Text-Size Control (A- / A+)
+                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const scales: FontSizeScale[] = ['small', 'normal', 'large', 'xlarge'];
+                        const current = scales.indexOf(settings.fontSize || 'normal');
+                        if (current > 0) {
+                          onUpdateSettings({ ...settings, fontSize: scales[current - 1] });
+                        }
+                      }}
+                      disabled={(settings.fontSize || 'normal') === 'small'}
+                      aria-label="Decrease text size (A-)"
+                      title="Decrease text size (A-)"
+                      className="min-h-[36px] min-w-[36px] px-2.5 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer"
+                    >
+                      A-
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const scales: FontSizeScale[] = ['small', 'normal', 'large', 'xlarge'];
+                        const current = scales.indexOf(settings.fontSize || 'normal');
+                        if (current < scales.length - 1) {
+                          onUpdateSettings({ ...settings, fontSize: scales[current + 1] });
+                        }
+                      }}
+                      disabled={(settings.fontSize || 'normal') === 'xlarge'}
+                      aria-label="Increase text size (A+)"
+                      title="Increase text size (A+)"
+                      className="min-h-[36px] min-w-[36px] px-2.5 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer"
+                    >
+                      A+
+                    </button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {(
                     [
@@ -384,10 +420,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClick={() => onUpdateSettings({ ...settings, fontSize: item.id })}
                       className={`min-h-[44px] px-3 py-2 text-xs font-mono-tabular font-semibold border rounded-xl transition-colors cursor-pointer ${
                         (settings.fontSize || 'normal') === item.id
-                          ? 'bg-[#8B5CF6] border-[#A78BFA] text-white'
+                          ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.3)]'
                           : isDark
-                          ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
-                          : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                          ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2] hover:border-cyan-400/50'
+                          : 'bg-white border-cyan-700/20 text-[#1E3A5F] hover:border-cyan-400/50'
                       }`}
                     >
                       {item.label}
@@ -407,10 +443,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
                     settings.highContrast
-                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.3)]'
                       : isDark
-                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
-                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                      ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2] hover:border-cyan-400/50'
+                      : 'bg-white border-cyan-700/20 text-[#1E3A5F] hover:border-cyan-400/50'
                   }`}
                 >
                   <span>High-Contrast Mode</span>
@@ -426,10 +462,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
                     settings.dyslexiaFont
-                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.3)]'
                       : isDark
-                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
-                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                      ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2] hover:border-cyan-400/50'
+                      : 'bg-white border-cyan-700/20 text-[#1E3A5F] hover:border-cyan-400/50'
                   }`}
                 >
                   <span>Dyslexia-Friendly Font</span>
@@ -445,10 +481,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
                     settings.reduceMotion
-                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.3)]'
                       : isDark
-                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
-                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                      ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2] hover:border-cyan-400/50'
+                      : 'bg-white border-cyan-700/20 text-[#1E3A5F] hover:border-cyan-400/50'
                   }`}
                 >
                   <span>Reduce Motion &amp; Ticker</span>
@@ -464,10 +500,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
                     settings.simpleLanguage
-                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      ? 'bg-cyan-500/25 border-cyan-400 text-cyan-300 font-semibold shadow-[0_0_12px_rgba(34,211,238,0.3)]'
                       : isDark
-                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
-                      : 'bg-white border-[#DCD5C7] text-[#3F3559]'
+                      ? 'bg-[#0A1830] border-cyan-500/20 text-[#8FA5C2] hover:border-cyan-400/50'
+                      : 'bg-white border-cyan-700/20 text-[#1E3A5F] hover:border-cyan-400/50'
                   }`}
                 >
                   <span>Simple-Language AI Mode</span>
@@ -490,9 +526,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   }}
                   className={`min-h-[44px] px-3.5 py-2 rounded-xl border text-left text-xs font-mono-tabular flex items-center justify-between cursor-pointer ${
                     settings.liteMode
-                      ? 'bg-[#8B5CF6]/25 border-[#A78BFA] text-white font-semibold'
+                      ? 'bg-[#22D3EE]/25 border-[#38BDF8] text-white font-semibold'
                       : isDark
-                      ? 'bg-[#101217] border-[#222631] text-[#C4BDD9]'
+                      ? 'bg-[#101217] border-[#222631] text-[#8FA5C2]'
                       : 'bg-white border-[#DCD5C7] text-[#3F3559]'
                   }`}
                 >
@@ -507,7 +543,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       onClose();
                       onReplayOnboardingTour();
                     }}
-                    className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#8B5CF6]/40 bg-[#8B5CF6]/10 text-[#A78BFA] text-xs font-mono-tabular font-semibold flex items-center justify-between cursor-pointer hover:bg-[#8B5CF6]/20"
+                    className="min-h-[44px] px-3.5 py-2 rounded-xl border border-[#22D3EE]/40 bg-[#22D3EE]/10 text-[#38BDF8] text-xs font-mono-tabular font-semibold flex items-center justify-between cursor-pointer hover:bg-[#22D3EE]/20"
                   >
                     <span>Replay Welcome Tour</span>
                     <PlayCircle className="w-4 h-4" />
@@ -665,7 +701,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#181615] hover:border-[#181615]'
                   }`}
                 >
-                  <FileCode className="w-4 h-4 text-[#A78BFA]" />
+                  <FileCode className="w-4 h-4 text-[#38BDF8]" />
                   <span>Export as Markdown (.MD)</span>
                 </button>
               )}
@@ -680,7 +716,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       : 'bg-[#EFEAE0] border-[#DCD5C7] text-[#181615] hover:border-[#181615]'
                   }`}
                 >
-                  <FileSpreadsheet className="w-4 h-4 text-[#A78BFA]" />
+                  <FileSpreadsheet className="w-4 h-4 text-[#38BDF8]" />
                   <span>Export Stories (.CSV)</span>
                 </button>
               )}
@@ -732,7 +768,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 <strong className={isDark ? 'text-[#F3F2EE]' : 'text-[#181615]'}>
                   Privacy &amp; Security Note:
                 </strong>{' '}
-                Only public news headlines, snippets, and sensor telemetry from public feeds are sent to the server-side Gemini AI proxy for summarization and classification. Your Gemini API key remains strictly on the server (<code className="font-mono-tabular">process.env.GEMINI_API_KEY</code>) and is never exposed to the browser. Your preferences, 7-day topic snapshots, and item caches are stored strictly in your browser&apos;s local storage.
+                Only public news headlines, snippets, and sensor telemetry from public feeds are sent to the server-side Gemini AI proxy for summarization and classification. Your Gemini API key remains strictly on the server environment and is never exposed to the browser. Your preferences, 7-day topic snapshots, and item caches are stored strictly in your browser&apos;s local storage.
               </p>
               <p>
                 <strong className={isDark ? 'text-[#F3F2EE]' : 'text-[#181615]'}>

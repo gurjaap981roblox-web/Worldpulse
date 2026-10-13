@@ -36,81 +36,117 @@
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://vtmqvzokyrdbkeszziuh.supabase.co" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 
-    <!-- Schema.org JSON-LD Structured Data -->
+    <!-- Schema.org JSON-LD Structured Data Scripts -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@graph": [
+        "@type": "WebSite",
+        "name": "WorldPulse",
+        "alternateName": "World Pulse",
+        "url": "https://worldpulse-rw7q.onrender.com/",
+        "description": "Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "WorldPulse",
+        "url": "https://worldpulse-rw7q.onrender.com/",
+        "logo": "https://worldpulse-rw7q.onrender.com/icon.svg"
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "WorldPulse",
+        "url": "https://worldpulse-rw7q.onrender.com/",
+        "applicationCategory": "NewsApplication",
+        "operatingSystem": "All",
+        "description": "Live global situation room aggregating verified feeds, sensor telemetry, and AI synthesis."
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
           {
-            "@type": "WebSite",
-            "@id": "https://worldpulse-rw7q.onrender.com/#website",
-            "url": "https://worldpulse-rw7q.onrender.com/",
-            "name": "WorldPulse",
-            "alternateName": "World Pulse",
-            "description": "Live world-monitoring dashboard aggregating global news, seismic activity, natural events, markets, and climate alerts with Gemini AI synthesis.",
-            "inLanguage": "en"
+            "@type": "Question",
+            "name": "Is WorldPulse completely free to use?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. WorldPulse is 100% free for readers. All public feeds, browser audio briefings, country dossiers, and filter presets work without any subscription or credit card."
+            }
           },
           {
-            "@type": "Organization",
-            "@id": "https://worldpulse-rw7q.onrender.com/#organization",
-            "name": "WorldPulse",
-            "url": "https://worldpulse-rw7q.onrender.com/",
-            "logo": "https://worldpulse-rw7q.onrender.com/icon.svg"
+            "@type": "Question",
+            "name": "How often does the global data update?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Primary dispatches and snapshots are collected every 30 minutes (and you can trigger a live sync anytime from the top bar). High-priority earthquake and weather sensors update in near real time."
+            }
           },
           {
-            "@type": "WebApplication",
-            "@id": "https://worldpulse-rw7q.onrender.com/#webapplication",
-            "name": "WorldPulse",
-            "url": "https://worldpulse-rw7q.onrender.com/",
-            "applicationCategory": "NewsAndWeatherApplication",
-            "operatingSystem": "All",
-            "browserRequirements": "Requires JavaScript. Requires HTML5.",
-            "description": "Live global situation room aggregating verified feeds, sensor telemetry, and AI synthesis."
+            "@type": "Question",
+            "name": "Is the AI summary always right?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No AI system is infallible. AI summaries and translations may occasionally miss nuance or context. That is why every single story card and briefing links directly to the original publisher or agency so you can verify the source."
+            }
           },
           {
-            "@type": "FAQPage",
-            "@id": "https://worldpulse-rw7q.onrender.com/#faq",
-            "mainEntity": [
-              {
-                "@type": "Question",
-                "name": "Where does WorldPulse collect its stories?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "WorldPulse ingests primary reports from BBC World, Al Jazeera, Reuters, The Guardian, USGS seismic sensors, NASA EONET satellites, GDELT, and Frankfurter/ECB central banking telemetry."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "How does Gemini AI score importance?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Gemini AI evaluates geopolitical significance, cross-border economic impact, population affected, and corroboration across independent wire services on an objective 1 to 10 scale."
-                }
-              },
-              {
-                "@type": "Question",
-                "name": "Is WorldPulse free to use?",
-                "acceptedAnswer": {
-                  "@type": "Answer",
-                  "text": "Yes, WorldPulse is 100% free with no paywalls, no tracking scripts, and client-side privacy controls."
-                }
-              }
-            ]
+            "@type": "Question",
+            "name": "Where does the data come from?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "We read from our primary Supabase intelligence tables backed by BBC World, Al Jazeera, The Guardian, Reuters, USGS Earthquake Hazards, NASA EONET, GDELT, CoinGecko, the European Central Bank, World Bank, Open-Meteo, WHO, and Wikimedia."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does it work on phones and tablets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Every button is at least 44px tall for touch accuracy, and WorldPulse can be installed as a Progressive Web App (PWA) on iOS, Android, iPad, and desktop with Low-Bandwidth Lite Mode support."
+            }
           }
         ]
       }
     </script>
   </head>
   <body class="bg-[#050B16] text-[#E6F1FF] antialiased selection:bg-[#22D3EE]/35 selection:text-white">
+    <noscript>
+      <div style="padding: 24px; max-width: 800px; margin: 0 auto; font-family: sans-serif; line-height: 1.6; color: #E6F1FF; background: #050B16;">
+        <h1>WorldPulse — Live World News, Map & Daily Briefing</h1>
+        <p>
+          WorldPulse is a real-time global monitoring situation room aggregating verified public news wires (BBC, Al Jazeera, The Guardian, Reuters), seismic sensors (USGS M4.5+), natural disasters (NASA EONET), central bank exchange rates (ECB, World Bank), and AI executive briefings in one quiet workspace.
+        </p>
+        <h2>Navigation &amp; Sections</h2>
+        <ul>
+          <li><a href="/" style="color: #22D3EE;">WorldPulse Landing Page</a></li>
+          <li><a href="/app" style="color: #22D3EE;">Live Situation Room Dashboard (/app)</a></li>
+          <li><a href="/api/v1/stories" style="color: #22D3EE;">Public Developer Stories API (JSON)</a></li>
+          <li><a href="/api/v1/feed.xml" style="color: #22D3EE;">Global Dispatches RSS Feed (XML)</a></li>
+          <li><a href="/api/v1/feed.json" style="color: #22D3EE;">Global Dispatches JSON Feed</a></li>
+          <li><a href="/healthz" style="color: #22D3EE;">API Health Status</a></li>
+          <li><a href="/status" style="color: #22D3EE;">System Status &amp; Collector Telemetry</a></li>
+        </ul>
+        <h2>Supported Languages</h2>
+        <p>Available in English, Hindi (हिन्दी), and Punjabi (ਪੰਜਾਬੀ).</p>
+      </div>
+    </noscript>
     <div id="root">
       <!-- Semantic crawlable HTML rendered before client JavaScript mount -->
       <header class="p-4 border-b border-[#22D3EE]/20 bg-[#050B16]">
         <nav aria-label="Main Navigation" class="max-w-6xl mx-auto flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <img src="/icon.svg" alt="WorldPulse radar logo" width="36" height="36" class="rounded-full" />
+            <img src="/icon.svg" alt="WorldPulse radar logo" width="36" height="36" loading="lazy" class="rounded-full" />
             <span class="font-bold text-xl tracking-wider text-[#22D3EE]">WORLDPULSE</span>
           </div>
           <ul class="flex items-center gap-4 text-sm text-[#8FA5C2]">
@@ -133,7 +169,7 @@
             WorldPulse aggregates verified news dispatches, earthquake telemetry from the USGS, wildfire and natural disaster tracking from NASA EONET, and economic signals into a cohesive command-center dashboard.
           </p>
           <div class="flex justify-center mb-12">
-            <img src="/og-image.png" alt="WorldPulse Global Situation Room Map and Incident Telemetry" width="1200" height="630" class="max-w-full rounded-2xl border border-[#22D3EE]/30 shadow-2xl" />
+            <img src="/og-image.png" alt="WorldPulse Global Situation Room Map and Incident Telemetry" width="1200" height="630" loading="lazy" class="max-w-full rounded-2xl border border-[#22D3EE]/30 shadow-2xl" />
           </div>
         </section>
         <section class="py-8">

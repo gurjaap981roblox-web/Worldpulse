@@ -224,8 +224,8 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
         title="Listen using browser speech synthesis"
         className={`min-h-[44px] px-3 py-1.5 rounded-full border text-xs font-mono-tabular inline-flex items-center gap-1.5 transition-all cursor-pointer ${
           isDark
-            ? 'bg-[#8B5CF6]/15 border-[#8B5CF6]/40 text-[#A78BFA] hover:bg-[#8B5CF6]/25'
-            : 'bg-[#7C3AED]/10 border-[#7C3AED]/30 text-[#6D28D9] hover:bg-[#7C3AED]/20'
+            ? 'bg-[#22D3EE]/15 border-[#22D3EE]/40 text-[#38BDF8] hover:bg-[#22D3EE]/25'
+            : 'bg-[#0284C7]/10 border-[#0284C7]/30 text-[#0369A1] hover:bg-[#0284C7]/20'
         }`}
       >
         <Volume2 className="w-3.5 h-3.5 shrink-0" />
@@ -238,8 +238,8 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
     <div
       className={`flex flex-wrap items-center gap-2 rounded-2xl border p-2 transition-colors no-print ${
         isDark
-          ? 'bg-[#0B0713]/90 border-[#8B5CF6]/30 text-[#F6F4FF]'
-          : 'bg-[#F5F2FF] border-[#7C3AED]/25 text-[#140E24]'
+          ? 'bg-[#050B16]/90 border-[#22D3EE]/30 text-[#E6F1FF]'
+          : 'bg-[#F5F2FF] border-[#0284C7]/25 text-[#140E24]'
       }`}
       role="region"
       aria-label={label || 'Audio Briefing Player'}
@@ -250,7 +250,7 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
           type="button"
           onClick={handlePlayOrResume}
           aria-label={status === 'paused' ? 'Resume audio briefing' : 'Play audio briefing'}
-          className="min-h-[44px] px-3.5 py-2 rounded-full bg-gradient-to-r from-[#8B5CF6] to-[#6D28D9] text-white text-xs font-mono-tabular font-semibold inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
+          className="min-h-[44px] px-3.5 py-2 rounded-full bg-gradient-to-r from-[#22D3EE] to-[#0369A1] text-white text-xs font-mono-tabular font-semibold inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
         >
           <Play className="w-3.5 h-3.5 fill-current" />
           <span>{status === 'paused' ? 'Resume' : labels.voiceBriefing}</span>
@@ -275,8 +275,8 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
         aria-label="Stop audio briefing"
         className={`min-h-[44px] px-3 py-2 rounded-full border text-xs font-mono-tabular inline-flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-40 ${
           isDark
-            ? 'border-[#8B5CF6]/30 bg-[#050309] text-[#C4BDD9] hover:text-white'
-            : 'border-[#7C3AED]/25 bg-white text-[#3F3559] hover:text-black'
+            ? 'border-[#22D3EE]/30 bg-[#0A1830] text-[#8FA5C2] hover:text-white'
+            : 'border-[#0284C7]/25 bg-white text-[#3F3559] hover:text-black'
         }`}
       >
         <Square className="w-3.5 h-3.5" />
@@ -293,10 +293,10 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
             aria-label={`Set playback speed ${spd}x`}
             className={`min-h-[44px] px-2.5 py-1.5 rounded-full text-[11px] font-mono-tabular font-semibold border transition-colors cursor-pointer ${
               rate === spd
-                ? 'bg-[#8B5CF6] border-[#A78BFA] text-white'
+                ? 'bg-[#22D3EE] border-[#38BDF8] text-white'
                 : isDark
-                ? 'bg-[#050309] border-[#8B5CF6]/20 text-[#9389B0] hover:text-white'
-                : 'bg-white border-[#7C3AED]/20 text-[#625680] hover:text-black'
+                ? 'bg-[#0A1830] border-[#22D3EE]/20 text-[#8FA5C2] hover:text-white'
+                : 'bg-white border-[#0284C7]/20 text-[#625680] hover:text-black'
             }`}
           >
             {spd}x
@@ -311,8 +311,8 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
         onChange={(e) => setSelectedVoiceURI(e.target.value)}
         className={`min-h-[44px] max-w-[200px] px-3 py-1.5 rounded-full border text-xs font-mono-tabular truncate cursor-pointer ${
           isDark
-            ? 'bg-[#050309] border-[#8B5CF6]/30 text-[#F6F4FF]'
-            : 'bg-white border-[#7C3AED]/25 text-[#140E24]'
+            ? 'bg-[#0A1830] border-[#22D3EE]/30 text-[#E6F1FF]'
+            : 'bg-white border-[#0284C7]/25 text-[#140E24]'
         }`}
       >
         {(matchingVoices.length > 0 ? matchingVoices : voices).length === 0 ? (
@@ -331,7 +331,7 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
           type="button"
           onClick={() => setShowControls(false)}
           aria-label="Collapse audio player"
-          className="min-h-[44px] px-2.5 text-xs font-mono-tabular text-[#A78BFA] hover:underline cursor-pointer"
+          className="min-h-[44px] px-2.5 text-xs font-mono-tabular text-[#38BDF8] hover:underline cursor-pointer"
         >
           Hide
         </button>
@@ -349,11 +349,11 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
           aria-live="polite"
           className={`w-full mt-1 p-2.5 rounded-xl border text-xs leading-relaxed transition-colors ${
             isDark
-              ? 'bg-[#050309]/95 border-[#8B5CF6]/35 text-[#C4BDD9]'
-              : 'bg-white border-[#7C3AED]/30 text-[#3F3559]'
+              ? 'bg-[#0A1830]/95 border-[#22D3EE]/35 text-[#8FA5C2]'
+              : 'bg-white border-[#0284C7]/30 text-[#3F3559]'
           }`}
         >
-          <div className="flex items-center justify-between text-[10px] font-mono-tabular uppercase tracking-wider text-[#A78BFA] mb-1">
+          <div className="flex items-center justify-between text-[10px] font-mono-tabular uppercase tracking-wider text-[#38BDF8] mb-1">
             <span>Read-Along Highlighting</span>
             <span>
               Sentence {Math.min(activeSentenceIdx + 1, sentencesWithRanges.length)} /{' '}
@@ -369,8 +369,8 @@ export const AudioSpeechControls: React.FC<AudioSpeechControlsProps> = ({
                   className={
                     isCurrent
                       ? isDark
-                        ? 'bg-[#8B5CF6]/35 text-white font-semibold px-1 py-0.5 rounded'
-                        : 'bg-[#7C3AED]/20 text-[#140E24] font-semibold px-1 py-0.5 rounded'
+                        ? 'bg-[#22D3EE]/35 text-white font-semibold px-1 py-0.5 rounded'
+                        : 'bg-[#0284C7]/20 text-[#140E24] font-semibold px-1 py-0.5 rounded'
                       : 'opacity-55'
                   }
                 >

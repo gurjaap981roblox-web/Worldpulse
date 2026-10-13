@@ -109,8 +109,21 @@ function safeSetItem(key: string, value: unknown): void {
 
 export function loadSettings(): AppSettings {
   const saved = safeGetItem<Partial<AppSettings>>(STORAGE_KEYS.SETTINGS, {});
+  let systemTheme: 'dark' | 'light' = 'dark';
+  let systemReduceMotion = false;
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      systemTheme = 'light';
+    }
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      systemReduceMotion = true;
+    }
+  }
+
   return {
     ...DEFAULT_SETTINGS,
+    theme: saved.theme || systemTheme,
+    reduceMotion: saved.reduceMotion !== undefined ? saved.reduceMotion : systemReduceMotion,
     ...saved,
   };
 }
