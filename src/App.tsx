@@ -140,7 +140,7 @@ const WorldMapPanel = lazy(() =>
   import('./components/WorldMapPanel').then((m) => ({ default: m.WorldMapPanel }))
 );
 const LegalTrustModal = lazy(() =>
-  import('./components/LegalTrustCenter').then((m) => ({ default: m.LegalTrustModal }))
+  import('./components/LegalTrustModal').then((m) => ({ default: m.LegalTrustModal }))
 );
 
 export default function App() {

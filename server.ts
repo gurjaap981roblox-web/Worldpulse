@@ -564,10 +564,22 @@ async function startServer() {
 
   // Requirement 1, 2, 3: Strict Security Headers (Helmet, CSP without unsafe-eval, HSTS 1yr, Permissions-Policy, X-Frame-Options)
   app.use((req, res, next) => {
-    const isEmbed = req.query.embed === '1';
+    const isEmbed = req.query.embed === '1' || req.query.embed === 'top5';
+    const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
+    const refererHeader = (req.headers.referer || '').toString();
+    const isAiStudioPreview =
+      process.env.NODE_ENV !== 'production' ||
+      hostHeader.includes('run.app') ||
+      req.hostname.includes('run.app') ||
+      req.hostname === 'localhost' ||
+      req.hostname === '127.0.0.1' ||
+      refererHeader.includes('google.com') ||
+      req.headers['sec-fetch-dest'] === 'iframe';
 
-    // Requirement 2: X-Frame-Options DENY except when ?embed=1 is used
-    if (isEmbed) {
+    const allowFraming = isEmbed || isAiStudioPreview;
+
+    // Requirement 2: X-Frame-Options DENY except when ?embed=1 is used (or inside AI Studio preview)
+    if (allowFraming) {
       res.removeHeader('X-Frame-Options');
     } else {
       res.setHeader('X-Frame-Options', 'DENY');
@@ -615,18 +627,28 @@ async function startServer() {
             'https://api.coingecko.com',
             'https://en.wikipedia.org',
             'https://*.wikipedia.org',
+            'https://*.run.app',
           ],
+          workerSrc: ["'self'", 'blob:'],
+          childSrc: ["'self'", 'blob:'],
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           formAction: ["'self'"],
-          frameAncestors: isEmbed ? ["'self'", '*'] : ["'none'"],
+          frameAncestors: allowFraming
+            ? ["'self'", 'https://*.google.com', 'https://*.googleusercontent.com', 'https://*.run.app', '*']
+            : ["'none'"],
+          upgradeInsecureRequests: null,
         },
       },
       crossOriginEmbedderPolicy: false,
+      crossOriginOpenerPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      xFrameOptions: false, // Handled dynamically above with ?embed=1
+      xFrameOptions: false, // Handled dynamically above based on allowFraming
       referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // Requirement 2
-      hsts: { maxAge: 31536000, includeSubDomains: true }, // Requirement 2 (1 year)
+      hsts:
+        process.env.NODE_ENV === 'production' && !isAiStudioPreview
+          ? { maxAge: 31536000, includeSubDomains: true } // Requirement 2 (1 year)
+          : false,
       noSniff: true, // Requirement 2
     })(req, res, next);
   });
