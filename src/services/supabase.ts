@@ -33,6 +33,12 @@ export const supabase = createClient(
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
+    global: {
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+    },
   }
 );
 
@@ -81,9 +87,10 @@ export interface SupabaseFetchResult {
   snapshots: Snapshot[];
   briefing: DailyBriefing | null;
   tableState: SupabaseTableState;
+  newestSnapshotTakenAt: number | null;
 }
 
-// Read-only fetch from Supabase tables: stories, snapshots, briefings
+// Read-only fetch from Supabase tables: stories, snapshots, briefings with no-cache
 export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
   const now = Date.now();
   if (!isSupabaseConfigured) {
@@ -91,6 +98,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       stories: [],
       snapshots: [],
       briefing: null,
+      newestSnapshotTakenAt: null,
       tableState: {
         storiesCount: 0,
         snapshotsCount: 0,
@@ -116,10 +124,12 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       supabase
         .from('snapshots')
         .select('*')
+        .order('taken_at', { ascending: false })
         .limit(30),
       supabase
         .from('briefings')
         .select('*')
+        .order('created_at', { ascending: false })
         .limit(5),
     ]);
 
@@ -184,9 +194,10 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
 
     // Normalize & sanitize snapshots from Supabase
     const snapshots: Snapshot[] = rawSnapshots.map((row: Record<string, unknown>, idx: number) => {
-      const ts = row.created_at
-        ? new Date(String(row.created_at)).getTime()
-        : Number(row.timestamp) || now - idx * 3600_000;
+      const takenAtRaw = row.taken_at || row.takenAt || row.created_at || row.timestamp;
+      const ts = takenAtRaw
+        ? (typeof takenAtRaw === 'number' ? takenAtRaw : Date.parse(String(takenAtRaw)))
+        : now - idx * 3600_000;
       const validTs = Number.isNaN(ts) ? now : ts;
       if (!latestTimestamp || validTs > latestTimestamp) {
         latestTimestamp = validTs;
@@ -283,6 +294,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       return {
         id: sanitizeText(String(row.id || `sb-snap-${idx}`), 80),
         timestamp: validTs,
+        takenAt: validTs,
         dayKey: new Date(validTs).toISOString().slice(0, 10),
         storyIds: Array.isArray(row.story_ids)
           ? row.story_ids.map((s) => String(s))
@@ -360,6 +372,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       stories,
       snapshots,
       briefing,
+      newestSnapshotTakenAt: snapshots.length > 0 ? (snapshots[0].takenAt || snapshots[0].timestamp) : null,
       tableState: {
         storiesCount: stories.length,
         snapshotsCount: snapshots.length,
@@ -382,6 +395,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       stories: [],
       snapshots: [],
       briefing: null,
+      newestSnapshotTakenAt: null,
       tableState: {
         storiesCount: 0,
         snapshotsCount: 0,

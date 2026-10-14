@@ -295,6 +295,7 @@ export interface Snapshot {
   topCoinPrices: Record<string, number>;
   topCoinChanges?: Record<string, number>;
   sourceTimestamps?: Record<string, number>;
+  takenAt?: number;
 }
 
 export interface CountryBrief {

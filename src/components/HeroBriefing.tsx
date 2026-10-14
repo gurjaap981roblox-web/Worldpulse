@@ -10,6 +10,7 @@ import {
   FileText,
   Printer,
   Share2,
+  Sparkles,
 } from 'lucide-react';
 import { AppSettings, DailyBriefing, LegalPageId } from '../types';
 import { formatTimeInTz, UI_TRANSLATIONS } from '../utils/sanitize';
@@ -27,6 +28,7 @@ interface HeroBriefingProps {
   onExportCsv?: () => void;
   onPrintPdf: () => void;
   onOpenLegalPage?: (page: LegalPageId) => void;
+  onOpenGeminiSuite?: () => void;
 }
 
 export const HeroBriefing: React.FC<HeroBriefingProps> = ({
@@ -40,6 +42,7 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
   onExportCsv,
   onPrintPdf,
   onOpenLegalPage,
+  onOpenGeminiSuite,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -226,6 +229,19 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
             settings={settings}
             label="Executive Daily Audio Briefing"
           />
+
+          {onOpenGeminiSuite && (
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={onOpenGeminiSuite}
+                className="px-4 py-2 rounded-xl bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/25 hover:border-cyan-300 text-xs font-mono-tabular font-bold flex items-center gap-2 cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.2)] transition-all"
+              >
+                <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+                <span>Launch Situation Room Gemini AI (Chatbot · Voice · Veo 3 Video · Transcribe)</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 5 Architectural Ledger Columns for Highlights */}

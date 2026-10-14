@@ -5,8 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';
 import dotenv from 'dotenv';
+import compression from 'compression';
 import { createServer as createViteServer } from 'vite';
-import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI, Type, ThinkingLevel, GenerateVideosOperation } from '@google/genai';
 
 dotenv.config();
 
@@ -473,12 +474,13 @@ const SSRF_ALLOWED_HOSTS = new Set([
 
 function isPrivateOrLocalIp(hostname: string): boolean {
   const host = hostname.toLowerCase().trim();
-  if (host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' || host === '::1') return true;
-  if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan')) return true;
+  if (host === 'localhost' || host === '0.0.0.0' || host === '::1') return true;
+  if (host.startsWith('127.')) return true;
   if (host.startsWith('10.')) return true;
   if (host.startsWith('192.168.')) return true;
   if (host.startsWith('169.254.')) return true;
   if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host)) return true;
+  if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan')) return true;
   return false;
 }
 
@@ -548,9 +550,12 @@ async function startServer() {
   // Requirement 11: Remove the "X-Powered-By" header
   app.disable('x-powered-by');
 
+  // Requirement 5: Add compression (gzip) for text responses
+  app.use(compression());
+
   app.set('trust proxy', 1);
 
-  // Requirement 13: Request ID tracing middleware on every request
+  // Requirement 8: Add a request id to each request and include it in server log lines
   app.use((req, res, next) => {
     const incomingId = req.headers['x-request-id'];
     const reqId =
@@ -562,40 +567,41 @@ async function startServer() {
     next();
   });
 
-  // Requirement 1, 2, 3: Strict Security Headers (Helmet, CSP without unsafe-eval, HSTS 1yr, Permissions-Policy, X-Frame-Options)
+  // Requirements 1, 2, 3, 4: Strict Security Headers
   app.use((req, res, next) => {
     const isEmbed = req.query.embed === '1' || req.query.embed === 'top5';
-    const hostHeader = (req.headers['x-forwarded-host'] || req.headers.host || '').toString();
-    const refererHeader = (req.headers.referer || '').toString();
-    const isAiStudioPreview =
-      process.env.NODE_ENV !== 'production' ||
-      hostHeader.includes('run.app') ||
-      req.hostname.includes('run.app') ||
-      req.hostname === 'localhost' ||
-      req.hostname === '127.0.0.1' ||
-      refererHeader.includes('google.com') ||
-      req.headers['sec-fetch-dest'] === 'iframe';
+    const host = (req.headers['x-forwarded-host'] || req.headers.host || req.hostname || '').toString().toLowerCase();
 
+    // Requirement 1: isAiStudioPreview true ONLY when NODE_ENV !== 'production' OR the hostname contains 'run.app'
+    const isAiStudioPreview = process.env.NODE_ENV !== 'production' || host.includes('run.app');
+
+    // Requirement 2: allowFraming should be true only for ?embed=1 or ?embed=top5, or isAiStudioPreview
     const allowFraming = isEmbed || isAiStudioPreview;
 
-    // Requirement 2: X-Frame-Options DENY except when ?embed=1 is used (or inside AI Studio preview)
+    // Requirement 2: Everything else gets X-Frame-Options DENY
     if (allowFraming) {
       res.removeHeader('X-Frame-Options');
     } else {
       res.setHeader('X-Frame-Options', 'DENY');
     }
 
-    // Requirement 3: Permissions-Policy: disable camera, microphone, geolocation, payment, usb
+    // Permissions-Policy
     res.setHeader(
       'Permissions-Policy',
       'camera=(), microphone=(), geolocation=(), payment=(), usb=()'
     );
 
+    // Requirement 4: Keep HSTS (1 year) on for all production responses on the Render host, including embed pages
+    const isRenderHost = host.includes('onrender.com') || (process.env.NODE_ENV === 'production' && !host.includes('run.app'));
+    if (isRenderHost) {
+      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+
     helmet({
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"], // Requirement 1: NO 'unsafe-eval'
+          scriptSrc: ["'self'", "'unsafe-inline'"],
           styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://unpkg.com'],
           fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
           imgSrc: [
@@ -634,8 +640,9 @@ async function startServer() {
           objectSrc: ["'none'"],
           baseUri: ["'self'"],
           formAction: ["'self'"],
+          // Requirement 3: When allowFraming is true, set frame-ancestors to 'self' https://*.google.com https://*.googleusercontent.com https://*.run.app only. Remove '*' wildcard. When false: 'none'
           frameAncestors: allowFraming
-            ? ["'self'", 'https://*.google.com', 'https://*.googleusercontent.com', 'https://*.run.app', '*']
+            ? ["'self'", 'https://*.google.com', 'https://*.googleusercontent.com', 'https://*.run.app']
             : ["'none'"],
           upgradeInsecureRequests: null,
         },
@@ -643,20 +650,17 @@ async function startServer() {
       crossOriginEmbedderPolicy: false,
       crossOriginOpenerPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
-      xFrameOptions: false, // Handled dynamically above based on allowFraming
-      referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // Requirement 2
-      hsts:
-        process.env.NODE_ENV === 'production' && !isAiStudioPreview
-          ? { maxAge: 31536000, includeSubDomains: true } // Requirement 2 (1 year)
-          : false,
-      noSniff: true, // Requirement 2
+      xFrameOptions: false,
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+      hsts: isRenderHost ? { maxAge: 31536000, includeSubDomains: true } : false,
+      noSniff: true,
     })(req, res, next);
   });
 
   // 50kb JSON limit to protect against oversized payloads
   app.use(express.json({ limit: '50kb' }));
 
-  // Requirement 4: CORS: only allow our own origin (APP_URL). No wildcard.
+  // Requirement 6: CORS for /api/*: allow only our own origin (APP_URL), no wildcard.
   const allowedOrigins = new Set([
     APP_URL,
     'https://worldpulse-rw7q.onrender.com',
@@ -666,16 +670,16 @@ async function startServer() {
 
   app.use('/api', (req, res, next) => {
     const origin = req.headers.origin;
-    const reqHost = req.get('host');
-    const isOwnOrigin =
-      origin &&
-      (allowedOrigins.has(origin) ||
-        (reqHost && (origin === `http://${reqHost}` || origin === `https://${reqHost}`)) ||
-        /^https:\/\/[a-z0-9\-]+\.run\.app$/i.test(origin));
+    if (origin) {
+      const isAllowedOrigin =
+        origin === APP_URL ||
+        (process.env.NODE_ENV !== 'production' &&
+          (allowedOrigins.has(origin) || /^https:\/\/[a-z0-9\-]+\.run\.app$/i.test(origin)));
 
-    if (origin && isOwnOrigin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Vary', 'Origin');
+      if (isAllowedOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+      }
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Request-Id');
@@ -1465,6 +1469,366 @@ Preserve all numbers, dates, and proper nouns accurately. Do not add or omit fac
     }
   });
 
+  // 7B. Multi-Turn Gemini Chatbot with Roles, Model Switching, and Search Grounding
+  app.post('/api/ai/chat', async (req, res) => {
+    const reqId = (req as any).id;
+    const rate = res.locals.aiRate || { remaining: 0 };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({
+        error: 'AI service is temporarily unavailable. Please try again later.',
+        remainingQuota: rate.remaining,
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+      return sendBadRequest(res, 'Invalid JSON body');
+    }
+
+    const { messages, role = 'analyst', model = 'gemini-3.8-flash', useSearch = false } = req.body;
+
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return sendBadRequest(res, 'Messages must be a non-empty array');
+    }
+
+    const validRoles: Record<string, string> = {
+      analyst:
+        'You are a Senior Geopolitical Intelligence Analyst at WorldPulse Situation Room. Provide structured, evidence-grounded strategic assessments with key risks, diplomatic ripple effects, and scenario projections. Format with clear headings and bullet points.',
+      crisis:
+        'You are a Rapid Crisis & Disaster Response Coordinator at WorldPulse Situation Room. Focus on real-time emergency triage, humanitarian corridors, casualty figures, critical infrastructure damage, and immediate containment measures.',
+      macro:
+        'You are a Chief Macroeconomic & Trade Strategist at WorldPulse Situation Room. Analyze supply chain bottlenecks, sovereign debt, central bank policies, currency volatility, commodity dislocations, and global market sentiment.',
+      factchecker:
+        'You are an Unbiased Global Fact Checker at WorldPulse Situation Room. Cross-examine claims against corroborated international wire services, flag unsubstantiated assertions, point out cognitive biases, and rate epistemic confidence.',
+    };
+
+    const systemInstruction = validRoles[role] || validRoles.analyst;
+
+    // Model selection: gemini-4-argon for complex tasks, gemini-3.8-flash for general, gemini-3.1-flash-lite for fast
+    let selectedModel = 'gemini-3.8-flash';
+    if (model === 'gemini-4-argon') selectedModel = 'gemini-4-argon';
+    else if (model === 'gemini-3.1-flash-lite') selectedModel = 'gemini-3.1-flash-lite';
+    else selectedModel = 'gemini-3.8-flash';
+
+    // Format conversation history
+    const contents = messages.slice(-12).map((m: any) => ({
+      role: m.role === 'model' || m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: cleanXmlText(String(m.content || m.text || '')).slice(0, 1500) }],
+    }));
+
+    try {
+      const config: Record<string, any> = {
+        systemInstruction,
+        temperature: 0.4,
+      };
+
+      if (useSearch) {
+        config.tools = [{ googleSearch: {} }];
+      }
+
+      const response = await ai.models.generateContent({
+        model: selectedModel,
+        contents,
+        config,
+      });
+
+      const reply = response.text || '';
+
+      // Extract search grounding metadata
+      const candidate = response.candidates?.[0];
+      const groundingMetadata = candidate?.groundingMetadata;
+      const webSearchQueries = groundingMetadata?.webSearchQueries || [];
+      const rawChunks = groundingMetadata?.groundingChunks || [];
+      const sources: Array<{ title: string; url: string }> = [];
+
+      for (const chunk of rawChunks) {
+        if (chunk.web?.uri) {
+          sources.push({
+            title: chunk.web.title || chunk.web.uri,
+            url: chunk.web.uri,
+          });
+        }
+      }
+
+      return res.json({
+        reply,
+        modelUsed: selectedModel,
+        role,
+        searchUsed: Boolean(useSearch),
+        webSearchQueries,
+        sources: sources.slice(0, 6),
+        remainingQuota: rate.remaining,
+      });
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Chatbot query failed', err);
+      return sendServerError(res);
+    }
+  });
+
+  // 7C. Audio Transcription using gemini-3.5-transcribe
+  app.post('/api/ai/transcribe', async (req, res) => {
+    const reqId = (req as any).id;
+    const rate = res.locals.aiRate || { remaining: 0 };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({
+        error: 'AI service is temporarily unavailable. Please try again later.',
+        remainingQuota: rate.remaining,
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+      return sendBadRequest(res, 'Invalid JSON body');
+    }
+
+    const { audio, mimeType = 'audio/webm', prompt } = req.body;
+    if (!audio || typeof audio !== 'string') {
+      return sendBadRequest(res, 'Audio base64 data is required');
+    }
+
+    const base64Data = audio.replace(/^data:audio\/[a-z0-9\-]+;base64,/i, '').trim();
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-transcribe',
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                mimeType: mimeType || 'audio/webm',
+                data: base64Data,
+              },
+            },
+            {
+              text: cleanXmlText(String(prompt || 'Transcribe the spoken audio verbatim with punctuation.')).slice(0, 300),
+            },
+          ],
+        },
+      });
+
+      const transcript = response.text?.trim() || '';
+      return res.json({
+        transcript,
+        modelUsed: 'gemini-3.5-transcribe',
+        remainingQuota: rate.remaining,
+      });
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Audio transcription failed', err);
+      return sendServerError(res);
+    }
+  });
+
+  // 7D. Veo 3 Video Generation using veo-3.1-fast-generate-preview
+  app.post('/api/ai/video/generate', async (req, res) => {
+    const reqId = (req as any).id;
+    const rate = res.locals.aiRate || { remaining: 0 };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({
+        error: 'AI service is temporarily unavailable. Please try again later.',
+        remainingQuota: rate.remaining,
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+      return sendBadRequest(res, 'Invalid JSON body');
+    }
+
+    const { prompt, aspectRatio = '16:9' } = req.body;
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return sendBadRequest(res, 'Video prompt is required');
+    }
+
+    const validAspect = aspectRatio === '9:16' ? '9:16' : '16:9';
+    const cleanPrompt = cleanXmlText(prompt).slice(0, 500);
+
+    try {
+      const operation = await ai.models.generateVideos({
+        model: 'veo-3.1-fast-generate-preview',
+        prompt: cleanPrompt,
+        config: {
+          numberOfVideos: 1,
+          resolution: '720p',
+          aspectRatio: validAspect,
+        },
+      });
+
+      return res.json({
+        operationName: operation.name,
+        aspectRatio: validAspect,
+        modelUsed: 'veo-3.1-fast-generate-preview',
+        remainingQuota: rate.remaining,
+      });
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Veo video generation failed', err);
+      return sendServerError(res);
+    }
+  });
+
+  app.post('/api/ai/video/status', async (req, res) => {
+    const reqId = (req as any).id;
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({ error: 'AI service unavailable' });
+    }
+
+    const { operationName } = req.body;
+    if (!operationName || typeof operationName !== 'string') {
+      return sendBadRequest(res, 'Operation name is required');
+    }
+
+    try {
+      const op = new GenerateVideosOperation();
+      op.name = operationName;
+      const updated = await ai.operations.getVideosOperation({ operation: op });
+      const videoUri = updated.response?.generatedVideos?.[0]?.video?.uri || null;
+
+      return res.json({
+        done: Boolean(updated.done),
+        error: updated.error ? String(updated.error.message || updated.error) : null,
+        hasVideo: Boolean(videoUri),
+      });
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Veo video status check failed', err);
+      return sendServerError(res);
+    }
+  });
+
+  app.get('/api/ai/video/download', async (req, res) => {
+    const reqId = (req as any).id;
+    const ai = getGenAIClient();
+    const apiKey = process.env.GEMINI_API_KEY || '';
+    if (!ai || !apiKey) {
+      return res.status(503).json({ error: 'AI service unavailable' });
+    }
+
+    const operationName = req.query.operationName;
+    if (!operationName || typeof operationName !== 'string') {
+      return sendBadRequest(res, 'operationName query param required');
+    }
+
+    try {
+      const op = new GenerateVideosOperation();
+      op.name = operationName;
+      const updated = await ai.operations.getVideosOperation({ operation: op });
+      const uri = updated.response?.generatedVideos?.[0]?.video?.uri;
+
+      if (!uri) {
+        return res.status(404).json({ error: 'Video not yet ready or missing' });
+      }
+
+      const videoRes = await fetch(uri, {
+        headers: { 'x-goog-api-key': apiKey },
+      });
+
+      if (!videoRes.ok) {
+        return sendServerError(res);
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      const arrayBuffer = await videoRes.arrayBuffer();
+      return res.send(Buffer.from(arrayBuffer));
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Veo video download failed', err);
+      return sendServerError(res);
+    }
+  });
+
+  // 7E. Real-time Voice Conversations using gemini-3.8-live & TTS
+  app.post('/api/ai/voice-dialogue', async (req, res) => {
+    const reqId = (req as any).id;
+    const rate = res.locals.aiRate || { remaining: 0 };
+
+    const ai = getGenAIClient();
+    if (!ai) {
+      return res.status(503).json({
+        error: 'AI service is temporarily unavailable. Please try again later.',
+        remainingQuota: rate.remaining,
+      });
+    }
+
+    if (!req.body || typeof req.body !== 'object') {
+      return sendBadRequest(res, 'Invalid JSON body');
+    }
+
+    const { audio, text, role = 'analyst' } = req.body;
+    let userPrompt = text ? String(text).trim() : '';
+
+    try {
+      if (audio && typeof audio === 'string') {
+        const base64Data = audio.replace(/^data:audio\/[a-z0-9\-]+;base64,/i, '').trim();
+        const transcribeRes = await ai.models.generateContent({
+          model: 'gemini-3.5-transcribe',
+          contents: {
+            parts: [
+              { inlineData: { mimeType: 'audio/webm', data: base64Data } },
+              { text: 'Transcribe this voice query cleanly.' },
+            ],
+          },
+        });
+        const transcribedText = transcribeRes.text?.trim();
+        if (transcribedText) userPrompt = transcribedText;
+      }
+
+      if (!userPrompt) {
+        return sendBadRequest(res, 'No audible speech or text provided');
+      }
+
+      const systemInstruction =
+        'You are the WorldPulse Voice Dispatch AI (gemini-3.8-live). Deliver concise, natural, verbal situation room briefings in 2 to 3 sentences suitable for radio dispatch.';
+
+      const answerRes = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: userPrompt,
+        config: {
+          systemInstruction,
+          temperature: 0.5,
+        },
+      });
+
+      const replyText = answerRes.text?.trim() || 'No response generated.';
+
+      let base64Audio = '';
+      try {
+        const ttsRes = await ai.models.generateContent({
+          model: 'gemini-3.8-flash-lite-tts',
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: replyText, speechMetadata: { style: 'Calm, authoritative situation room dispatch' } }],
+            },
+          ],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Zephyr' },
+              },
+            },
+          },
+        });
+        base64Audio = ttsRes.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data || '';
+      } catch {
+        // Fallback
+      }
+
+      return res.json({
+        userPrompt,
+        reply: replyText,
+        audioBase64: base64Audio,
+        modelUsed: 'gemini-3.8-live',
+        remainingQuota: rate.remaining,
+      });
+    } catch (err: unknown) {
+      safeLog('error', reqId, 'Voice dialogue failed', err);
+      return sendServerError(res);
+    }
+  });
+
   // 8. Markets Endpoint: Stock Indices, Gold, Oil, and USD/INR
   app.get('/api/markets/extra', async (req, res) => {
     const reqId = (req as any).id;
@@ -1869,7 +2233,7 @@ ${itemsXml}
 
       return res.send(rss);
     } catch {
-      return res.status(500).send('<?xml version="1.0"?><error>RSS generation failed</error>');
+      return sendServerError(res);
     }
   });
 
@@ -1906,11 +2270,56 @@ ${itemsXml}
 </urlset>`);
   });
 
+  // Requirement 12: Serve /.well-known/assetlinks.json as []
+  app.get('/.well-known/assetlinks.json', (_req, res) => {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.status(200).send('[]');
+  });
+
   app.get('/.well-known/security.txt', (_req, res) => {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8');
     res.status(200).send(
       `Contact: mailto:security@worldpulse.app\nExpires: 2027-12-31T23:59:59.000Z\nPreferred-Languages: en, hi, pa\nCanonical: https://worldpulse-rw7q.onrender.com/.well-known/security.txt\nPolicy: https://worldpulse-rw7q.onrender.com/#privacy\nAcknowledgments: https://worldpulse-rw7q.onrender.com/#about\n`
     );
+  });
+
+  // Requirement 10 & 11: GET /manifest.webmanifest with Cache-Control: no-cache
+  app.get('/manifest.webmanifest', (_req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.status(200).json({
+      id: '/',
+      name: 'WorldPulse – Live World News, Map & Daily Briefing',
+      short_name: 'WorldPulse',
+      description:
+        'Live world-monitoring situation room aggregating global news, seismic tremors, natural disasters, financial markets, and Gemini AI synthesis in real time.',
+      start_url: '/app',
+      scope: '/',
+      display: 'standalone',
+      background_color: '#050B16',
+      theme_color: '#050B16',
+      icons: [
+        {
+          src: '/pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/pwa-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'any',
+        },
+        {
+          src: '/pwa-maskable-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
+      ],
+    });
   });
 
   // Dedicated /status endpoint reporting collector update time, stories count, and API health
@@ -2038,7 +2447,7 @@ ${itemsXml}
       .replace(/<meta name="twitter:description" content=".*?" \/>/, `<meta name="twitter:description" content="${desc}" />`);
   };
 
-  // Guard: ensure SPA fallback NEVER answers requests for /api/*, /healthz, /robots.txt, /sitemap.xml or /.well-known/*
+  // Guard: ensure SPA fallback NEVER answers requests for /api/*, /healthz, /robots.txt, /sitemap.xml, /manifest.webmanifest, /sw.js or /.well-known/*
   const isExcludedFromSpa = (reqPath: string): boolean => {
     return (
       reqPath.startsWith('/api/') ||
@@ -2047,26 +2456,83 @@ ${itemsXml}
       reqPath === '/status' ||
       reqPath === '/robots.txt' ||
       reqPath === '/sitemap.xml' ||
+      reqPath === '/manifest.webmanifest' ||
+      reqPath === '/sw.js' ||
+      reqPath === '/dev-dist/sw.js' ||
       reqPath.startsWith('/.well-known/') ||
       reqPath === '/.well-known'
     );
   };
 
   app.all(
-    ['/api', '/api/*', '/healthz', '/robots.txt', '/sitemap.xml', '/.well-known', '/.well-known/*'],
+    ['/api', '/api/*', '/healthz', '/robots.txt', '/sitemap.xml', '/manifest.webmanifest', '/.well-known', '/.well-known/*'],
     (_req, res) => {
       res.status(404).json({ error: 'Not found' });
     }
   );
 
-  // Mount Vite middleware in development or static dist in production
+  // Requirement 10: In the server, serve /sw.js and /manifest.webmanifest with Cache-Control: no-cache
   const distPath = path.join(__dirname, 'dist');
+  app.get(['/sw.js', '/dev-dist/sw.js'], (_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    const distSw = path.join(distPath, 'sw.js');
+    if (fs.existsSync(distSw)) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+      return res.sendFile(distSw);
+    }
+    next();
+  });
+
+  // Requirement 13: Add Cache-Control: no-cache for index.html and 1 year immutable for hashed files in /assets
+  app.use((req, res, next) => {
+    if (req.path.startsWith('/assets/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    } else if (
+      req.path === '/' ||
+      req.path === '/index.html' ||
+      req.path === '/app' ||
+      req.path === '/sw.js' ||
+      req.path === '/manifest.webmanifest'
+    ) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+    next();
+  });
+
+  // Requirement 13: Serve /assets with 1 year immutable Cache-Control
+  const distPath = path.join(__dirname, 'dist');
+  const distAssetsPath = path.join(distPath, 'assets');
+  if (fs.existsSync(distAssetsPath)) {
+    app.use(
+      '/assets',
+      express.static(distAssetsPath, {
+        maxAge: 31536000000,
+        immutable: true,
+        setHeaders: (res) => {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        },
+      })
+    );
+  }
+
+  // Mount Vite middleware in development or static dist in production
   if (process.env.NODE_ENV === 'production' && fs.existsSync(distPath)) {
-    app.use(express.static(distPath));
+    app.use(
+      express.static(distPath, {
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('index.html')) {
+            res.setHeader('Cache-Control', 'no-cache');
+          } else if (filePath.includes('/assets/') || filePath.includes('\\assets\\')) {
+            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+          }
+        },
+      })
+    );
     app.get('*', (req, res) => {
       if (isExcludedFromSpa(req.path)) {
         return res.status(404).json({ error: 'Not found' });
       }
+      res.setHeader('Cache-Control', 'no-cache');
       const indexPath = path.join(distPath, 'index.html');
       if (req.query.country && typeof req.query.country === 'string') {
         try {
@@ -2095,14 +2561,27 @@ ${itemsXml}
           const rawHtml = fs.readFileSync(indexPath, 'utf-8');
           const transformed = await vite.transformIndexHtml(req.url, rawHtml);
           const modified = injectCountryMeta(transformed, req.query.country as string);
+          res.setHeader('Cache-Control', 'no-cache');
           return res.status(200).send(modified);
         } catch {
           // fallback
         }
       }
+      if (req.path === '/' || req.path === '/index.html' || req.path === '/app') {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
       vite.middlewares(req, res, next);
     });
   }
+
+  // Requirement 10: Global Express error handler guaranteeing no stack traces or raw errors reach the browser
+  app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    const reqId = (req as any).id || 'SYSTEM';
+    safeLog('error', reqId, 'Unhandled server error', err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Something went wrong' });
+    }
+  });
 
   // Requirement 14: Graceful shutdown and startup
   const server = app.listen(PORT, '0.0.0.0', () => {

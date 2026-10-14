@@ -45,15 +45,79 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
+          skipWaiting: true,
+          clientsClaim: true,
+          navigateFallback: null,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
           runtimeCaching: [
+            // 1. Exclude every request to /api/*, to *.supabase.co, and to any external API (USGS, NASA, CoinGecko, Open-Meteo, GDELT, Wikipedia) from SW cache (NetworkOnly)
             {
-              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              urlPattern: ({ url }) => {
+                const path = url.pathname;
+                const host = url.hostname.toLowerCase();
+                return (
+                  path.startsWith('/api/') ||
+                  host.includes('supabase.co') ||
+                  host.includes('usgs.gov') ||
+                  host.includes('nasa.gov') ||
+                  host.includes('coingecko.com') ||
+                  host.includes('open-meteo.com') ||
+                  host.includes('gdeltproject.org') ||
+                  host.includes('wikipedia.org') ||
+                  host.includes('frankfurter.app') ||
+                  host.includes('yahoo.com')
+                );
+              },
+              handler: 'NetworkOnly',
+            },
+            // 2. Cache index.html with NetworkFirst
+            {
+              urlPattern: ({ request, url }) => {
+                return (
+                  request.mode === 'navigate' ||
+                  url.pathname === '/' ||
+                  url.pathname === '/index.html' ||
+                  url.pathname === '/app'
+                );
+              },
+              handler: 'NetworkFirst',
+              options: {
+                cacheName: 'html-cache',
+                networkTimeoutSeconds: 3,
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            // 3. Cache hashed JS/CSS with CacheFirst
+            {
+              urlPattern: ({ request, url }) => {
+                return (
+                  request.destination === 'script' ||
+                  request.destination === 'style' ||
+                  url.pathname.includes('/assets/')
+                );
+              },
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'static-assets-cache',
+                expiration: {
+                  maxEntries: 100,
+                  maxAgeSeconds: 60 * 60 * 24 * 365,
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+              },
+            },
+            // 4. Google Fonts
+            {
+              urlPattern: /^https:\/\/fonts\.(?:googleapis|gstatic)\.com\/.*/i,
               handler: 'CacheFirst',
               options: {
                 cacheName: 'google-fonts-cache',
                 expiration: {
-                  maxEntries: 10,
+                  maxEntries: 20,
                   maxAgeSeconds: 60 * 60 * 24 * 365,
                 },
                 cacheableResponse: {
@@ -61,20 +125,7 @@ export default defineConfig(() => {
                 },
               },
             },
-            {
-              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
-              handler: 'CacheFirst',
-              options: {
-                cacheName: 'gstatic-fonts-cache',
-                expiration: {
-                  maxEntries: 10,
-                  maxAgeSeconds: 60 * 60 * 24 * 365,
-                },
-                cacheableResponse: {
-                  statuses: [0, 200],
-                },
-              },
-            },
+            // 5. Basemap satellite tiles
             {
               urlPattern: /^https:\/\/server\.arcgisonline\.com\/.*/i,
               handler: 'CacheFirst',

@@ -7,6 +7,7 @@ import {
   RefreshCw,
   Search,
   Settings,
+  Sparkles,
   Sun,
   X,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ interface TopBarProps {
   onChangeLanguage?: (lang: AppLanguage) => void;
   onFocusSearch?: () => void;
   onGoToLanding?: () => void;
+  onOpenGeminiSuite?: () => void;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -42,6 +44,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onChangeLanguage,
   onFocusSearch,
   onGoToLanding,
+  onOpenGeminiSuite,
 }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSModal, setShowIOSModal] = useState(false);
@@ -189,6 +192,20 @@ export const TopBar: React.FC<TopBarProps> = ({
                 }`}
               >
                 <Search className="w-4 h-4 text-[#22D3EE]" />
+              </button>
+            )}
+
+            {/* Gemini Intelligence Suite Button */}
+            {onOpenGeminiSuite && (
+              <button
+                type="button"
+                onClick={onOpenGeminiSuite}
+                aria-label="Open Gemini Intelligence Suite (Chatbot, Audio Transcription, Veo 3 Video, Voice Live)"
+                title="Launch Gemini AI Suite"
+                className="px-3.5 py-2 rounded-full bg-cyan-500/15 border border-cyan-400/40 text-cyan-300 hover:bg-cyan-500/25 text-xs font-mono-tabular font-bold flex items-center gap-1.5 cursor-pointer shadow-[0_0_12px_rgba(34,211,238,0.25)] transition-all shrink-0"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+                <span className="hidden md:inline">Gemini AI</span>
               </button>
             )}
 
@@ -345,6 +362,19 @@ export const TopBar: React.FC<TopBarProps> = ({
               >
                 05. Speeches
               </a>
+              {onOpenGeminiSuite && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenGeminiSuite();
+                  }}
+                  className="min-h-[44px] px-3 py-2 rounded-xl border border-cyan-400/50 bg-cyan-500/15 text-cyan-300 flex items-center gap-2 hover:bg-cyan-500/25 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4 text-cyan-400 animate-pulse" />
+                  <span className="font-bold">Gemini AI Suite (Chat, Voice, Veo 3, Transcribe)</span>
+                </button>
+              )}
               {onGoToLanding && (
                 <button
                   type="button"
