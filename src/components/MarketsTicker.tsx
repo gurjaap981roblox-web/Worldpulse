@@ -9,6 +9,7 @@ interface MarketsTickerProps {
   wikiTrends: WikiTrend[];
   isLoading: boolean;
   settings: AppSettings;
+  snapshotTakenAt?: number | string | null;
 }
 
 export const MarketsTicker: React.FC<MarketsTickerProps> = ({
@@ -18,8 +19,30 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
   wikiTrends,
   isLoading,
   settings,
+  snapshotTakenAt,
 }) => {
   const isDark = settings.theme === 'dark';
+
+  const asOfTime = React.useMemo(() => {
+    if (!snapshotTakenAt) return null;
+    const d = new Date(snapshotTakenAt);
+    if (Number.isNaN(d.getTime())) return null;
+    try {
+      if (settings?.timezone) {
+        return new Intl.DateTimeFormat('en-GB', {
+          timeZone: settings.timezone,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: false,
+        }).format(d);
+      }
+    } catch {
+      // fallback to local time
+    }
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  }, [snapshotTakenAt, settings?.timezone]);
 
   return (
     <section
@@ -41,9 +64,16 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
             isDark ? 'bg-[#090A0D]' : 'bg-[#EFEAE0]/60'
           }`}
         >
-          <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
-            Live Tape
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-mono-tabular uppercase tracking-wider text-[#E05A2B] font-semibold">
+              Live Tape
+            </span>
+            {asOfTime && (
+              <span className={`text-[10px] font-mono-tabular font-medium ${isDark ? 'text-[#8C93A1]' : 'text-[#666159]'}`}>
+                as of {asOfTime}
+              </span>
+            )}
+          </div>
           <span className="text-xs font-semibold whitespace-nowrap">Indices · Gold · Oil · FX · Crypto</span>
         </div>
 
@@ -142,14 +172,16 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
             ))}
           </div>
         ) : (
-          coins.slice(0, 6).map((c) => {
-            const isUp = c.change24h >= 0;
+          coins.map((c) => {
+            const chg = Number.isFinite(c.change24h) ? c.change24h : 0;
+            const isUp = chg >= 0;
             return (
               <a
-                key={c.id}
+                key={c.id || c.symbol}
                 href={c.url}
                 target="_blank"
                 rel="noopener noreferrer"
+                title={asOfTime ? `${c.name} price as of ${asOfTime}` : undefined}
                 className={`px-3.5 py-2 flex flex-col justify-center whitespace-nowrap shrink-0 transition-colors ${
                   isDark ? 'hover:bg-[#151820]' : 'hover:bg-[#EFEAE0]/50'
                 }`}
@@ -176,7 +208,7 @@ export const MarketsTicker: React.FC<MarketsTickerProps> = ({
                       <ArrowDownRight className="w-3 h-3" />
                     )}
                     {isUp ? '+' : ''}
-                    {c.change24h.toFixed(2)}%
+                    {chg.toFixed(2)}%
                   </span>
                 </div>
               </a>

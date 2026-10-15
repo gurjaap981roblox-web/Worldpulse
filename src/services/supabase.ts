@@ -1,5 +1,6 @@
 import { createClient, Session, User } from '@supabase/supabase-js';
 import {
+  CoinMarket,
   CustomAlertRule,
   DailyBriefing,
   Snapshot,
@@ -88,6 +89,66 @@ export interface SupabaseFetchResult {
   briefing: DailyBriefing | null;
   tableState: SupabaseTableState;
   newestSnapshotTakenAt: number | null;
+  coins: CoinMarket[];
+}
+
+// Convert snapshot market prices & changes to CoinMarket array
+// Prioritizes BNB, BTC, ETH, and SOL (and includes all coins present in snapshot data)
+export function convertSnapshotMarketsToCoins(
+  snapshot: Snapshot | undefined | null
+): CoinMarket[] {
+  if (!snapshot || !snapshot.topCoinPrices) return [];
+  const prices = snapshot.topCoinPrices;
+  const changes = snapshot.topCoinChanges || {};
+  const symbols = Object.keys(prices);
+  if (symbols.length === 0) return [];
+
+  const COIN_META: Record<string, { id: string; name: string }> = {
+    BNB: { id: 'binancecoin', name: 'BNB' },
+    BTC: { id: 'bitcoin', name: 'Bitcoin' },
+    ETH: { id: 'ethereum', name: 'Ethereum' },
+    SOL: { id: 'solana', name: 'Solana' },
+    XRP: { id: 'ripple', name: 'XRP' },
+    TRX: { id: 'tron', name: 'TRON' },
+    DOGE: { id: 'dogecoin', name: 'Dogecoin' },
+    ADA: { id: 'cardano', name: 'Cardano' },
+    AVAX: { id: 'avalanche-2', name: 'Avalanche' },
+    DOT: { id: 'polkadot', name: 'Polkadot' },
+    LINK: { id: 'chainlink', name: 'Chainlink' },
+    ZEC: { id: 'zcash', name: 'Zcash' },
+    USDC: { id: 'usd-coin', name: 'USD Coin' },
+    USDT: { id: 'tether', name: 'Tether' },
+  };
+
+  // Ensure BNB, BTC, ETH and SOL (all coins present) are included, prioritized first
+  const priority = ['BNB', 'BTC', 'ETH', 'SOL'];
+  const presentPriority = priority.filter((s) => symbols.includes(s));
+  const remaining = symbols.filter(
+    (s) => !priority.includes(s) && s !== 'GOLD' && s !== 'XAU'
+  );
+  const orderedSymbols = [...presentPriority, ...remaining];
+
+  return orderedSymbols.map((sym) => {
+    const meta = COIN_META[sym] || {
+      id: sym.toLowerCase(),
+      name: sym,
+    };
+    const price = prices[sym];
+    const change =
+      changes[sym] !== undefined && Number.isFinite(changes[sym])
+        ? Number(changes[sym])
+        : 0;
+    return {
+      id: meta.id,
+      symbol: sym,
+      name: meta.name,
+      currentPrice: price,
+      change24h: change,
+      marketCap: 0,
+      sparkline: [price, price],
+      url: `https://www.coingecko.com/en/coins/${encodeURIComponent(meta.id)}`,
+    };
+  });
 }
 
 // Read-only fetch from Supabase tables: stories, snapshots, briefings with no-cache
@@ -98,6 +159,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       stories: [],
       snapshots: [],
       briefing: null,
+      coins: [],
       newestSnapshotTakenAt: null,
       tableState: {
         storiesCount: 0,
@@ -232,50 +294,91 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
           ? (row.countryCounts as Record<string, number>)
           : {};
 
+      // 1. The snapshots.markets column is an object like {"BTC":{"price":81136,"change24h":-3.1},"ETH":{...}}. Read it as nested objects.
+      const rawMarkets =
+        row.markets && typeof row.markets === 'object'
+          ? (row.markets as Record<string, unknown>)
+          : null;
+
+      const topCoinPrices: Record<string, number> = {};
+      const topCoinChanges: Record<string, number> = {};
+
+      if (rawMarkets) {
+        for (const [key, val] of Object.entries(rawMarkets)) {
+          const upperKey = key.toUpperCase();
+          if (val !== null && typeof val === 'object') {
+            const vObj = val as Record<string, unknown>;
+            // 2. For each key, set topCoinPrices[KEY] = Number(value.price) when value is an object with a numeric price (also accept a plain number).
+            const p = Number(vObj.price ?? vObj.currentPrice ?? vObj.value);
+            if (Number.isFinite(p) && p > 0) {
+              topCoinPrices[upperKey] = p;
+            }
+            // 3. For each key, set topCoinChanges[KEY] = Number(value.change24h) when it is a number.
+            const c = Number(vObj.change24h ?? vObj.changePct ?? vObj.change);
+            if (Number.isFinite(c)) {
+              topCoinChanges[upperKey] = c;
+            }
+          } else if (val !== null && val !== undefined) {
+            // Also accept a plain number
+            const num = Number(val);
+            if (Number.isFinite(num) && num > 0) {
+              topCoinPrices[upperKey] = num;
+            }
+          }
+        }
+      }
+
+      // 4. Keep existing support for top_coin_prices / topCoinPrices
       const rawPricesObj =
         row.top_coin_prices && typeof row.top_coin_prices === 'object'
           ? (row.top_coin_prices as Record<string, unknown>)
           : row.topCoinPrices && typeof row.topCoinPrices === 'object'
           ? (row.topCoinPrices as Record<string, unknown>)
-          : row.markets && typeof row.markets === 'object'
-          ? (row.markets as Record<string, unknown>)
           : {};
-
-      const topCoinPrices: Record<string, number> = {};
       for (const [k, v] of Object.entries(rawPricesObj)) {
-        const num = Number(v);
-        if (Number.isFinite(num) && num > 0) {
-          topCoinPrices[k.toUpperCase()] = num;
+        const upperK = k.toUpperCase();
+        if (v !== null && typeof v === 'object') {
+          const p = Number((v as Record<string, unknown>).price);
+          if (Number.isFinite(p) && p > 0 && !topCoinPrices[upperK]) {
+            topCoinPrices[upperK] = p;
+          }
+        } else {
+          const num = Number(v);
+          if (Number.isFinite(num) && num > 0 && !topCoinPrices[upperK]) {
+            topCoinPrices[upperK] = num;
+          }
         }
       }
-      // Support direct columns on snapshots table (e.g. btc, btc_price, eth, eth_price, gold, gold_price)
-      const directBtc = Number(row.btc_price ?? row.btc ?? row.BTC);
-      if (Number.isFinite(directBtc) && directBtc > 0) topCoinPrices.BTC = directBtc;
-      const directEth = Number(row.eth_price ?? row.eth ?? row.ETH);
-      if (Number.isFinite(directEth) && directEth > 0) topCoinPrices.ETH = directEth;
-      const directGold = Number(row.gold_price ?? row.gold ?? row.xau ?? row.GOLD ?? row.XAU);
-      if (Number.isFinite(directGold) && directGold > 0) topCoinPrices.GOLD = directGold;
 
+      // Keep existing support for top_coin_changes / topCoinChanges
       const rawChangesObj =
         row.top_coin_changes && typeof row.top_coin_changes === 'object'
           ? (row.top_coin_changes as Record<string, unknown>)
           : row.topCoinChanges && typeof row.topCoinChanges === 'object'
           ? (row.topCoinChanges as Record<string, unknown>)
           : {};
-
-      const topCoinChanges: Record<string, number> = {};
       for (const [k, v] of Object.entries(rawChangesObj)) {
+        const upperK = k.toUpperCase();
         const num = Number(v);
-        if (Number.isFinite(num)) {
-          topCoinChanges[k.toUpperCase()] = num;
+        if (Number.isFinite(num) && topCoinChanges[upperK] === undefined) {
+          topCoinChanges[upperK] = num;
         }
       }
+
+      // Direct flat columns on snapshots table (e.g. btc, btc_price, eth, eth_price, gold, gold_price)
+      const directBtc = Number(row.btc_price ?? row.btc ?? row.BTC);
+      if (Number.isFinite(directBtc) && directBtc > 0 && !topCoinPrices.BTC) topCoinPrices.BTC = directBtc;
+      const directEth = Number(row.eth_price ?? row.eth ?? row.ETH);
+      if (Number.isFinite(directEth) && directEth > 0 && !topCoinPrices.ETH) topCoinPrices.ETH = directEth;
+      const directGold = Number(row.gold_price ?? row.gold ?? row.xau ?? row.GOLD ?? row.XAU);
+      if (Number.isFinite(directGold) && directGold > 0 && !topCoinPrices.GOLD) topCoinPrices.GOLD = directGold;
+
       const directBtcChg = Number(row.btc_change ?? row.btc_change_24h);
-      if (Number.isFinite(directBtcChg)) topCoinChanges.BTC = directBtcChg;
+      if (Number.isFinite(directBtcChg) && topCoinChanges.BTC === undefined) topCoinChanges.BTC = directBtcChg;
       const directEthChg = Number(row.eth_change ?? row.eth_change_24h);
-      if (Number.isFinite(directEthChg)) topCoinChanges.ETH = directEthChg;
+      if (Number.isFinite(directEthChg) && topCoinChanges.ETH === undefined) topCoinChanges.ETH = directEthChg;
       const directGoldChg = Number(row.gold_change ?? row.gold_change_24h);
-      if (Number.isFinite(directGoldChg)) topCoinChanges.GOLD = directGoldChg;
+      if (Number.isFinite(directGoldChg) && topCoinChanges.GOLD === undefined) topCoinChanges.GOLD = directGoldChg;
 
       const rawSourcesHealth =
         row.source_timestamps && typeof row.source_timestamps === 'object'
@@ -313,7 +416,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       const newest = snapshots[0];
       const older = snapshots[1];
       const nextChanges: Record<string, number> = { ...(newest.topCoinChanges || {}) };
-      for (const sym of ['BTC', 'ETH', 'GOLD']) {
+      for (const sym of Object.keys(newest.topCoinPrices)) {
         if (
           nextChanges[sym] === undefined &&
           newest.topCoinPrices[sym] &&
@@ -367,11 +470,13 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
     const storiesEmpty = stories.length === 0;
     const snapshotsEmpty = snapshots.length === 0;
     const briefingsEmpty = !briefing;
+    const coins = snapshots.length > 0 ? convertSnapshotMarketsToCoins(snapshots[0]) : [];
 
     return {
       stories,
       snapshots,
       briefing,
+      coins,
       newestSnapshotTakenAt: snapshots.length > 0 ? (snapshots[0].takenAt || snapshots[0].timestamp) : null,
       tableState: {
         storiesCount: stories.length,
@@ -395,6 +500,7 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
       stories: [],
       snapshots: [],
       briefing: null,
+      coins: [],
       newestSnapshotTakenAt: null,
       tableState: {
         storiesCount: 0,

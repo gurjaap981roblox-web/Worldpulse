@@ -87,6 +87,7 @@ import {
   verifyBreakingStoryWithSearch,
 } from './services/llm';
 import {
+  convertSnapshotMarketsToCoins,
   fetchFromSupabasePrimary,
   getCurrentSupabaseSession,
   loadAlertsFromSupabase,
@@ -217,6 +218,22 @@ export default function App() {
   // Supabase Primary Table State & Strict Supabase-only arrays for Live Pulse
   const [supabaseStories, setSupabaseStories] = useState<Story[]>([]);
   const [supabaseSnapshots, setSupabaseSnapshots] = useState<Snapshot[]>([]);
+
+  // Markets ticker coins: prioritize Supabase snapshot coins (BNB, BTC, ETH, SOL, all coins present), only use fallback when Supabase has none
+  const activeCoins = useMemo(() => {
+    const snap =
+      supabaseSnapshots.length > 0
+        ? supabaseSnapshots[0]
+        : snapshots.length > 0
+        ? snapshots[0]
+        : null;
+    if (snap) {
+      const sbCoins = convertSnapshotMarketsToCoins(snap);
+      if (sbCoins.length > 0) return sbCoins;
+    }
+    return coins;
+  }, [supabaseSnapshots, snapshots, coins]);
+
   const [supabaseBriefing, setSupabaseBriefing] = useState<DailyBriefing | null>(null);
   const [supabaseState, setSupabaseState] = useState<SupabaseTableState>({
     storiesCount: 0,
@@ -636,7 +653,12 @@ export default function App() {
         supabase: updatedStatuses.supabase,
       });
 
-      if (fetched.coins.length > 0) setCoins(fetched.coins);
+      // Markets data: prioritize Supabase snapshot coins (BNB, BTC, ETH, SOL, all coins present), only use fallback when Supabase has none
+      const activeSnapshotCoins =
+        sbResult.coins && sbResult.coins.length > 0
+          ? sbResult.coins
+          : fetched.coins;
+      if (activeSnapshotCoins.length > 0) setCoins(activeSnapshotCoins);
       if (fetched.fxRates.length > 0) setFxRates(fetched.fxRates);
       if (fetched.extraMarkets.length > 0) setExtraMarkets(fetched.extraMarkets);
       if (fetched.macroIndicators.length > 0) setMacroIndicators(fetched.macroIndicators);
@@ -656,7 +678,7 @@ export default function App() {
         const fallbackBC = buildFallbackBriefingAndChanges(
           sbResult.stories,
           activeSnaps,
-          fetched.coins
+          activeSnapshotCoins
         );
 
         setStories(sbResult.stories);
@@ -664,7 +686,20 @@ export default function App() {
         setBriefing(sbResult.briefing || fallbackBC.briefing);
         setWhatChanged(fallbackBC.whatChanged);
         setLastUpdated(newestSnapshotTime || sbResult.tableState.latestDataTimestamp || Date.now());
-        evaluateAlertRules(sbResult.stories, fetched.coins);
+        evaluateAlertRules(sbResult.stories, activeSnapshotCoins);
+
+        savePersistedDashboardState({
+          stories: sbResult.stories,
+          briefing: sbResult.briefing || fallbackBC.briefing,
+          whatChanged: fallbackBC.whatChanged,
+          coins: activeSnapshotCoins,
+          fxRates: fetched.fxRates,
+          extraMarkets: fetched.extraMarkets,
+          macroIndicators: fetched.macroIndicators,
+          weather: fetched.weather,
+          wikiTrends: fetched.wikiTrends,
+          lastUpdated: newestSnapshotTime || Date.now(),
+        });
       } else if (settingsRef.current.strictSupabaseOnly) {
         setStories([]);
         setBriefing(sbResult.briefing);
@@ -1704,12 +1739,17 @@ export default function App() {
         {viewMode === 'all' && !settings.liteMode && (
           <div className="space-y-3 no-print">
             <MarketsTicker
-              coins={coins}
+              coins={activeCoins}
               fxRates={fxRates}
               extraMarkets={extraMarkets}
               wikiTrends={wikiTrends}
-              isLoading={isRefreshing && coins.length === 0}
+              isLoading={isRefreshing && activeCoins.length === 0}
               settings={settings}
+              snapshotTakenAt={
+                supabaseSnapshots.length > 0
+                  ? (supabaseSnapshots[0].takenAt || supabaseSnapshots[0].timestamp)
+                  : (snapshots.length > 0 ? (snapshots[0].takenAt || snapshots[0].timestamp) : null)
+              }
             />
             <RisingTopicsStrip
               metrics={risingTopics}
@@ -1797,7 +1837,7 @@ export default function App() {
             <EconomicChangePanel
               fxRates={fxRates}
               macroIndicators={macroIndicators}
-              coins={coins}
+              coins={activeCoins}
               stories={stories}
               isLoading={isRefreshing && fxRates.length === 0}
               onSelectCountry={(code) => setSelectedCountryCode(code)}
