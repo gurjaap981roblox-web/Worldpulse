@@ -242,11 +242,13 @@ export const TopBar: React.FC<TopBarProps> = ({
               type="button"
               onClick={onManualRefresh}
               disabled={isRefreshing}
-              aria-label="Refresh world data now"
+              aria-label="Refresh data from Supabase without cache"
+              title="Refresh data from Supabase (bypasses cache)"
               className="wp-btn-primary px-3.5 py-2 text-xs font-mono-tabular uppercase tracking-wider flex items-center gap-1.5 shrink-0 cursor-pointer disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isRefreshing ? 'Syncing' : 'Refresh'}</span>
+              <span className="hidden sm:inline">{isRefreshing ? 'Syncing...' : 'Refresh data'}</span>
+              <span className="sm:hidden">{isRefreshing ? '...' : 'Refresh'}</span>
             </button>
 
             {/* PWA Install Button */}

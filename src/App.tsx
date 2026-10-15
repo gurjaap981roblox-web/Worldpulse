@@ -21,6 +21,7 @@ import {
   Sparkles,
   Stethoscope,
   Swords,
+  RefreshCw,
   UserCheck,
   WifiOff,
   X,
@@ -102,6 +103,7 @@ import {
   UI_TRANSLATIONS,
 } from './utils/sanitize';
 import { useOnlineStatus } from './hooks/usePWAInstall';
+import { usePWAUpdate } from './hooks/usePWAUpdate';
 import { TopBar } from './components/TopBar';
 import { HeroBriefing } from './components/HeroBriefing';
 import { LivePulseSection } from './components/LivePulseSection';
@@ -210,6 +212,7 @@ export default function App() {
     initialCached?.lastUpdated || null
   );
   const [minutesAgo, setMinutesAgo] = useState<number>(0);
+  const { needRefresh, reloadToUpdate } = usePWAUpdate();
 
   // Supabase Primary Table State & Strict Supabase-only arrays for Live Pulse
   const [supabaseStories, setSupabaseStories] = useState<Story[]>([]);
@@ -642,8 +645,12 @@ export default function App() {
       setAcledInfo(fetched.acledInfo);
 
       // If Supabase has stories, use Supabase as primary!
+      const newestSnapshotTime =
+        sbResult.newestSnapshotTakenAt ||
+        (sbResult.snapshots.length > 0 ? (sbResult.snapshots[0].takenAt || sbResult.snapshots[0].timestamp) : null) ||
+        (snapshotsRef.current.length > 0 ? (snapshotsRef.current[0].takenAt || snapshotsRef.current[0].timestamp) : null);
+
       if (!sbResult.tableState.storiesEmpty && sbResult.stories.length > 0) {
-        const now = sbResult.tableState.latestDataTimestamp || Date.now();
         const activeSnaps =
           sbResult.snapshots.length > 0 ? sbResult.snapshots : snapshotsRef.current;
         const fallbackBC = buildFallbackBriefingAndChanges(
@@ -656,12 +663,12 @@ export default function App() {
         setSnapshots(activeSnaps);
         setBriefing(sbResult.briefing || fallbackBC.briefing);
         setWhatChanged(fallbackBC.whatChanged);
-        setLastUpdated(now);
+        setLastUpdated(newestSnapshotTime || sbResult.tableState.latestDataTimestamp || Date.now());
         evaluateAlertRules(sbResult.stories, fetched.coins);
       } else if (settingsRef.current.strictSupabaseOnly) {
         setStories([]);
         setBriefing(sbResult.briefing);
-        setLastUpdated(Date.now());
+        setLastUpdated(newestSnapshotTime || Date.now());
       } else if (fetched.rawItems.length > 0) {
         const fastStories = buildBaselineStories(fetched.rawItems);
         const fastFallback = buildFallbackBriefingAndChanges(
@@ -673,7 +680,7 @@ export default function App() {
         setStories(fastStories);
         setBriefing((prev) => sbResult.briefing || prev || fastFallback.briefing);
         setWhatChanged((prev) => prev || fastFallback.whatChanged);
-        setLastUpdated(Date.now());
+        setLastUpdated(newestSnapshotTime || Date.now());
 
         const aiResult = await runGeminiPipeline(
           fetched.rawItems,
@@ -687,7 +694,7 @@ export default function App() {
         setStories(aiResult.stories);
         setBriefing(sbResult.briefing || aiResult.briefing);
         setWhatChanged(aiResult.whatChanged);
-        setLastUpdated(now);
+        setLastUpdated(newestSnapshotTime || now);
 
         const updatedSnapshots = saveSnapshot(aiResult.stories, fetched.coins);
         setSnapshots(updatedSnapshots);
@@ -732,6 +739,20 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(interval);
+  }, [performRefresh]);
+
+  // Requirement 8: Re-fetch when the tab becomes visible again (visibilitychange event)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performRefresh();
+        setSecondsUntilRefresh(settingsRef.current.refreshIntervalMinutes * 60);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [performRefresh]);
 
   const handleUpdateSettings = (updated: AppSettings) => {
@@ -1059,10 +1080,27 @@ export default function App() {
     window.print();
   };
 
-  const handleClearCache = () => {
-    clearAllWorldPulseCache();
-    setSnapshots(loadSnapshots());
-    performRefresh();
+  // Requirement 9: "Clear app cache and reload", unregistering SW, clearing caches and reloading
+  const handleClearCache = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          await caches.delete(key);
+        }
+      }
+      clearAllWorldPulseCache();
+    } catch (err) {
+      console.warn('Error clearing caches:', err);
+    } finally {
+      window.location.reload();
+    }
   };
 
   const handleCopyShareableFilterLink = () => {
@@ -1186,6 +1224,18 @@ export default function App() {
   if (showLandingPage) {
     return (
       <>
+        {/* Requirement 4: PWA Update Bar */}
+        {needRefresh && (
+          <div
+            role="alert"
+            onClick={reloadToUpdate}
+            className="sticky top-0 z-50 w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 text-center text-xs sm:text-sm font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-colors"
+          >
+            <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+            <span>New version available. Tap to refresh</span>
+          </div>
+        )}
+
         <LandingPage
           stories={stories}
           briefing={briefing}
@@ -1229,6 +1279,18 @@ export default function App() {
         isDark ? 'bg-[#050B16] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#050B16]'
       }`}
     >
+      {/* Requirement 4: PWA Update Bar */}
+      {needRefresh && (
+        <div
+          role="alert"
+          onClick={reloadToUpdate}
+          className="sticky top-0 z-50 w-full bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 text-center text-xs sm:text-sm font-semibold tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-colors"
+        >
+          <RefreshCw className="w-3.5 h-3.5 animate-spin shrink-0" />
+          <span>New version available. Tap to refresh</span>
+        </div>
+      )}
+
       {/* Top Bar */}
       <TopBar
         settings={settings}

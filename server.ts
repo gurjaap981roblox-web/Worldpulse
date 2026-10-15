@@ -2500,7 +2500,6 @@ ${itemsXml}
   });
 
   // Requirement 13: Serve /assets with 1 year immutable Cache-Control
-  const distPath = path.join(__dirname, 'dist');
   const distAssetsPath = path.join(distPath, 'assets');
   if (fs.existsSync(distAssetsPath)) {
     app.use(

@@ -750,10 +750,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <button
                 type="button"
                 onClick={onClearCache}
-                className="min-h-[44px] px-4 py-2 text-xs font-semibold border border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer"
+                title="Unregister service worker, purge browser cache storage, clear local data, and reload"
+                className="min-h-[44px] px-4 py-2 text-xs font-semibold border border-rose-500/50 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 flex items-center gap-2 cursor-pointer transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
-                <span>Purge Local Cache &amp; Snapshots</span>
+                <span>Clear app cache and reload</span>
               </button>
             </div>
 
