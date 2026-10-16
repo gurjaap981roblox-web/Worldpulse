@@ -1859,6 +1859,7 @@ export default function App() {
           <div className="lg:col-span-5 space-y-5">
             <TopTenList
               stories={filteredStories}
+              dateRangeFilter={dateRangeFilter}
               isLoading={isRefreshing && stories.length === 0}
               selectedStoryId={selectedStory?.id || null}
               onSelectStory={(story) => setSelectedStory(story)}

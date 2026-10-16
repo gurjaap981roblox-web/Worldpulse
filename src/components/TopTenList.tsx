@@ -8,7 +8,7 @@ import {
   Loader2,
   Share2,
 } from 'lucide-react';
-import { AppLanguage, AppSettings, Story, TranslatedStoryCacheEntry } from '../types';
+import { AppLanguage, AppSettings, DateRangeFilter, Story, TranslatedStoryCacheEntry } from '../types';
 import {
   formatRelativeTime,
   getCountryFlag,
@@ -18,6 +18,20 @@ import {
 import { getCachedTranslation } from '../services/storage';
 import { translateStoryOnDemand } from '../services/llm';
 import { StoryTrustSignals } from './StoryTrustSignals';
+
+function formatStoryAge(timestamp: number | undefined | null): string {
+  if (!timestamp) return 'Recently';
+  const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (diffSec < 60) return 'Just now';
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin} min ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr === 1) return '1 hour ago';
+  if (diffHr < 24) return `${diffHr} hours ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays === 1) return '1 day ago';
+  return `${diffDays} days ago`;
+}
 
 interface TopTenListProps {
   stories: Story[];
@@ -30,6 +44,7 @@ interface TopTenListProps {
   onOpenTimeline?: (story: Story) => void;
   onShareStoryCard?: (story: Story) => void;
   settings: AppSettings;
+  dateRangeFilter?: DateRangeFilter;
 }
 
 export const TopTenList: React.FC<TopTenListProps> = ({
@@ -43,10 +58,69 @@ export const TopTenList: React.FC<TopTenListProps> = ({
   onOpenTimeline,
   onShareStoryCard,
   settings,
+  dateRangeFilter = '24h',
 }) => {
   const isDark = settings.theme === 'dark';
-  const topTen = stories.slice(0, 10);
   const labels = UI_TRANSLATIONS[settings.language] || UI_TRANSLATIONS.en;
+
+  const [activeTab, setActiveTab] = useState<'top10' | 'latest'>('top10');
+  const [latestLimit, setLatestLimit] = useState<number>(30);
+
+  const now = Date.now();
+  const maxAgeMs =
+    dateRangeFilter === '7d'
+      ? 7 * 24 * 3600 * 1000
+      : dateRangeFilter === '30d'
+      ? 30 * 24 * 3600 * 1000
+      : 24 * 3600 * 1000;
+
+  // 2. Only consider stories from the selected date range (default last 24 hours)
+  const storiesInRange = React.useMemo(() => {
+    return stories.filter((story) => {
+      const storyTime = (story as any).publishedAt || story.time;
+      if (storyTime && now - storyTime > maxAgeMs) {
+        return false;
+      }
+      return true;
+    });
+  }, [stories, maxAgeMs, now]);
+
+  // 1. In the Top 10 scoring, use score = importance * recencyFactor, where recencyFactor = max(0.35, 1 - ageHours/24 * 0.65)
+  // 3. If two stories have the same score, show the newer one first
+  const topTen = React.useMemo(() => {
+    const scored = storiesInRange.map((story) => {
+      const storyTime = (story as any).publishedAt || story.time || now;
+      const ageMs = Math.max(0, now - storyTime);
+      const ageHours = ageMs / (3600 * 1000);
+      const recencyFactor = Math.max(0.35, 1 - (ageHours / 24) * 0.65);
+      const score = story.importance * recencyFactor;
+      return { story, score, time: storyTime };
+    });
+
+    scored.sort((a, b) => {
+      if (Math.abs(b.score - a.score) > 1e-6) {
+        return b.score - a.score;
+      }
+      return b.time - a.time;
+    });
+
+    return scored.slice(0, 10).map((item) => item.story);
+  }, [storiesInRange, now]);
+
+  // 5. "Latest" tab lists stories strictly by newest first, 30 at a time
+  const latestStories = React.useMemo(() => {
+    return [...storiesInRange].sort((a, b) => {
+      const timeA = (a as any).publishedAt || a.time || 0;
+      const timeB = (b as any).publishedAt || b.time || 0;
+      return timeB - timeA;
+    });
+  }, [storiesInRange]);
+
+  const visibleLatest = React.useMemo(() => {
+    return latestStories.slice(0, latestLimit);
+  }, [latestStories, latestLimit]);
+
+  const displayStories = activeTab === 'top10' ? topTen : visibleLatest;
 
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [localTranslations, setLocalTranslations] = useState<
@@ -93,7 +167,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
       className="wp-glass-card flex flex-col transition-colors duration-200 overflow-hidden"
     >
       <div
-        className={`p-4 sm:p-5 border-b flex items-center justify-between gap-2 ${
+        className={`p-4 sm:p-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
           isDark ? 'border-cyan-500/25' : 'border-cyan-700/20'
         }`}
       >
@@ -107,15 +181,67 @@ export const TopTenList: React.FC<TopTenListProps> = ({
             id="top-ten-heading"
             className="font-editorial text-lg font-bold tracking-tight mt-0.5"
           >
-            Top 10 Global Dispatches
+            {activeTab === 'top10' ? 'Top 10 Global Dispatches' : 'Latest Global Dispatches'}
           </h2>
+          {/* 7. Keep a small label on the Top 10 saying "Ranked by importance and recency" */}
+          {activeTab === 'top10' && (
+            <div className="text-[11px] font-mono-tabular text-[#8FA5C2] mt-0.5 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22D3EE]" />
+              <span>Ranked by importance and recency</span>
+            </div>
+          )}
         </div>
-        <span className="px-3 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-xs font-mono-tabular font-semibold text-[#22D3EE]">
-          {topTen.length}/10 Ranked
-        </span>
+
+        {/* 5. Add a "Latest" tab next to Top 10 that lists stories strictly by newest first, 30 at a time */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <div
+            role="tablist"
+            aria-label="Dispatch listing views"
+            className={`p-1 rounded-full border flex items-center gap-1 ${
+              isDark ? 'border-cyan-500/30 bg-[#0A1830]' : 'border-cyan-700/20 bg-cyan-500/10'
+            }`}
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'top10'}
+              onClick={() => setActiveTab('top10')}
+              className={`px-3 py-1 rounded-full text-xs font-mono-tabular font-semibold transition-colors cursor-pointer ${
+                activeTab === 'top10'
+                  ? 'bg-cyan-500 text-[#050B16] shadow-sm'
+                  : 'text-[#8FA5C2] hover:text-white'
+              }`}
+            >
+              Top 10
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'latest'}
+              onClick={() => setActiveTab('latest')}
+              className={`px-3 py-1 rounded-full text-xs font-mono-tabular font-semibold transition-colors cursor-pointer ${
+                activeTab === 'latest'
+                  ? 'bg-cyan-500 text-[#050B16] shadow-sm'
+                  : 'text-[#8FA5C2] hover:text-white'
+              }`}
+            >
+              Latest ({latestStories.length})
+            </button>
+          </div>
+
+          {activeTab === 'top10' ? (
+            <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-[11px] font-mono-tabular font-semibold text-[#22D3EE]">
+              {topTen.length}/10 Ranked
+            </span>
+          ) : (
+            <span className="hidden sm:inline-flex px-2.5 py-1 rounded-full bg-cyan-500/15 border border-cyan-500/35 text-[11px] font-mono-tabular font-semibold text-[#22D3EE]">
+              {visibleLatest.length} of {latestStories.length}
+            </span>
+          )}
+        </div>
       </div>
 
-      {isLoading && topTen.length === 0 ? (
+      {isLoading && displayStories.length === 0 ? (
         <div className="p-4 space-y-4">
           {[1, 2, 3, 4, 5, 6].map((n) => (
             <div key={n} className="space-y-2">
@@ -125,15 +251,16 @@ export const TopTenList: React.FC<TopTenListProps> = ({
             </div>
           ))}
         </div>
-      ) : topTen.length === 0 ? (
+      ) : displayStories.length === 0 ? (
         <div className="p-8 text-center">
           <p className="text-sm font-mono-tabular text-[#8FA5C2]">
             {labels.collectingData}
           </p>
         </div>
       ) : (
-        <ol className={`divide-y ${isDark ? 'divide-[#22D3EE]/20' : 'divide-[#0284C7]/15'}`}>
-          {topTen.map((story, idx) => {
+        <>
+          <ol className={`divide-y ${isDark ? 'divide-[#22D3EE]/20' : 'divide-[#0284C7]/15'}`}>
+            {displayStories.map((story, idx) => {
             const rankStr = String(idx + 1).padStart(2, '0');
             const topicColor = TOPIC_COLORS[story.topic]?.hex || '#22D3EE';
             const isSelected = selectedStoryId === story.id;
@@ -200,6 +327,15 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                           }}
                         >
                           {story.topic}
+                        </span>
+
+                        {/* 4. Show each story's time (for example "35 min ago") on every Top 10 card */}
+                        <span
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/25 text-[11px] font-mono-tabular text-[#22D3EE]"
+                          title={new Date((story as any).publishedAt || story.time).toLocaleString()}
+                        >
+                          <Clock className="w-3 h-3 text-[#22D3EE]" />
+                          <span>{formatStoryAge((story as any).publishedAt || story.time)}</span>
                         </span>
 
                         {translated && (
@@ -392,7 +528,24 @@ export const TopTenList: React.FC<TopTenListProps> = ({
               </li>
             );
           })}
-        </ol>
+          </ol>
+
+          {/* 6. Add a "Show more" button under Latest */}
+          {activeTab === 'latest' && visibleLatest.length < latestStories.length && (
+            <div className="p-4 sm:p-5 text-center border-t border-cyan-500/20">
+              <button
+                type="button"
+                onClick={() => setLatestLimit((prev) => prev + 30)}
+                className="px-5 py-2.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-mono-tabular font-bold text-[#22D3EE] transition-colors cursor-pointer inline-flex items-center gap-2"
+              >
+                <span>Show more</span>
+                <span className="opacity-75 font-normal">
+                  ({latestStories.length - visibleLatest.length} remaining)
+                </span>
+              </button>
+            </div>
+          )}
+        </>
       )}
     </section>
   );
