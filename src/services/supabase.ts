@@ -201,57 +201,86 @@ export async function fetchFromSupabasePrimary(): Promise<SupabaseFetchResult> {
 
     let latestTimestamp: number | null = null;
 
-    // Normalize & sanitize stories from Supabase
+export function normalizeSupabaseStoryRow(
+  row: Record<string, unknown>,
+  idx: number,
+  now: number = Date.now()
+): Story {
+  const pubTime = row.published_at
+    ? new Date(String(row.published_at)).getTime()
+    : row.created_at
+    ? new Date(String(row.created_at)).getTime()
+    : now;
+  const validTime = Number.isNaN(pubTime) ? now : pubTime;
+
+  const headline = sanitizeText(row.headline || row.title || 'Untitled Dispatch', 200);
+  const summary = sanitizeText(row.summary || row.description || 'No data', 500);
+  const lat = typeof row.lat === 'number' ? row.lat : Number(row.lat) || 0;
+  const lng = typeof row.lng === 'number' ? row.lng : Number(row.lng) || 0;
+
+  const rawCountry = sanitizeText(row.country || '', 40);
+  const meta =
+    rawCountry && rawCountry.length >= 2
+      ? getCountryMeta(rawCountry, `${headline} ${summary}`)
+      : inferCountryFromCoords(lat, lng);
+
+  const topic = parseValidTopic(row.topic);
+  const importance = Math.max(1, Math.min(10, Number(row.importance) || 6));
+  const sentiment = Math.max(-1, Math.min(1, Number(row.sentiment) || 0));
+  const confidence = Math.max(0, Math.min(1, Number(row.confidence) || 0.8));
+  const status = sanitizeText(row.status || 'active', 40);
+  const sources = parseSupabaseSources(row.sources, validTime);
+
+  return {
+    id: sanitizeText(String(row.id || `sb-story-${idx}-${validTime}`), 100),
+    headline,
+    summary,
+    country: meta.code,
+    countryName: meta.name,
+    region: meta.region,
+    topic,
+    importance,
+    sentiment,
+    lat: lat !== 0 ? lat : meta.lat,
+    lng: lng !== 0 ? lng : meta.lng,
+    confidence,
+    time: validTime,
+    sources,
+    eventClusterKey: `${meta.code}-${topic}-${headline.slice(0, 24).toLowerCase()}`,
+    isDeveloping: status.toLowerCase() === 'developing' || confidence < 0.65,
+    aiAnalyzed: true,
+    status,
+    origin: 'supabase',
+  };
+}
+
+// Fetch next page of stories from Supabase ordered by published_at desc
+export async function fetchMoreStoriesFromSupabase(
+  offset: number,
+  limit: number = 30
+): Promise<Story[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('stories')
+      .select('*')
+      .order('published_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error || !Array.isArray(data)) return [];
+    const now = Date.now();
+    return data.map((row, idx) => normalizeSupabaseStoryRow(row, offset + idx, now));
+  } catch {
+    return [];
+  }
+}
+
     const stories: Story[] = rawStories.map((row: Record<string, unknown>, idx: number) => {
-      const pubTime = row.published_at
-        ? new Date(String(row.published_at)).getTime()
-        : row.created_at
-        ? new Date(String(row.created_at)).getTime()
-        : now;
-      const validTime = Number.isNaN(pubTime) ? now : pubTime;
-      if (!latestTimestamp || validTime > latestTimestamp) {
-        latestTimestamp = validTime;
+      const s = normalizeSupabaseStoryRow(row, idx, now);
+      if (!latestTimestamp || s.time > latestTimestamp) {
+        latestTimestamp = s.time;
       }
-
-      const headline = sanitizeText(row.headline || row.title || 'Untitled Dispatch', 200);
-      const summary = sanitizeText(row.summary || row.description || 'No data', 500);
-      const lat = typeof row.lat === 'number' ? row.lat : Number(row.lat) || 0;
-      const lng = typeof row.lng === 'number' ? row.lng : Number(row.lng) || 0;
-
-      const rawCountry = sanitizeText(row.country || '', 40);
-      const meta =
-        rawCountry && rawCountry.length >= 2
-          ? getCountryMeta(rawCountry, `${headline} ${summary}`)
-          : inferCountryFromCoords(lat, lng);
-
-      const topic = parseValidTopic(row.topic);
-      const importance = Math.max(1, Math.min(10, Number(row.importance) || 6));
-      const sentiment = Math.max(-1, Math.min(1, Number(row.sentiment) || 0));
-      const confidence = Math.max(0, Math.min(1, Number(row.confidence) || 0.8));
-      const status = sanitizeText(row.status || 'active', 40);
-      const sources = parseSupabaseSources(row.sources, validTime);
-
-      return {
-        id: sanitizeText(String(row.id || `sb-story-${idx}-${validTime}`), 100),
-        headline,
-        summary,
-        country: meta.code,
-        countryName: meta.name,
-        region: meta.region,
-        topic,
-        importance,
-        sentiment,
-        lat: lat !== 0 ? lat : meta.lat,
-        lng: lng !== 0 ? lng : meta.lng,
-        confidence,
-        time: validTime,
-        sources,
-        eventClusterKey: `${meta.code}-${topic}-${headline.slice(0, 24).toLowerCase()}`,
-        isDeveloping: status.toLowerCase() === 'developing' || confidence < 0.65,
-        aiAnalyzed: true,
-        status,
-        origin: 'supabase',
-      };
+      return s;
     });
 
     // Normalize & sanitize snapshots from Supabase

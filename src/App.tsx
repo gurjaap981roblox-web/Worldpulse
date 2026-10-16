@@ -89,6 +89,7 @@ import {
 import {
   convertSnapshotMarketsToCoins,
   fetchFromSupabasePrimary,
+  fetchMoreStoriesFromSupabase,
   getCurrentSupabaseSession,
   loadAlertsFromSupabase,
   loadBookmarksFromSupabase,
@@ -113,6 +114,7 @@ import { EconomicChangePanel } from './components/EconomicChangePanel';
 import { DisastersPanel } from './components/DisastersPanel';
 import { WhatChangedPanel } from './components/WhatChangedPanel';
 import { RisingTopicsStrip } from './components/RisingTopicsStrip';
+import { PanelErrorBoundary } from './components/ErrorBoundary';
 import { MarketsTicker } from './components/MarketsTicker';
 import { CountryModal } from './components/CountryModal';
 import { SettingsModal } from './components/SettingsModal';
@@ -844,6 +846,25 @@ export default function App() {
     }
   };
 
+  // Requirement 8: Fetch next page from Supabase ordered by published_at desc for Latest tab
+  const handleLoadMoreLatest = async (): Promise<number> => {
+    const currentCount = stories.filter((s) => s.origin === 'supabase').length;
+    const newStories = await fetchMoreStoriesFromSupabase(currentCount, 30);
+    if (newStories.length > 0) {
+      setStories((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const filtered = newStories.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...filtered];
+      });
+      setSupabaseStories((prev) => {
+        const existingIds = new Set(prev.map((s) => s.id));
+        const filtered = newStories.filter((s) => !existingIds.has(s.id));
+        return [...prev, ...filtered];
+      });
+    }
+    return newStories.length;
+  };
+
   const handleUpdateAlertRules = (rules: CustomAlertRule[]) => {
     setAlertRules(rules);
     saveCustomAlerts(rules);
@@ -1314,6 +1335,11 @@ export default function App() {
         isDark ? 'bg-[#050B16] text-[#E6F1FF]' : 'bg-[#F0F6FC] text-[#050B16]'
       }`}
     >
+      {/* Requirement 12: Skip to content link as the first focusable element */}
+      <a href="#main-content" className="wp-skip-link">
+        Skip to content
+      </a>
+
       {/* Requirement 4: PWA Update Bar */}
       {needRefresh && (
         <div

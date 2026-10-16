@@ -23,10 +23,28 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Visible Keyboard Focus Outlines (WCAG AA/AAA) */
-*:focus-visible {
-  outline: 2px solid var(--wp-accent-light) !important;
+/* Visible Keyboard Focus Outlines on all buttons, links, inputs (WCAG AA/AAA - Requirement 15) */
+*:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #38BDF8 !important;
   outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.35) !important;
+}
+
+/* Ensure every interactive tap target is at least 44px tall on phones (Requirement 18) */
+@media (max-width: 640px) {
+  button,
+  a[role="button"],
+  a.cursor-pointer,
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"] {
+    min-height: 44px !important;
+  }
 }
 
 /* Skip to main content link */

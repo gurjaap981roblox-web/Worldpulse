@@ -94,9 +94,31 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
     }
   };
 
+  // Requirement 19: Share button on briefing (Web Share API when available, otherwise copy link)
+  const handleShareBriefing = async () => {
+    const shareTitle = `WorldPulse Executive Briefing: ${briefing.headline}`;
+    const shareText = briefing.headline;
+    const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/app` : 'https://worldpulse.app';
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+    handleCopyLink();
+  };
+
   const shareText = `WorldPulse Executive Briefing: ${briefing.headline}`;
   const shareUrl = typeof window !== 'undefined' ? window.location.origin + '/app' : 'https://worldpulse.app';
-  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+  // Requirement 19: WhatsApp (wa.me) option
+  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
   const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
 
   return (
@@ -138,37 +160,53 @@ export const HeroBriefing: React.FC<HeroBriefingProps> = ({
           </span>
         </div>
 
-        {/* Action Controls: Share (Copy, WhatsApp, X) & Export (.MD, CSV, TXT, PDF) */}
+        {/* Action Controls: Share (Web Share / Copy, WhatsApp wa.me, X) & Export (.MD, CSV, TXT, PDF) */}
         <div className="flex flex-wrap items-center gap-1.5 no-print">
+          {/* Requirement 19: Share button (Web Share API, falls back to copy) */}
+          <button
+            type="button"
+            onClick={handleShareBriefing}
+            aria-label="Share briefing"
+            title="Share briefing (Web Share API or copy link)"
+            className="wp-btn-secondary min-h-[44px] px-3.5 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1.5 cursor-pointer"
+          >
+            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5 text-[#22D3EE]" />}
+            <span>{copiedLink ? 'Copied Link' : 'Share'}</span>
+          </button>
+
+          {/* Copy Link Direct */}
           <button
             type="button"
             onClick={handleCopyLink}
-            aria-label="Copy briefing link"
+            aria-label="Copy direct briefing link"
             title="Copy link to briefing"
-            className="wp-btn-secondary px-2.5 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+            className="wp-btn-secondary min-h-[44px] min-w-[44px] px-2.5 py-1.5 text-xs font-mono-tabular inline-flex items-center justify-center gap-1 cursor-pointer"
           >
-            {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#22D3EE]" />}
-            <span>{copiedLink ? 'Copied' : 'Share'}</span>
+            <Copy className="w-3.5 h-3.5 text-[#8FA5C2]" />
           </button>
+
+          {/* Requirement 19: WhatsApp (wa.me) */}
           <a
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Share briefing on WhatsApp"
-            title="Share on WhatsApp"
-            className="wp-btn-secondary px-2 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+            title="Share on WhatsApp (wa.me)"
+            className="wp-btn-secondary min-h-[44px] min-w-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center justify-center gap-1 cursor-pointer"
           >
-            <span className="text-emerald-400 font-bold text-[11px]">WA</span>
+            <span className="text-emerald-400 font-bold text-xs">WA</span>
           </a>
+
+          {/* Twitter / X */}
           <a
             href={twitterUrl}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Share briefing on X"
             title="Share on X"
-            className="wp-btn-secondary px-2 py-1.5 text-xs font-mono-tabular inline-flex items-center gap-1 cursor-pointer"
+            className="wp-btn-secondary min-h-[44px] min-w-[44px] px-3 py-1.5 text-xs font-mono-tabular inline-flex items-center justify-center gap-1 cursor-pointer"
           >
-            <span className="text-cyan-300 font-bold text-[11px]">X</span>
+            <span className="text-cyan-300 font-bold text-xs">X</span>
           </a>
           {onExportMarkdown && (
             <button

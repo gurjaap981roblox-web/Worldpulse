@@ -383,7 +383,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       disabled={(settings.fontSize || 'normal') === 'small'}
                       aria-label="Decrease text size (A-)"
                       title="Decrease text size (A-)"
-                      className="min-h-[36px] min-w-[36px] px-2.5 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] px-3 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer flex items-center justify-center"
                     >
                       A-
                     </button>
@@ -399,7 +399,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                       disabled={(settings.fontSize || 'normal') === 'xlarge'}
                       aria-label="Increase text size (A+)"
                       title="Increase text size (A+)"
-                      className="min-h-[36px] min-w-[36px] px-2.5 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] px-3 rounded-lg border border-cyan-500/30 bg-[#0A1830] text-cyan-300 font-bold text-xs font-mono-tabular hover:border-cyan-400 disabled:opacity-30 cursor-pointer flex items-center justify-center"
                     >
                       A+
                     </button>
@@ -575,7 +575,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         key={topic}
                         type="button"
                         onClick={() => toggleTopic(topic)}
-                        className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular font-semibold border transition-colors cursor-pointer ${
+                        className={`min-h-[44px] px-3 py-2 text-xs font-mono-tabular font-semibold border transition-colors cursor-pointer ${
                           active
                             ? isDark
                               ? 'bg-[#F3F2EE] border-[#F3F2EE] text-[#090A0D]'
@@ -604,7 +604,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                         key={region}
                         type="button"
                         onClick={() => toggleRegion(region)}
-                        className={`min-h-[38px] px-3 py-1.5 text-xs font-mono-tabular font-semibold border transition-colors cursor-pointer ${
+                        className={`min-h-[44px] px-3 py-2 text-xs font-mono-tabular font-semibold border transition-colors cursor-pointer ${
                           active
                             ? isDark
                               ? 'bg-[#F3F2EE] border-[#F3F2EE] text-[#090A0D]'

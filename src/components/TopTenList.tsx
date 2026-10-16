@@ -43,6 +43,7 @@ interface TopTenListProps {
   onToggleBookmark?: (story: Story) => void;
   onOpenTimeline?: (story: Story) => void;
   onShareStoryCard?: (story: Story) => void;
+  onLoadMoreLatest?: () => Promise<number>;
   settings: AppSettings;
   dateRangeFilter?: DateRangeFilter;
 }
@@ -57,6 +58,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
   onToggleBookmark,
   onOpenTimeline,
   onShareStoryCard,
+  onLoadMoreLatest,
   settings,
   dateRangeFilter = '24h',
 }) => {
@@ -65,6 +67,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
 
   const [activeTab, setActiveTab] = useState<'top10' | 'latest'>('top10');
   const [latestLimit, setLatestLimit] = useState<number>(30);
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   const now = Date.now();
   const maxAgeMs =
@@ -137,6 +140,43 @@ export const TopTenList: React.FC<TopTenListProps> = ({
       setTimeout(() => setCopiedStoryId(null), 2000);
     } catch {
       // fallback
+    }
+  };
+
+  // Requirement 19: Web Share API when available, otherwise copy link
+  const handleShareStory = async (story: Story) => {
+    const shareTitle = story.headline;
+    const shareText = `${story.headline} – WorldPulse`;
+    const shareUrl = `${window.location.origin}/app?country=${story.country}`;
+
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+    handleCopyStoryLink(story);
+  };
+
+  // Requirement 8: "Show more" button under Latest fetches next page from Supabase ordered by published_at desc
+  const handleShowMore = async () => {
+    setIsLoadingMore(true);
+    try {
+      if (onLoadMoreLatest) {
+        await onLoadMoreLatest();
+      }
+      setLatestLimit((prev) => prev + 30);
+    } catch {
+      // Continue expanding locally if network fetch fails
+      setLatestLimit((prev) => prev + 30);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -347,13 +387,42 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                       </div>
 
                       {/* Quick Action Icons & Share Buttons (44px touch targets) */}
-                      <div className="flex items-center gap-1">
-                        {/* Copy Link */}
+                      <div className="flex items-center gap-1.5">
+                        {/* Requirement 19: Web Share API button with copy fallback */}
+                        <button
+                          type="button"
+                          onClick={() => handleShareStory(story)}
+                          aria-label="Share story"
+                          title="Share story (Web Share API or copy link)"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-cyan-500/30 bg-cyan-500/10 hover:border-cyan-400 hover:bg-cyan-500/20 flex items-center justify-center text-[#22D3EE] hover:text-white transition-colors cursor-pointer"
+                        >
+                          {copiedStoryId === story.id ? (
+                            <Check className="w-4 h-4 text-emerald-400" />
+                          ) : (
+                            <Share2 className="w-4 h-4" />
+                          )}
+                        </button>
+
+                        {/* Requirement 19: WhatsApp (wa.me) option */}
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(
+                            story.headline + ' ' + (typeof window !== 'undefined' ? window.location.origin : '') + '/app?country=' + story.country
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Share story on WhatsApp"
+                          title="Share on WhatsApp (wa.me)"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-emerald-500/30 bg-emerald-500/10 hover:border-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
+                        >
+                          WA
+                        </a>
+
+                        {/* Copy Link Direct */}
                         <button
                           type="button"
                           onClick={() => handleCopyStoryLink(story)}
                           aria-label="Copy story share link"
-                          title="Copy share link"
+                          title="Copy direct share link"
                           className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-[#8FA5C2] hover:text-white transition-colors cursor-pointer"
                         >
                           {copiedStoryId === story.id ? (
@@ -362,20 +431,6 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                             <Copy className="w-4 h-4 text-[#22D3EE]" />
                           )}
                         </button>
-
-                        {/* WhatsApp Share */}
-                        <a
-                          href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                            story.headline + ' ' + (typeof window !== 'undefined' ? window.location.origin : '') + '/app?country=' + story.country
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label="Share story on WhatsApp"
-                          title="Share on WhatsApp"
-                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-emerald-400 transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
-                        >
-                          WA
-                        </a>
 
                         {/* X (Twitter) Share */}
                         <a
@@ -388,7 +443,7 @@ export const TopTenList: React.FC<TopTenListProps> = ({
                           rel="noopener noreferrer"
                           aria-label="Share story on X"
                           title="Share on X"
-                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-cyan-300 transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
+                          className="min-h-[44px] min-w-[44px] rounded-full border border-transparent hover:border-cyan-500/40 flex items-center justify-center text-cyan-300 hover:text-white transition-colors cursor-pointer text-xs font-bold font-mono-tabular"
                         >
                           X
                         </a>
@@ -530,18 +585,29 @@ export const TopTenList: React.FC<TopTenListProps> = ({
           })}
           </ol>
 
-          {/* 6. Add a "Show more" button under Latest */}
-          {activeTab === 'latest' && visibleLatest.length < latestStories.length && (
+          {/* 8. Add a "Show more" button under Latest that fetches the next page from Supabase ordered by published_at desc */}
+          {activeTab === 'latest' && (visibleLatest.length < latestStories.length || Boolean(onLoadMoreLatest)) && (
             <div className="p-4 sm:p-5 text-center border-t border-cyan-500/20">
               <button
                 type="button"
-                onClick={() => setLatestLimit((prev) => prev + 30)}
-                className="px-5 py-2.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-mono-tabular font-bold text-[#22D3EE] transition-colors cursor-pointer inline-flex items-center gap-2"
+                onClick={handleShowMore}
+                disabled={isLoadingMore}
+                aria-label="Show more dispatches from Supabase"
+                className="min-h-[44px] px-6 py-2.5 rounded-full border border-cyan-500/40 bg-cyan-500/15 hover:bg-cyan-500/25 text-xs font-mono-tabular font-bold text-[#22D3EE] transition-colors cursor-pointer inline-flex items-center justify-center gap-2 disabled:opacity-50"
               >
-                <span>Show more</span>
-                <span className="opacity-75 font-normal">
-                  ({latestStories.length - visibleLatest.length} remaining)
-                </span>
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                    <span>Fetching next dispatches from Supabase...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Show more</span>
+                    <span className="opacity-75 font-normal">
+                      ({Math.max(0, latestStories.length - visibleLatest.length)} cached · fetch next page)
+                    </span>
+                  </>
+                )}
               </button>
             </div>
           )}

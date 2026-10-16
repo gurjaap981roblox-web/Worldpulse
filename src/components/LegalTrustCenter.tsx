@@ -310,8 +310,66 @@ export const LegalFooterLinks: React.FC<LegalFooterLinksProps> = ({
           <span className="font-bold text-sm tracking-wide text-[#22D3EE]">WORLDPULSE</span>
           <span>© 2026 WorldPulse Intel · Open Public Telemetry</span>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-          {LEGAL_NAV_ITEMS.map((item) => (
+
+        {/* Requirement 20: Explicit footer links to Privacy, Terms, Cookies, Accessibility, Security, JSON feed & RSS feed */}
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 font-mono-tabular">
+          <button
+            type="button"
+            onClick={() => onOpenLegalPage('privacy')}
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] underline sm:no-underline"
+          >
+            Privacy
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenLegalPage('terms')}
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] underline sm:no-underline"
+          >
+            Terms
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenLegalPage('cookies')}
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] underline sm:no-underline"
+          >
+            Cookies
+          </button>
+          <button
+            type="button"
+            onClick={() => onOpenLegalPage('accessibility')}
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] underline sm:no-underline"
+          >
+            Accessibility
+          </button>
+          <a
+            href="/.well-known/security.txt"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] text-cyan-300"
+          >
+            Security (/.well-known/security.txt)
+          </a>
+          <a
+            href="/api/feed.json"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] text-cyan-300"
+          >
+            JSON Feed
+          </a>
+          <a
+            href="/api/feed.xml"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#38BDF8] transition-colors cursor-pointer text-[11px] text-cyan-300"
+          >
+            RSS Feed
+          </a>
+
+          {/* Remaining legal items */}
+          {LEGAL_NAV_ITEMS.filter(
+            (i) => !['privacy', 'terms', 'cookies', 'accessibility', 'security'].includes(i.id)
+          ).map((item) => (
             <button
               key={item.id}
               type="button"
